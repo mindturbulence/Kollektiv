@@ -334,7 +334,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
       return;
     }
     if (!layer.mask) {
-      showGlobalFeedback?.(`Layer "${layer.name}" has no mask — add one with the +M chip first.`, true);
+      showGlobalFeedback?.(`Layer "${layer.name}" has no mask — add one with the mask button under the Layers panel first.`, true);
       return;
     }
     try {
@@ -517,7 +517,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
       >
         <ToolRail />
         <div className="flex-1 flex flex-col min-w-0">
-          <ToolHeader viewportRef={viewportRef} />
+          <ToolHeader />
           <CanvasViewport ref={viewportRef} onCursorMove={setCursorPos} />
         </div>
         <LayersPanel />

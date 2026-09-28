@@ -13,6 +13,7 @@
 // are supported in modern browsers and are used when available).
 
 import { SelectionEngine } from '../selection/SelectionEngine';
+import { getSnapshot } from '../store';
 import type { LayerTransform } from '../types';
 
 /** Affine matrix representation (a b c d e f, canvas order). */
@@ -86,4 +87,60 @@ export function selectionClipInBitmapSpace(layer: {
   const out = new Path2D();
   out.addPath(docPath, dm);
   return out;
+}
+
+/**
+ * The active selection rasterized into the layer's bitmap space (opaque =
+ * selected), or null when there is no selection. Paint tools mask their
+ * stroke buffer with this once per pointer event: clipping every stamp to a
+ * wand selection's per-row path took ~15 s per stroke on a noisy photo.
+ */
+export function selectionMaskInBitmapSpace(layer: {
+  transform: LayerTransform;
+  intrinsicWidth: number;
+  intrinsicHeight: number;
+}): OffscreenCanvas | null {
+  const selection = getSnapshot().selection;
+  if (!selection) return null;
+  const oc = new OffscreenCanvas(layer.intrinsicWidth, layer.intrinsicHeight);
+  const ctx = oc.getContext('2d');
+  if (!ctx) return null;
+  ctx.setTransform(...docToBitmapMatrix(layer));
+  if (selection.shape.kind === 'raster') {
+    ctx.drawImage(selection.shape.mask, 0, 0);
+  } else {
+    const docPath = SelectionEngine.getSelectionClip();
+    if (!docPath) return null;
+    ctx.fillStyle = '#fff';
+    ctx.fill(docPath);
+  }
+  return oc;
+}
+
+/**
+ * Recomposites a paint stroke: out = base, then the stroke buffer (cut to the
+ * selection mask) applied with `op`. Stamps accumulate source-over in the
+ * buffer, so one composite equals stamping each dab onto the layer directly.
+ */
+export function composeStroke(
+  out: OffscreenCanvasRenderingContext2D,
+  base: CanvasImageSource,
+  stroke: OffscreenCanvas,
+  mask: OffscreenCanvas | null,
+  op: GlobalCompositeOperation,
+): void {
+  if (mask) {
+    const sctx = stroke.getContext('2d');
+    if (sctx) {
+      // Idempotent: pixels outside the selection are dropped, never needed again.
+      sctx.globalCompositeOperation = 'destination-in';
+      sctx.drawImage(mask, 0, 0);
+      sctx.globalCompositeOperation = 'source-over';
+    }
+  }
+  out.globalCompositeOperation = 'copy';
+  out.drawImage(base, 0, 0);
+  out.globalCompositeOperation = op;
+  out.drawImage(stroke, 0, 0);
+  out.globalCompositeOperation = 'source-over';
 }

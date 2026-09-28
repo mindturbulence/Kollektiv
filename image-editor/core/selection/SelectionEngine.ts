@@ -1,6 +1,6 @@
 // ─── Kollektiv Image Editor — SelectionEngine ────────────────────────────────
-// Manages the current selection state. M4 scope: rect + ellipse marquee.
-// Lasso / Magic Wand deferred.
+// Manages the current selection state: rect/ellipse marquee, lasso, polygon
+// lasso, and raster (magic wand — see FloodFill.magicWandSelect) selections.
 //
 // Live drag state is module-scoped so CanvasRenderer can read it without
 // going through the store on every pointermove. Committed selection lands
@@ -10,6 +10,7 @@
 
 import { dispatch, getSnapshot } from '../store';
 import { pushCommand } from '../history/HistoryManager';
+import { maskGeometry, edgePixels } from './maskGeometry';
 import type { Rect, Point, Selection, HistoryCommand } from '../types';
 
 // ─── Internal drag state ─────────────────────────────────────────────────────
@@ -38,6 +39,65 @@ function normalizeRect(ax: number, ay: number, bx: number, by: number): Rect {
     width:  Math.abs(bx - ax),
     height: Math.abs(by - ay),
   };
+}
+
+/** Marching-ants outline of a raster selection: a doc-space path, or — past
+ *  MAX_OUTLINE_SEGMENTS, where stroking every pointermove took ~2 s on a
+ *  noisy wand mask — a pre-rendered edge image placed at (x, y) in doc space. */
+export type RasterOutline =
+  | { kind: 'path'; path: Path2D }
+  | { kind: 'image'; image: OffscreenCanvas; x: number; y: number };
+
+const MAX_OUTLINE_SEGMENTS = 4000;
+
+interface RasterPaths { clip: Path2D; outline: RasterOutline }
+
+/** Clip + outline for a raster mask, built from one readback and cached per
+ *  mask bitmap (SET_SELECTION always brings a new one; the old entry is GC'd). */
+const _rasterCache = new WeakMap<ImageBitmap, RasterPaths>();
+
+function rasterPaths(selection: Selection): RasterPaths | null {
+  if (selection.shape.kind !== 'raster') return null;
+  const mask = selection.shape.mask;
+  const cached = _rasterCache.get(mask);
+  if (cached) return cached;
+
+  const b = selection.bounds;
+  const x = Math.max(0, Math.floor(b.x));
+  const y = Math.max(0, Math.floor(b.y));
+  const w = Math.min(mask.width - x, Math.ceil(b.width));
+  const h = Math.min(mask.height - y, Math.ceil(b.height));
+  if (w <= 0 || h <= 0) return null;
+  const oc = new OffscreenCanvas(mask.width, mask.height);
+  const mctx = oc.getContext('2d', { willReadFrequently: true });
+  if (!mctx) return null;
+  mctx.drawImage(mask, 0, 0);
+  let data: ImageData;
+  try {
+    data = mctx.getImageData(x, y, w, h);
+  } catch {
+    return null;
+  }
+
+  const { runs, edges } = maskGeometry(data.data, w, h, x, y);
+  const clip = new Path2D();
+  for (let i = 0; i < runs.length; i += 3) clip.rect(runs[i], runs[i + 1], runs[i + 2], 1);
+  let outline: RasterOutline;
+  if (edges.length / 4 > MAX_OUTLINE_SEGMENTS) {
+    const image = new OffscreenCanvas(w, h);
+    image.getContext('2d')?.putImageData(new ImageData(edgePixels(data.data, w, h), w, h), 0, 0);
+    outline = { kind: 'image', image, x, y };
+  } else {
+    const path = new Path2D();
+    for (let i = 0; i < edges.length; i += 4) {
+      path.moveTo(edges[i], edges[i + 1]);
+      path.lineTo(edges[i + 2], edges[i + 3]);
+    }
+    outline = { kind: 'path', path };
+  }
+  const paths = { clip, outline };
+  _rasterCache.set(mask, paths);
+  return paths;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -156,34 +216,31 @@ export const SelectionEngine = {
   deselect(): void { dispatch({ type: 'SET_SELECTION', selection: null }); },
 
   /**
-   * Builds a clip region for the active selection, in the given coordinate
-   * space (review H7 — nothing read the selection before, so marquee/lasso/
-   * wand were decoration). Callers `ctx.clip(path)` before stamping/painting.
+   * Builds a doc-space clip region for the active selection (review H7 —
+   * nothing read the selection before, so marquee/lasso/wand were decoration).
+   * Callers `ctx.clip(path)` before stamping/painting.
    *
-   * - rect / ellipse / polygon → a Path2D in `offset` space directly.
-   * - raster (magic wand) → a Path2D of opaque mask *tiles* within the
-   *   selection bounds at ~4px granularity: far cheaper than readback per
-   *   stamp and exact enough for paint clipping.
+   * - rect / ellipse / polygon → the shape as a Path2D.
+   * - raster (magic wand) → pixel-exact row runs of the mask, cached per mask
+   *   (a 4px-band approximation leaked paint across curved edges).
    *
    * Returns null when there is no active selection (paint everywhere).
    */
-  getSelectionClip(offset?: { x: number; y: number }): Path2D | null {
+  getSelectionClip(): Path2D | null {
     const selection = getSnapshot().selection;
     if (!selection) return null;
-    const ox = offset?.x ?? 0;
-    const oy = offset?.y ?? 0;
     const path = new Path2D();
 
     switch (selection.shape.kind) {
       case 'rect': {
         const b = selection.shape.bounds;
-        path.rect(b.x + ox, b.y + oy, b.width, b.height);
+        path.rect(b.x, b.y, b.width, b.height);
         break;
       }
       case 'ellipse': {
         const b = selection.shape.bounds;
         path.ellipse(
-          b.x + ox + b.width / 2, b.y + oy + b.height / 2,
+          b.x + b.width / 2, b.y + b.height / 2,
           Math.max(0.5, b.width / 2), Math.max(0.5, b.height / 2),
           0, 0, Math.PI * 2,
         );
@@ -192,44 +249,22 @@ export const SelectionEngine = {
       case 'polygon': {
         const pts = selection.shape.points;
         if (pts.length < 3) return null;
-        path.moveTo(pts[0].x + ox, pts[0].y + oy);
-        for (let i = 1; i < pts.length; i++) path.lineTo(pts[i].x + ox, pts[i].y + oy);
+        path.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) path.lineTo(pts[i].x, pts[i].y);
         path.closePath();
         break;
       }
-      case 'raster': {
-        // Sample the wand mask into opaque-run rectangles (4px rows).
-        const mask = selection.shape.mask;
-        const b = selection.bounds;
-        const TILE = 4;
-        const oc = new OffscreenCanvas(mask.width, mask.height);
-        const mctx = oc.getContext('2d');
-        if (!mctx) return null;
-        mctx.drawImage(mask, 0, 0);
-        let row: ImageData;
-        try {
-          row = mctx.getImageData(b.x, b.y, Math.min(mask.width - b.x, b.width), Math.min(mask.height - b.y, b.height));
-        } catch {
-          return null;
-        }
-        const rw = row.width;
-        for (let ty = 0; ty < row.height; ty += TILE) {
-          let runStart = -1;
-          const rowH = Math.min(TILE, row.height - ty);
-          for (let x = 0; x <= rw; x++) {
-            const alpha = x < rw ? row.data[(ty * rw + x) * 4 + 3] : 0;
-            const on = alpha > 127;
-            if (on && runStart < 0) runStart = x;
-            if (!on && runStart >= 0) {
-              path.rect(b.x + runStart + ox, b.y + ty + oy, x - runStart, rowH);
-              runStart = -1;
-            }
-          }
-        }
-        break;
-      }
+      case 'raster':
+        return rasterPaths(selection)?.clip ?? null;
     }
     return path;
+  },
+
+  /** Marching-ants outline of a raster selection, in doc space. Null for
+   *  vector selections (the overlay draws those from their shape). */
+  getRasterOutline(): RasterOutline | null {
+    const selection = getSnapshot().selection;
+    return selection?.shape.kind === 'raster' ? rasterPaths(selection)?.outline ?? null : null;
   },
 
   invertSelection(docWidth: number, docHeight: number): void {

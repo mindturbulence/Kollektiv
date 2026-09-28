@@ -10,13 +10,8 @@ import { TransformEngine } from '../core/transform/TransformEngine';
 import { SelectionEngine } from '../core/selection/SelectionEngine';
 import { TypeTool } from '../core/text/TypeTool';
 import { GradientTool } from '../core/gradient/GradientTool';
+import { wandSettings } from '../core/selection/FloodFill';
 import type { ToolId } from '../core/types';
-import type { CanvasViewportHandle } from './CanvasViewport';
-
-// CanvasViewportHandle is used by WandControls to update tolerance — passed as a prop
-interface ToolHeaderProps {
-  viewportRef?: React.RefObject<CanvasViewportHandle | null>;
-}
 
 const TOOL_HINTS: Partial<Record<ToolId, string>> = {
   move: 'Move: drag to reposition the active layer',
@@ -42,7 +37,7 @@ const Slider: React.FC<{
   suffix?: string;
   onChange: (value: number) => void;
 }> = ({ label, value, min, max, step = 1, suffix = '', onChange }) => (
-  <label className="flex items-center gap-1.5 text-2xs font-mono text-base-content/60 whitespace-nowrap">
+  <label className="flex items-center gap-1.5 text-xs font-mono text-base-content/70 whitespace-nowrap">
     {label}
     <input
       type="range"
@@ -111,7 +106,7 @@ const TransformControls: React.FC = () => {
   // image-only guard made them immovable from the header too).
   const layer = doc && activeLayerId ? findLayerById(doc.layers, activeLayerId) : undefined;
   if (!layer) {
-    return <span className="px-3 text-2xs font-mono text-base-content/60">Select a layer to transform</span>;
+    return <span className="px-3 text-xs font-mono text-base-content/70">Select a layer to transform</span>;
   }
   const t = layer.transform;
   const setW = (v: number) => dispatch({ type: 'UPDATE_LAYER', layerId: layer.id, patch: { transform: { ...t, size: { ...t.size, width: Math.max(1, v) } } } });
@@ -120,19 +115,19 @@ const TransformControls: React.FC = () => {
 
   return (
     <div className="flex items-center gap-3 px-3">
-      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
-        W <input type="number" className="w-16 bg-transparent border border-base-content/20 px-1 text-right text-2xs font-mono" value={Math.round(t.size.width)} onChange={e => setW(Number(e.target.value))} />
+      <label className="flex items-center gap-1 text-xs font-mono text-base-content/70">
+        W <input type="number" className="w-16 h-6 bg-transparent border border-base-content/20 px-1.5 text-right text-xs font-mono" value={Math.round(t.size.width)} onChange={e => setW(Number(e.target.value))} />
       </label>
-      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
-        H <input type="number" className="w-16 bg-transparent border border-base-content/20 px-1 text-right text-2xs font-mono" value={Math.round(t.size.height)} onChange={e => setH(Number(e.target.value))} />
+      <label className="flex items-center gap-1 text-xs font-mono text-base-content/70">
+        H <input type="number" className="w-16 h-6 bg-transparent border border-base-content/20 px-1.5 text-right text-xs font-mono" value={Math.round(t.size.height)} onChange={e => setH(Number(e.target.value))} />
       </label>
-      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
-        ° <input type="number" className="w-14 bg-transparent border border-base-content/20 px-1 text-right text-2xs font-mono" value={Math.round(t.rotation)} onChange={e => setRot(Number(e.target.value))} />
+      <label className="flex items-center gap-1 text-xs font-mono text-base-content/70">
+        ° <input type="number" className="w-14 h-6 bg-transparent border border-base-content/20 px-1.5 text-right text-xs font-mono" value={Math.round(t.rotation)} onChange={e => setRot(Number(e.target.value))} />
       </label>
       <div className="h-4 w-px bg-base-content/10" />
-      <button type="button" className="text-2xs font-mono text-base-content/60 hover:text-primary px-1 border border-base-content/15 hover:border-primary" onClick={() => activeLayerId && TransformEngine.flipHorizontal(activeLayerId)}>↔ Flip H</button>
-      <button type="button" className="text-2xs font-mono text-base-content/60 hover:text-primary px-1 border border-base-content/15 hover:border-primary" onClick={() => activeLayerId && TransformEngine.flipVertical(activeLayerId)}>↕ Flip V</button>
-      <button type="button" className="text-2xs font-mono text-base-content/60 hover:text-primary px-1 border border-base-content/15 hover:border-primary" onClick={() => activeLayerId && TransformEngine.resetRotation(activeLayerId)}>Reset °</button>
+      <button type="button" className="text-xs font-mono text-base-content/70 hover:text-primary h-6 px-2 border border-base-content/15 hover:border-primary" onClick={() => activeLayerId && TransformEngine.flipHorizontal(activeLayerId)}>↔ Flip H</button>
+      <button type="button" className="text-xs font-mono text-base-content/70 hover:text-primary h-6 px-2 border border-base-content/15 hover:border-primary" onClick={() => activeLayerId && TransformEngine.flipVertical(activeLayerId)}>↕ Flip V</button>
+      <button type="button" className="text-xs font-mono text-base-content/70 hover:text-primary h-6 px-2 border border-base-content/15 hover:border-primary" onClick={() => activeLayerId && TransformEngine.resetRotation(activeLayerId)}>Reset °</button>
     </div>
   );
 };
@@ -144,7 +139,7 @@ const VariantToggle: React.FC<{ options: { tool: ToolId; label: string }[] }> = 
     <div className="flex border border-base-content/20">
       {options.map(({ tool, label }) => (
         <button key={tool} type="button" aria-pressed={activeTool === tool}
-          className={`px-2 py-0.5 text-2xs font-mono uppercase ${activeTool === tool ? 'bg-primary/10 text-primary' : 'text-base-content/60 hover:text-primary'}`}
+          className={`h-6 px-2.5 text-xs font-mono uppercase ${activeTool === tool ? 'bg-primary/10 text-primary' : 'text-base-content/60 hover:text-primary'}`}
           onClick={() => dispatch({ type: 'SET_ACTIVE_TOOL', tool })}>
           {label}
         </button>
@@ -164,9 +159,9 @@ const SelectionControls: React.FC = () => {
       {isMarquee && (
         <VariantToggle options={[{ tool: 'marquee-rect', label: 'Rect' }, { tool: 'marquee-ellipse', label: 'Ellipse' }]} />
       )}
-      <span className="text-2xs font-mono text-base-content/60">Drag to select</span>
+      <span className="text-xs font-mono text-base-content/70">Drag to select</span>
       {hasSelection && (
-        <button type="button" className="text-2xs font-mono text-base-content/60 hover:text-primary border border-base-content/15 hover:border-primary px-2 py-0.5" onClick={() => SelectionEngine.deselect()}>
+        <button type="button" className="text-xs font-mono text-base-content/70 hover:text-primary h-6 border border-base-content/15 hover:border-primary px-2" onClick={() => SelectionEngine.deselect()}>
           Deselect (Ctrl+D)
         </button>
       )}
@@ -183,27 +178,27 @@ const TypeControls: React.FC = () => {
 
   return (
     <div className="flex items-center gap-3 px-3">
-      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
+      <label className="flex items-center gap-1 text-xs font-mono text-base-content/70">
         Family
-        <input type="text" className="w-28 bg-transparent border border-base-content/20 px-1 text-2xs font-mono"
+        <input type="text" className="w-28 h-6 bg-transparent border border-base-content/20 px-1.5 text-xs font-mono"
           defaultValue={s.fontFamily}
           onBlur={e => { TypeTool.updateSettings({ fontFamily: e.target.value }); update(); }} />
       </label>
-      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
+      <label className="flex items-center gap-1 text-xs font-mono text-base-content/70">
         Size
-        <input type="number" className="w-14 bg-transparent border border-base-content/20 px-1 text-right text-2xs font-mono"
+        <input type="number" className="w-14 h-6 bg-transparent border border-base-content/20 px-1.5 text-right text-xs font-mono"
           min={6} max={512} defaultValue={s.fontSize}
           onBlur={e => { TypeTool.updateSettings({ fontSize: Number(e.target.value) }); update(); }} />
       </label>
-      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
+      <label className="flex items-center gap-1 text-xs font-mono text-base-content/70">
         Color
         <input type="color" className="w-7 h-5 border-none bg-transparent cursor-pointer"
           defaultValue={s.color}
           onInput={e => { TypeTool.updateSettings({ color: (e.target as HTMLInputElement).value }); update(); }} />
       </label>
-      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
+      <label className="flex items-center gap-1 text-xs font-mono text-base-content/70">
         Weight
-        <select className="bg-transparent border border-base-content/20 text-2xs font-mono"
+        <select className="bg-transparent border border-base-content/20 text-xs font-mono"
           defaultValue={String(s.fontWeight)}
           onChange={e => { TypeTool.updateSettings({ fontWeight: Number(e.target.value) }); update(); }}>
           <option value="300">Light</option>
@@ -212,7 +207,7 @@ const TypeControls: React.FC = () => {
           <option value="900">Black</option>
         </select>
       </label>
-      <span className="text-2xs font-mono text-base-content/35">Click canvas to place text · Ctrl+Enter to confirm</span>
+      <span className="text-xs font-mono text-base-content/35">Click canvas to place text · Ctrl+Enter to confirm</span>
     </div>
   );
 };
@@ -225,8 +220,8 @@ const ShapeControls: React.FC = () => {
   return (
     <div className="flex items-center gap-3 px-3">
       <VariantToggle options={[{ tool: 'shape-rect', label: 'Rect' }, { tool: 'shape-ellipse', label: 'Ellipse' }]} />
-      <span className="text-2xs font-mono text-base-content/60">Drag to draw</span>
-      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
+      <span className="text-xs font-mono text-base-content/70">Drag to draw</span>
+      <label className="flex items-center gap-1 text-xs font-mono text-base-content/70">
         Fill
         <input type="color" className="w-7 h-5 border-none bg-transparent cursor-pointer"
           value={colors.foreground}
@@ -238,26 +233,25 @@ const ShapeControls: React.FC = () => {
 
 // ─── Wand controls ────────────────────────────────────────────────────────
 
-const WandControls: React.FC<{ viewportRef?: React.RefObject<CanvasViewportHandle | null> }> = ({ viewportRef }) => {
-  const [tolerance, setTolerance] = React.useState(32);
+const WandControls: React.FC = () => {
+  // wandSettings is module state (read by the viewport on click); local
+  // re-render only, so the controls survive tool switches without drifting.
+  const [, forceUpdate] = React.useState(0);
+  const set = (patch: Partial<typeof wandSettings>) => { Object.assign(wandSettings, patch); forceUpdate(n => n + 1); };
   const hasSelection = useSyncExternalStore(subscribe, () => getSnapshot().selection !== null);
   return (
-    <div className="flex items-center gap-3 px-3">
-      <label className="flex items-center gap-2 text-2xs font-mono text-base-content/60">
-        Tolerance
-        <input type="range" className="range range-xs range-primary w-24" min={0} max={255} value={tolerance}
-          onChange={e => {
-            const v = Number(e.target.value);
-            setTolerance(v);
-            viewportRef?.current?.setWandTolerance(v);
-          }} />
-        <span className="w-8 text-right">{tolerance}</span>
+    <div className="flex items-center gap-4 px-3">
+      <Slider label="Tolerance" value={wandSettings.tolerance} min={0} max={255} onChange={v => set({ tolerance: v })} />
+      <label className="flex items-center gap-1.5 text-xs font-mono text-base-content/70 whitespace-nowrap">
+        <input type="checkbox" className="checkbox checkbox-xs" checked={wandSettings.contiguous}
+          onChange={e => set({ contiguous: e.target.checked })} /> Contiguous
       </label>
-      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
-        <input type="checkbox" className="checkbox checkbox-xs" defaultChecked /> Contiguous
+      <label className="flex items-center gap-1.5 text-xs font-mono text-base-content/70 whitespace-nowrap">
+        <input type="checkbox" className="checkbox checkbox-xs" checked={wandSettings.sampleAllLayers}
+          onChange={e => set({ sampleAllLayers: e.target.checked })} /> Sample all layers
       </label>
       {hasSelection && (
-        <button type="button" className="text-2xs font-mono text-base-content/60 hover:text-primary border border-base-content/15 hover:border-primary px-2 py-0.5" onClick={() => SelectionEngine.deselect()}>
+        <button type="button" className="text-xs font-mono text-base-content/70 hover:text-primary h-6 border border-base-content/15 hover:border-primary px-2" onClick={() => SelectionEngine.deselect()}>
           Deselect
         </button>
       )}
@@ -272,11 +266,11 @@ const GradientControls: React.FC = () => {
   const kind = GradientTool.getKind();
   return (
     <div className="flex items-center gap-3 px-3">
-      <span className="text-2xs font-mono text-base-content/60">Drag to define gradient direction</span>
+      <span className="text-xs font-mono text-base-content/70">Drag to define gradient direction</span>
       <div className="flex border border-base-content/20">
         {(['linear', 'radial'] as const).map(k => (
           <button key={k} type="button"
-            className={`px-2 py-0.5 text-2xs font-mono uppercase ${kind === k ? 'bg-primary/10 text-primary' : 'text-base-content/60 hover:text-primary'}`}
+            className={`h-6 px-2.5 text-xs font-mono uppercase ${kind === k ? 'bg-primary/10 text-primary' : 'text-base-content/60 hover:text-primary'}`}
             onClick={() => { GradientTool.setKind(k); forceUpdate(n => n + 1); }}>
             {k}
           </button>
@@ -291,12 +285,12 @@ const GradientControls: React.FC = () => {
 const CropControls: React.FC = () => {
   const pending = useSyncExternalStore(subscribe, () => getSnapshot().pendingCrop);
   if (!pending) {
-    return <span className="px-3 text-2xs font-mono text-base-content/60">Crop: drag a rectangle on the canvas</span>;
+    return <span className="px-3 text-xs font-mono text-base-content/70">Crop: drag a rectangle on the canvas</span>;
   }
-  const btn = 'text-2xs font-mono px-2 py-0.5 border';
+  const btn = 'text-xs font-mono h-6 px-2 border';
   return (
     <div className="flex items-center gap-3 px-3">
-      <span className="text-2xs font-mono text-base-content/60">
+      <span className="text-xs font-mono text-base-content/70">
         {Math.round(pending.width)} × {Math.round(pending.height)}px
       </span>
       <button type="button" className={`${btn} border-primary text-primary hover:bg-primary/10`} onClick={() => SelectionEngine.applyCrop()}>
@@ -311,7 +305,7 @@ const CropControls: React.FC = () => {
 
 // ─── ToolHeader ────────────────────────────────────────────────────────────
 
-const ToolHeader: React.FC<ToolHeaderProps> = ({ viewportRef }) => {
+const ToolHeader: React.FC = () => {
   const activeTool = useSyncExternalStore(subscribe, () => getSnapshot().activeTool);
 
   return (
@@ -327,13 +321,13 @@ const ToolHeader: React.FC<ToolHeaderProps> = ({ viewportRef }) => {
       ) : (activeTool === 'shape-rect' || activeTool === 'shape-ellipse') ? (
         <ShapeControls />
       ) : activeTool === 'magic-wand' ? (
-        <WandControls viewportRef={viewportRef} />
+        <WandControls />
       ) : activeTool === 'crop' ? (
         <CropControls />
       ) : activeTool === 'gradient' ? (
         <GradientControls />
       ) : (
-        <span className="px-3 text-2xs font-mono text-base-content/60 uppercase tracking-wide truncate">
+        <span className="px-3 text-xs font-mono text-base-content/70 uppercase tracking-wide truncate">
           {TOOL_HINTS[activeTool] ?? 'No options for this tool'}
         </span>
       )}

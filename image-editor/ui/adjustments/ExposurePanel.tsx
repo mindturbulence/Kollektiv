@@ -75,17 +75,17 @@ const ExposurePanel: React.FC<ExposurePanelProps> = ({ layerId, onClose }) => {
     >
       <div className="space-y-3 pt-1">
         {sliders.map(({ label, value, set, min, max, step, fmt }) => (
-          <label key={label} className="flex items-center gap-2 text-2xs font-mono text-base-content/60">
+          <label key={label} className="flex items-center gap-2 text-xs font-mono text-base-content/60">
             <span className="w-20 flex-shrink-0">{label}</span>
             <input type="range" className="range range-xs range-primary flex-1"
               min={min} max={max} step={step} value={value}
               onChange={e => set(Number(e.target.value))} />
-            <input type="number" className="w-16 bg-transparent border border-base-content/20 px-1 text-right text-2xs"
+            <input type="number" className="w-16 bg-transparent border border-base-content/20 px-1 text-right text-xs"
               min={min} max={max} step={step} value={fmt(value)}
               onChange={e => set(Math.max(min, Math.min(max, Number(e.target.value))))} />
           </label>
         ))}
-        <button type="button" className="text-2xs font-mono text-base-content/60 hover:text-primary"
+        <button type="button" className="text-xs font-mono text-base-content/60 hover:text-primary"
           onClick={() => { setExposure(0); setOffset(0); setGammaCorrection(1.0); }}>
           Reset to defaults
         </button>

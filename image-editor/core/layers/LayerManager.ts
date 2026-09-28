@@ -9,7 +9,7 @@ import { dispatch, getSnapshot } from '../store';
 import { pushCommand } from '../history/HistoryManager';
 import { findLayerById, findLayerLocation } from './layerTree';
 import type { BlendMode, HistoryCommand, ImageLayer, Layer, LayerMask, TextLayer, ShapeLayer, Rect } from '../types';
-import { LayerPainter } from '../renderer/LayerPainter';
+import { rasterizeLayersToCanvas } from '../renderer/LayerPainter';
 import { resampleBitmap } from '../io/FileIO';
 import { selectionClipInBitmapSpace } from '../geometry/selectionClip';
 
@@ -252,18 +252,8 @@ export function duplicateLayer(layerId: string): string {
 async function rasterizeLayers(layers: Layer[]): Promise<ImageBitmap | null> {
   const { document: doc } = getSnapshot();
   if (!doc) return null;
-  const oc = new OffscreenCanvas(doc.width, doc.height);
-  const ctx = oc.getContext('2d');
-  if (!ctx) return null;
-  const painter = new LayerPainter(false);
-  try {
-    for (let i = layers.length - 1; i >= 0; i--) {
-      painter.drawLayer(ctx as unknown as CanvasRenderingContext2D, layers[i]);
-    }
-  } finally {
-    painter.dispose();
-  }
-  return createImageBitmap(oc);
+  const oc = rasterizeLayersToCanvas(layers, doc.width, doc.height);
+  return oc ? createImageBitmap(oc) : null;
 }
 
 /** Merges the active top-level layer into the one directly beneath it

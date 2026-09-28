@@ -102,10 +102,10 @@ const ZoomControl: React.FC<{ onFitToViewport: () => void }> = ({ onFitToViewpor
         <ChevronDownIcon className="w-3 h-3" />
       </button>
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1 w-32 bg-base-100 border border-base-content/10 shadow-lg z-20 py-1 max-h-72 overflow-y-auto">
+        <div className="absolute right-0 top-full mt-1 w-40 bg-base-100 border border-base-content/10 shadow-lg z-20 py-1 max-h-72 overflow-y-auto">
           <button
             type="button"
-            className="w-full text-left px-3 py-1 text-xs font-mono hover:bg-primary/10 hover:text-primary"
+            className="w-full text-left px-3 py-1.5 text-xs font-mono whitespace-nowrap hover:bg-primary/10 hover:text-primary"
             onClick={() => {
               onFitToViewport();
               setIsOpen(false);
@@ -117,7 +117,7 @@ const ZoomControl: React.FC<{ onFitToViewport: () => void }> = ({ onFitToViewpor
             <button
               key={stop}
               type="button"
-              className="w-full text-left px-3 py-1 text-xs font-mono hover:bg-primary/10 hover:text-primary"
+              className="w-full text-left px-3 py-1.5 text-xs font-mono whitespace-nowrap hover:bg-primary/10 hover:text-primary"
               onClick={() => {
                 dispatch({ type: 'SET_VIEWPORT', viewport: { zoom: stop } });
                 setIsOpen(false);
@@ -165,7 +165,7 @@ const ToolbarMenu: React.FC<{ label: string; items: MenuItem[] }> = ({ label, it
     <div ref={rootRef} className="relative">
       <button
         type="button"
-        className={`flex items-center gap-1 px-2 h-7 text-xs font-mono ${isOpen ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
+        className={`flex items-center gap-1 px-2.5 h-8 text-xs font-mono whitespace-nowrap ${isOpen ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
         aria-haspopup="menu"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((v) => !v)}
@@ -174,13 +174,13 @@ const ToolbarMenu: React.FC<{ label: string; items: MenuItem[] }> = ({ label, it
         <ChevronDownIcon className="w-3 h-3" />
       </button>
       {isOpen && (
-        <div role="menu" className="absolute left-0 top-full mt-1 min-w-[13rem] bg-base-100 border border-base-content/10 shadow-lg z-dropdown py-1">
+        <div role="menu" className="absolute left-0 top-full mt-1 min-w-[18rem] bg-base-100 border border-base-content/10 shadow-lg z-dropdown py-1">
             {items.map((item) => (
               <button
                 key={item.label}
                 type="button"
                 role="menuitem"
-                className="w-full flex items-center justify-between gap-4 px-3 py-1 text-xs font-mono text-left hover:bg-primary/10 hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-inherit"
+                className="w-full flex items-center justify-between gap-6 px-3 py-1.5 text-xs font-mono text-left whitespace-nowrap hover:bg-primary/10 hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-inherit"
                 disabled={item.disabled}
                 title={item.disabled ? item.reason : undefined}
                 onClick={() => {
@@ -189,7 +189,7 @@ const ToolbarMenu: React.FC<{ label: string; items: MenuItem[] }> = ({ label, it
                 }}
               >
                 <span>{item.label}</span>
-                {item.shortcut && <span className="text-base-content/60">{item.shortcut}</span>}
+                {item.shortcut && <span className="text-base-content/50 tracking-normal">{item.shortcut}</span>}
               </button>
             ))}
         </div>
@@ -288,9 +288,9 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         />
       </div>
 
-      <div className="flex-1" />
-
-      <UndoRedoGroup />
+      <div className="border-l border-base-content/10 pl-2">
+        <UndoRedoGroup />
+      </div>
 
       <div className="flex-1" />
 

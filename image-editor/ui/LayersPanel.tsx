@@ -72,8 +72,8 @@ const LayerThumbnail: React.FC<{ layer: Layer }> = ({ layer }) => {
 
   if (layer.type !== 'image') {
     return (
-      <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center border border-base-content/10 bg-base-300 text-base-content/60">
-        <PhotoIcon className="w-3.5 h-3.5" />
+      <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center border border-base-content/10 bg-base-300 text-base-content/60">
+        <PhotoIcon className="w-4 h-4" />
       </div>
     );
   }
@@ -81,9 +81,9 @@ const LayerThumbnail: React.FC<{ layer: Layer }> = ({ layer }) => {
   return (
     <canvas
       ref={canvasRef}
-      width={24}
-      height={24}
-      className="w-6 h-6 flex-shrink-0 border border-base-content/10"
+      width={28}
+      height={28}
+      className="w-7 h-7 flex-shrink-0 border border-base-content/10"
       style={{
         backgroundImage: 'repeating-conic-gradient(#3a3a3a 0% 25%, #2a2a2a 0% 50%)',
         backgroundSize: '8px 8px',
@@ -124,14 +124,14 @@ const LayerRow: React.FC<{
   return (
     <div
       draggable={depth === 0}
-      className={`h-7 flex-shrink-0 flex items-center gap-1.5 px-1.5 border-b cursor-default select-none ${
+      className={`h-9 flex-shrink-0 flex items-center gap-2 pr-1 border-b cursor-default select-none ${
         active ? 'bg-primary/10' : selected ? 'bg-primary/5' : 'hover:bg-base-content/5'
       } ${
         dropSide === 'above' ? 'border-t-2 border-t-primary border-base-content/5'
         : dropSide === 'below' ? 'border-b-2 border-b-primary border-base-content/5'
         : 'border-base-content/5'
       }`}
-      style={{ paddingLeft: 6 + depth * 14 }}
+      style={{ paddingLeft: 4 + depth * 16 }}
       onClick={(e) => onSelect(layer.id, { shift: e.shiftKey, ctrlOrMeta: e.ctrlKey || e.metaKey })}
       onDragStart={() => onDragStart(layer.id)}
       onDragEnter={(e) => { e.preventDefault(); onDragEnter(layer.id); }}
@@ -140,63 +140,51 @@ const LayerRow: React.FC<{
     >
       <button
         type="button"
-        className="flex-shrink-0 p-0.5 text-base-content/60 hover:text-base-content"
+        className="w-6 h-6 flex-shrink-0 flex items-center justify-center text-base-content/60 hover:text-base-content"
         aria-label={layer.visible ? `Hide ${isGroup ? 'group' : 'layer'}` : `Show ${isGroup ? 'group' : 'layer'}`}
         onClick={(e) => { e.stopPropagation(); LayerManager.setLayerVisibility(layer.id, !layer.visible); }}
       >
-        <EyeIcon className={`w-3.5 h-3.5 ${layer.visible ? '' : 'opacity-30'}`} />
+        <EyeIcon className={`w-4 h-4 ${layer.visible ? '' : 'opacity-30'}`} />
       </button>
 
       {isGroup ? (
         <button
           type="button"
-          className="w-6 h-6 flex-shrink-0 flex items-center justify-center gap-px text-base-content/60 hover:text-base-content"
+          className="w-7 h-7 flex-shrink-0 flex items-center justify-center gap-px text-base-content/60 hover:text-base-content"
           aria-label={isExpanded ? 'Collapse group' : 'Expand group'}
           aria-expanded={isExpanded}
           onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
         >
           {isExpanded ? <ChevronDownIcon className="w-2.5 h-2.5" /> : <ChevronRightIcon className="w-2.5 h-2.5" />}
-          {isExpanded ? <FolderOpenIcon className="w-3 h-3" /> : <FolderClosedIcon className="w-3 h-3" />}
+          {isExpanded ? <FolderOpenIcon className="w-3.5 h-3.5" /> : <FolderClosedIcon className="w-3.5 h-3.5" />}
         </button>
       ) : (
         <LayerThumbnail layer={layer} />
       )}
 
-      {layer.type === 'image' && (
-        layer.mask ? (
-          <button
-            type="button"
-            className={`flex-shrink-0 w-4 h-4 border ${paintingMask ? 'border-primary ring-1 ring-primary' : 'border-base-content/20'}`}
-            style={{
-              backgroundImage: 'repeating-conic-gradient(#3a3a3a 0% 25%, #2a2a2a 0% 50%)',
-              backgroundSize: '6px 6px',
-            }}
-            aria-label="Paint mask"
-            title="Click to paint this mask. Right-click to remove it."
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(layer.id, { shift: false, ctrlOrMeta: false });
-              dispatch({ type: 'SET_PAINT_TARGET', target: 'mask' });
-            }}
-            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); LayerManager.removeMask(layer.id); }}
-          />
-        ) : (
-          <button
-            type="button"
-            className="flex-shrink-0 px-0.5 text-2xs font-mono leading-none text-base-content/60 hover:text-base-content/70"
-            aria-label="Add mask"
-            title="Add mask"
-            onClick={(e) => { e.stopPropagation(); void LayerManager.addMask(layer.id); }}
-          >
-            +M
-          </button>
-        )
+      {layer.type === 'image' && layer.mask && (
+        <button
+          type="button"
+          className={`flex-shrink-0 w-6 h-6 border ${paintingMask ? 'border-primary ring-1 ring-primary' : 'border-base-content/20'}`}
+          style={{
+            backgroundImage: 'repeating-conic-gradient(#3a3a3a 0% 25%, #2a2a2a 0% 50%)',
+            backgroundSize: '6px 6px',
+          }}
+          aria-label="Paint mask"
+          title="Click to paint this mask. Right-click to remove it."
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(layer.id, { shift: false, ctrlOrMeta: false });
+            dispatch({ type: 'SET_PAINT_TARGET', target: 'mask' });
+          }}
+          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); LayerManager.removeMask(layer.id); }}
+        />
       )}
 
       {isRenaming ? (
         <input
           autoFocus
-          className="flex-1 min-w-0 bg-transparent border-b border-primary/50 text-xs font-mono outline-none"
+          className="flex-1 min-w-0 bg-transparent border-b border-primary/50 text-sm outline-none"
           value={draftName}
           onChange={(e) => setDraftName(e.target.value)}
           onBlur={commitRename}
@@ -208,7 +196,7 @@ const LayerRow: React.FC<{
         />
       ) : (
         <span
-          className="flex-1 min-w-0 text-xs font-mono truncate"
+          className="flex-1 min-w-0 text-sm truncate"
           onDoubleClick={(e) => { e.stopPropagation(); setIsRenaming(true); setDraftName(layer.name); }}
         >
           {layer.name}
@@ -218,21 +206,22 @@ const LayerRow: React.FC<{
       {isGroup ? (
         <button
           type="button"
-          className="flex-shrink-0 p-0.5 text-base-content/60 hover:text-base-content/80"
+          className="w-6 h-6 flex-shrink-0 flex items-center justify-center text-base-content/60 hover:text-primary"
           aria-label="Ungroup"
           title="Ungroup"
           onClick={(e) => { e.stopPropagation(); LayerManager.ungroupLayer(layer.id); }}
         >
-          <FolderOpenIcon className="w-3 h-3" />
+          <FolderOpenIcon className="w-3.5 h-3.5" />
         </button>
       ) : (
         <button
           type="button"
-          className="flex-shrink-0 p-0.5 text-base-content/60 hover:text-base-content/80"
+          className={`w-6 h-6 flex-shrink-0 flex items-center justify-center hover:text-primary ${layer.locked ? 'text-primary' : 'text-base-content/40'}`}
           aria-label={layer.locked ? 'Unlock layer' : 'Lock layer'}
+          title={layer.locked ? 'Unlock layer' : 'Lock layer'}
           onClick={(e) => { e.stopPropagation(); dispatch({ type: 'UPDATE_LAYER', layerId: layer.id, patch: { locked: !layer.locked } }); }}
         >
-          {layer.locked ? <LockIcon className="w-3 h-3" /> : <LockOpenIcon className="w-3 h-3" />}
+          {layer.locked ? <LockIcon className="w-3.5 h-3.5" /> : <LockOpenIcon className="w-3.5 h-3.5" />}
         </button>
       )}
     </div>
@@ -393,14 +382,14 @@ const LayersPanel: React.FC = () => {
       />
       <div className="flex-1 flex flex-col min-w-0 border-l border-base-content/5">
         <header className="panel-header h-9 px-3 flex-shrink-0">
-          <h3 className="self-center text-2xs font-display uppercase tracking-widest text-base-content/70">
+          <h3 className="self-center text-xs font-display uppercase tracking-widest text-base-content/70">
             Layers
           </h3>
         </header>
 
         <div className="px-3 py-2 flex flex-col gap-2 border-b border-base-content/5">
           <select
-            className="select select-xs select-bordered rounded-none font-mono"
+            className="select select-sm select-bordered rounded-none w-full text-xs font-mono"
             value={activeLayer?.blendMode ?? 'normal'}
             disabled={!activeLayer || activeLayerIsGroup}
             title={activeLayerIsGroup ? 'Group blend mode is not composited yet — applies per-child' : undefined}
@@ -420,7 +409,7 @@ const LayersPanel: React.FC = () => {
               ))}
             </optgroup>
           </select>
-          <label className="flex items-center gap-2 text-2xs font-mono text-base-content/60">
+          <label className="flex items-center gap-2 text-xs font-mono text-base-content/70">
             Opacity
             <input
               type="range"
@@ -458,7 +447,7 @@ const LayersPanel: React.FC = () => {
                 }
               }}
             />
-            <span className="w-8 text-right">{activeLayerIsGroup ? '—' : `${activeLayer?.opacity ?? 100}%`}</span>
+            <span className="w-10 text-right">{activeLayerIsGroup ? '—' : `${activeLayer?.opacity ?? 100}%`}</span>
           </label>
         </div>
         <div
@@ -501,10 +490,32 @@ const LayersPanel: React.FC = () => {
           ))}
         </div>
 
-        <footer className="panel-footer h-9 p-1 gap-1 flex-shrink-0">
+        <div className="flex-shrink-0 flex items-center gap-2 p-2 border-t border-base-content/5">
           <button
             type="button"
-            className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary"
+            className="form-btn flex-1 h-8 px-2 text-xs tracking-wider whitespace-nowrap"
+            aria-label="Merge down"
+            title="Merge the active layer into the one beneath it"
+            disabled={!activeLayer || activeLayerIsGroup || !canMergeDown}
+            onClick={handleMergeDown}
+          >
+            Merge down
+          </button>
+          <button
+            type="button"
+            className="form-btn flex-1 h-8 px-2 text-xs tracking-wider whitespace-nowrap"
+            aria-label="Flatten image"
+            title="Flatten all layers into one background"
+            disabled={!document || layers.length < 2}
+            onClick={handleFlatten}
+          >
+            Flatten
+          </button>
+        </div>
+        <footer className="panel-footer h-10 p-1 gap-1 flex-shrink-0 flex flex-row items-stretch">
+          <button
+            type="button"
+            className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
             aria-label="New blank layer"
             title="New blank layer"
             disabled={!document}
@@ -538,6 +549,19 @@ const LayersPanel: React.FC = () => {
           <button
             type="button"
             className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
+            aria-label="Add layer mask"
+            title={activeLayer?.type === 'image' && activeLayer.mask ? 'This layer already has a mask' : 'Add layer mask'}
+            disabled={activeLayer?.type !== 'image' || !!activeLayer.mask}
+            onClick={() => activeLayerId && void LayerManager.addMask(activeLayerId)}
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <rect x="3" y="4" width="18" height="16" rx="1" />
+              <circle cx="12" cy="12" r="4.5" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
             aria-label="Group selected layers"
             title="Group selected layers"
             disabled={!canGroup}
@@ -556,28 +580,6 @@ const LayersPanel: React.FC = () => {
             <DeleteIcon className="w-4 h-4" />
           </button>
         </footer>
-        <div className="h-7 flex-shrink-0 flex items-center gap-1 px-1 border-t border-base-content/5">
-          <button
-            type="button"
-            className="flex-1 px-1 py-0.5 text-2xs font-mono uppercase tracking-wide text-base-content/60 hover:text-primary border border-base-content/15 hover:border-primary disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Merge down"
-            title="Merge the active layer into the one beneath it"
-            disabled={!activeLayer || activeLayerIsGroup || !canMergeDown}
-            onClick={handleMergeDown}
-          >
-            Merge down
-          </button>
-          <button
-            type="button"
-            className="flex-1 px-1 py-0.5 text-2xs font-mono uppercase tracking-wide text-base-content/60 hover:text-primary border border-base-content/15 hover:border-primary disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Flatten image"
-            title="Flatten all layers into one background"
-            disabled={!document || layers.length < 2}
-            onClick={handleFlatten}
-          >
-            Flatten
-          </button>
-        </div>
       </div>
     </div>
   );

@@ -136,3 +136,80 @@ test.describe('Image Editor entry', () => {
         await expect(page.getByRole('button', { name: /Open image/ })).toHaveCount(0);
     });
 });
+
+// ─── Selection-clipped painting (magic wand) ────────────────────────────────
+
+/** The editor canvas — the widest canvas that isn't the app's full-screen backdrop. */
+const EDITOR_CANVAS = `(() => [...document.querySelectorAll('canvas')].find(c => { const r = c.getBoundingClientRect(); return r.width > 600 && r.left > 50; }))()`;
+
+async function docToClient(page: Page, x: number, y: number) {
+    return page.evaluate(([dx, dy, sel]) => {
+        const r = (eval(sel as string) as HTMLCanvasElement).getBoundingClientRect();
+        // The toolbar zoom control is the only button labelled "<n>%".
+        const zoomBtn = [...document.querySelectorAll('button')].find(b => /^\d+%$/.test(b.textContent!.trim()))!;
+        const z = parseInt(zoomBtn.textContent!, 10) / 100;
+        return { x: r.left + r.width / 2 + ((dx as number) - 200) * z, y: r.top + r.height / 2 + ((dy as number) - 150) * z };
+    }, [x, y, EDITOR_CANVAS] as const);
+}
+
+async function pixelAt(page: Page, docX: number, docY: number): Promise<number[]> {
+    const p = await docToClient(page, docX, docY);
+    return page.evaluate(([cx, cy, sel]) => {
+        const c = eval(sel as string) as HTMLCanvasElement;
+        const r = c.getBoundingClientRect();
+        const s = c.width / r.width;
+        return [...c.getContext('2d')!.getImageData(Math.round(((cx as number) - r.left) * s), Math.round(((cy as number) - r.top) * s), 1, 1).data].slice(0, 3);
+    }, [p.x, p.y, EDITOR_CANVAS] as const);
+}
+
+test('magic wand selection clips the brush, even on a blank layer', async ({ page }) => {
+    await bootToAppShell(page, 'image_editor');
+    // 400×300: blue left half, red right half, green disc (r=60) centred at (300,150).
+    const png = Buffer.from((await page.evaluate(() => {
+        const c = document.createElement('canvas'); c.width = 400; c.height = 300;
+        const x = c.getContext('2d')!;
+        x.fillStyle = '#2040c0'; x.fillRect(0, 0, 200, 300);
+        x.fillStyle = '#c03030'; x.fillRect(200, 0, 200, 300);
+        x.fillStyle = '#30c030'; x.beginPath(); x.arc(300, 150, 60, 0, Math.PI * 2); x.fill();
+        return c.toDataURL('image/png');
+    })).split(',')[1], 'base64');
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
+    await (await chooser).setFiles({ name: 'disc.png', mimeType: 'image/png', buffer: png });
+    await expect(page.getByText('400 × 300px')).toBeVisible({ timeout: 15_000 });
+
+    // Paint on a fresh blank layer: the wand samples all layers, so it selects the disc.
+    await page.getByRole('button', { name: 'New blank layer' }).click();
+    await page.keyboard.press('w');
+    const seed = await docToClient(page, 300, 150);
+    await page.mouse.click(seed.x, seed.y);
+    await page.waitForTimeout(500);
+
+    await page.keyboard.press('b');
+    const a = await docToClient(page, 180, 150);
+    const b = await docToClient(page, 390, 150);
+    await page.mouse.move(a.x, a.y);
+    await page.mouse.down();
+    for (let i = 1; i <= 40; i++) await page.mouse.move(a.x + (b.x - a.x) * i / 40, a.y);
+    await page.mouse.up();
+
+    // Inside the disc turns black; red just outside its edge and blue far left stay untouched.
+    await expect.poll(async () => Math.max(...await pixelAt(page, 300, 150)), { timeout: 5_000 }).toBeLessThan(20);
+    const outside = await pixelAt(page, 225, 150);
+    expect(outside[0]).toBeGreaterThan(150);
+    const far = await pixelAt(page, 190, 150);
+    expect(far[2]).toBeGreaterThan(150);
+
+    // Layer footer controls sit in one horizontal row.
+    const tops = await page.locator('footer.panel-footer button').evaluateAll(bs => bs.map(b => Math.round(b.getBoundingClientRect().top)));
+    expect(tops.length).toBe(6);
+    expect(new Set(tops).size).toBe(1);
+
+    // Merge down + flatten collapse the stack.
+    await page.getByRole('button', { name: 'Merge down' }).click();
+    await expect(page.locator('[draggable]')).toHaveCount(1);
+    await page.getByRole('button', { name: 'New blank layer' }).click();
+    await expect(page.locator('[draggable]')).toHaveCount(2);
+    await page.getByRole('button', { name: 'Flatten image' }).click();
+    await expect(page.locator('[draggable]')).toHaveCount(1);
+});

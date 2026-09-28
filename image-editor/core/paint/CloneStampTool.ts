@@ -6,7 +6,7 @@
 import { getSnapshot, dispatch } from '../store';
 import { pushCommand } from '../history/HistoryManager';
 import { findLayerById } from '../layers/layerTree';
-import { selectionClipInBitmapSpace } from '../geometry/selectionClip';
+import { selectionMaskInBitmapSpace, composeStroke } from '../geometry/selectionClip';
 import type { HistoryCommand, ImageLayer } from '../types';
 
 // ─── State ───────────────────────────────────────────────────────────────────
@@ -21,7 +21,8 @@ let _destCtx:      OffscreenCanvasRenderingContext2D | null = null;
 let _prevBitmap:   ImageBitmap | null = null;
 let _strokeStart:  { x: number; y: number } | null = null; // pointer at stroke start (bitmap coords)
 let _lastStamp:    { x: number; y: number } | null = null;
-let _clipPath:     Path2D | null = null; // active selection, in bitmap space (E5)
+let _stroke:       OffscreenCanvas | null = null; // this stroke's cloned dabs only
+let _selMask:      OffscreenCanvas | null = null; // active selection, in bitmap space (E5)
 let _isStroking    = false;
 
 /** Frame pump registered by the active CanvasRenderer (live preview, H4). */
@@ -30,7 +31,8 @@ let _requestFrame: (() => void) | null = null;
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function paintStamp(destX: number, destY: number, pressure: number): void {
-  if (!_destCtx || !_sourceBitmap || !_sourcePoint || !_strokeStart) return;
+  const ctx = _stroke?.getContext('2d');
+  if (!ctx || !_sourceBitmap || !_sourcePoint || !_strokeStart) return;
   const { brush } = getSnapshot();
 
   // Clone offset: (destX - strokeStartX) applied to source origin
@@ -42,19 +44,22 @@ function paintStamp(destX: number, destY: number, pressure: number): void {
   const radius = Math.max(0.5, (brush.size / 2) * _sourceScale * Math.max(0.1, pressure));
   const alpha  = (brush.opacity / 100) * (brush.flow / 100) * Math.max(0.1, pressure);
 
-  _destCtx.save();
-  _destCtx.globalAlpha = alpha;
-  _destCtx.globalCompositeOperation = 'source-over';
-  // Clip to the active selection first (E5), then to the stamp circle.
-  if (_clipPath) _destCtx.clip(_clipPath);
-
+  // Into the stroke buffer; composite() cuts it to the selection (E5).
+  ctx.save();
+  ctx.globalAlpha = alpha;
   // Clip to a circle, then draw the source bitmap shifted so (srcX, srcY) appears at (destX, destY)
-  _destCtx.beginPath();
-  _destCtx.arc(destX, destY, radius, 0, Math.PI * 2);
-  _destCtx.clip();
-  _destCtx.drawImage(_sourceBitmap, destX - srcX, destY - srcY);
+  ctx.beginPath();
+  ctx.arc(destX, destY, radius, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.drawImage(_sourceBitmap, destX - srcX, destY - srcY);
+  ctx.restore();
+}
 
-  _destCtx.restore();
+/** Rebuilds the preview from the pre-stroke bitmap plus the masked stroke
+ *  buffer — once per pointer event, not per dab. */
+function composite(): void {
+  if (_destCtx && _stroke && _prevBitmap) composeStroke(_destCtx, _prevBitmap, _stroke, _selMask, 'source-over');
+  _requestFrame?.(); // repaint the live stroke preview (H4)
 }
 
 /** Spaced stamping along the segment from the last stamp (same rule as the
@@ -64,7 +69,7 @@ function stampSpaced(x: number, y: number, pressure: number): void {
   if (!_lastStamp) {
     paintStamp(x, y, pressure);
     _lastStamp = { x, y };
-    _requestFrame?.(); // repaint the live stroke preview (H4)
+    composite();
     return;
   }
   const { brush } = getSnapshot();
@@ -81,7 +86,7 @@ function stampSpaced(x: number, y: number, pressure: number): void {
   }
   const covered = steps * spacing;
   _lastStamp = { x: _lastStamp.x + (dx * covered) / dist, y: _lastStamp.y + (dy * covered) / dist };
-  _requestFrame?.(); // repaint the live stroke preview (H4)
+  composite();
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -132,8 +137,9 @@ export const CloneStampTool = {
     _destCtx.drawImage(destLayer.bitmap, 0, 0);
     _strokeStart = null; // set on first addPoint
     _lastStamp   = null;
-    // Capture the selection clip in bitmap space once per stroke (E5).
-    _clipPath    = selectionClipInBitmapSpace({
+    _stroke      = new OffscreenCanvas(destLayer.intrinsicWidth, destLayer.intrinsicHeight);
+    // Rasterize the selection into bitmap space once per stroke (E5).
+    _selMask     = selectionMaskInBitmapSpace({
       transform: destLayer.transform,
       intrinsicWidth: destLayer.intrinsicWidth,
       intrinsicHeight: destLayer.intrinsicHeight,
@@ -161,7 +167,8 @@ export const CloneStampTool = {
     _prevBitmap  = null;
     _strokeStart = null;
     _lastStamp   = null;
-    _clipPath    = null;
+    _stroke      = null;
+    _selMask     = null;
 
     void createImageBitmap(canvas).then(newBitmap => {
       const cmd: HistoryCommand = {
@@ -180,7 +187,8 @@ export const CloneStampTool = {
     _sourceBitmap  = null;
     _sourcePoint   = null;
     _sourceScale   = 1;
-    _clipPath      = null;
+    _stroke        = null;
+    _selMask       = null;
     _destCanvas    = null;
     _destCtx       = null;
     _destLayerId   = null;

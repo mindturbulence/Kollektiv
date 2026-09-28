@@ -62,8 +62,8 @@ export class CanvasRenderer {
     // Live stroke preview (review H4): brush/clone addPoint mutates an
     // OffscreenCanvas directly without dispatching, so the store never
     // notifies. Register this renderer as the frame pump for stroke updates.
-    BrushEngine.setRequestFrame(this.scheduleFrame);
-    CloneStampTool.setRequestFrame(this.scheduleFrame);
+    BrushEngine.setRequestFrame(this.scheduleStrokeFrame);
+    CloneStampTool.setRequestFrame(this.scheduleStrokeFrame);
     this.syncSize();
 
     const container = this.canvas.parentElement;
@@ -218,10 +218,22 @@ export class CanvasRenderer {
       const isEllipse  = sel?.shape.kind === 'ellipse'  && !liveSel;
       const isPolygon  = sel?.shape.kind === 'polygon'  && !liveSel;
       ctx.save();
-      ctx.lineWidth = 1;
       const dashOff = ((Date.now() / 80) % 8);
 
-      if (isPolygon && sel?.shape.kind === 'polygon') {
+      // Raster (wand) selections trace the mask edge in doc space; the
+      // context is scaled to canvas space, so widths and dashes divide by zoom
+      // to stay 1 css px. Vector shapes are built in canvas space (scale 1).
+      const rasterOutline = !liveSel ? SelectionEngine.getRasterOutline() : null;
+      let s = 1;
+      if (rasterOutline) {
+        const o = docToCanvas(0, 0, viewport, W, H, docW, docH);
+        s = viewport.zoom;
+        ctx.transform(s, 0, 0, s, o.x, o.y);
+        if (rasterOutline.kind === 'image') {
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(rasterOutline.image, rasterOutline.x, rasterOutline.y);
+        }
+      } else if (isPolygon && sel?.shape.kind === 'polygon') {
         const pts = sel.shape.points.map(p => docToCanvas(p.x, p.y, viewport, W, H, docW, docH));
         ctx.beginPath();
         if (pts.length > 0) {
@@ -236,13 +248,18 @@ export class CanvasRenderer {
         ctx.beginPath();
         ctx.rect(tl.x, tl.y, w, h);
       }
+      const strokeAnts = () => {
+        if (!rasterOutline) ctx.stroke();
+        else if (rasterOutline.kind === 'path') ctx.stroke(rasterOutline.path);
+      };
+      ctx.lineWidth = 1 / s;
+      ctx.setLineDash([4 / s, 4 / s]);
       ctx.strokeStyle = 'white';
-      ctx.setLineDash([4, 4]);
-      ctx.lineDashOffset = -dashOff;
-      ctx.stroke();
+      ctx.lineDashOffset = -dashOff / s;
+      strokeAnts();
       ctx.strokeStyle = 'black';
-      ctx.lineDashOffset = 4 - dashOff;
-      ctx.stroke();
+      ctx.lineDashOffset = (4 - dashOff) / s;
+      strokeAnts();
       ctx.setLineDash([]);
       ctx.restore();
 
@@ -452,6 +469,14 @@ export class CanvasRenderer {
   private scheduleFrame = (): void => {
     if (this.rafId !== null) return;
     this.rafId = requestAnimationFrame(this.frame);
+  };
+
+  /** Stroke stamps change pixels without changing store state, so the
+   *  state-identity dirty check in frame() would skip them — force a render
+   *  (same mechanism as the resize path). */
+  private scheduleStrokeFrame = (): void => {
+    this.lastState = null;
+    this.scheduleFrame();
   };
 
   private frame = (): void => {

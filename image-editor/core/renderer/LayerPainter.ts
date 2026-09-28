@@ -11,6 +11,24 @@ import { BlendCompositor, MANUAL_BLEND_MODES, type ManualBlendMode } from './Ble
 import { BrushEngine } from '../paint/BrushEngine';
 import { CloneStampTool } from '../paint/CloneStampTool';
 
+/** Renders `layers` (index 0 = topmost, drawn bottom-up) into a width×height
+ *  document-space canvas with committed pixels only (no adjustment previews).
+ *  Shared by merge/flatten and the magic wand so both see what the viewport shows. */
+export function rasterizeLayersToCanvas(layers: Layer[], width: number, height: number): OffscreenCanvas | null {
+  const oc = new OffscreenCanvas(width, height);
+  const ctx = oc.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  const painter = new LayerPainter(false);
+  try {
+    for (let i = layers.length - 1; i >= 0; i--) {
+      painter.drawLayer(ctx as unknown as CanvasRenderingContext2D, layers[i]);
+    }
+  } finally {
+    painter.dispose();
+  }
+  return oc;
+}
+
 export class LayerPainter {
   // Scratch canvas reused across frames for mask alpha-compositing — resized
   // on demand rather than allocated per layer per frame.

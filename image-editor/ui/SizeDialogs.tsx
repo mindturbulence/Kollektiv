@@ -62,7 +62,7 @@ const DimensionInputs: React.FC<{
   const clamp = (v: number) => Math.max(1, Math.min(MAX_DIM, Math.round(v) || 1));
   return (
     <div className="flex items-center gap-3">
-      <label className="flex-1 flex flex-col gap-1 text-2xs font-mono uppercase tracking-wide text-base-content/60">
+      <label className="flex-1 flex flex-col gap-1 text-xs font-mono uppercase tracking-wide text-base-content/60">
         Width
         <input
           type="number"
@@ -78,7 +78,7 @@ const DimensionInputs: React.FC<{
         />
       </label>
       <span className="mt-4 text-base-content/60">×</span>
-      <label className="flex-1 flex flex-col gap-1 text-2xs font-mono uppercase tracking-wide text-base-content/60">
+      <label className="flex-1 flex flex-col gap-1 text-xs font-mono uppercase tracking-wide text-base-content/60">
         Height
         <input
           type="number"
@@ -143,7 +143,7 @@ export const ImageSizeDialog: React.FC<{ isOpen: boolean; onClose: () => void }>
         </>
       }
     >
-      <p className="text-2xs font-mono text-base-content/60">Resamples the active layer's pixels. Current: {current}px</p>
+      <p className="text-xs font-mono text-base-content/60">Resamples the active layer's pixels. Current: {current}px</p>
       <DimensionInputs
         width={width}
         height={height}
@@ -151,12 +151,12 @@ export const ImageSizeDialog: React.FC<{ isOpen: boolean; onClose: () => void }>
         onHeight={setHeight}
         constrainRatio={constrain ? { ratio } : undefined}
       />
-      <label className="flex items-center gap-2 text-2xs text-base-content/70 cursor-pointer">
+      <label className="flex items-center gap-2 text-xs text-base-content/70 cursor-pointer">
         <input type="checkbox" className="checkbox checkbox-xs checkbox-primary" checked={constrain} onChange={(e) => setConstrain(e.target.checked)} />
         Constrain proportions
       </label>
-      <p className="text-2xs font-mono text-base-content/60">Limit: {MAX_DIM}px per side</p>
-      {error && <p className="text-2xs font-mono text-error">{error}</p>}
+      <p className="text-xs font-mono text-base-content/60">Limit: {MAX_DIM}px per side</p>
+      {error && <p className="text-xs font-mono text-error">{error}</p>}
     </DialogShell>
   );
 };
@@ -205,10 +205,10 @@ export const CanvasSizeDialog: React.FC<{ isOpen: boolean; onClose: () => void }
         </>
       }
     >
-      <p className="text-2xs font-mono text-base-content/60">Changes the document bounds without resampling pixels. Current: {doc.width} × {doc.height}px</p>
+      <p className="text-xs font-mono text-base-content/60">Changes the document bounds without resampling pixels. Current: {doc.width} × {doc.height}px</p>
       <DimensionInputs width={width} height={height} onWidth={setWidth} onHeight={setHeight} />
       <div className="flex flex-col gap-1.5">
-        <span className="text-2xs font-mono uppercase tracking-wide text-base-content/60">Anchor (which edge stays put)</span>
+        <span className="text-xs font-mono uppercase tracking-wide text-base-content/60">Anchor (which edge stays put)</span>
         <div className="grid grid-cols-3 gap-1 w-fit">
           {ANCHORS.map((a) => (
             <button
@@ -224,7 +224,7 @@ export const CanvasSizeDialog: React.FC<{ isOpen: boolean; onClose: () => void }
         </div>
       </div>
       {grows && (
-        <p className="text-2xs font-mono text-base-content/60">
+        <p className="text-xs font-mono text-base-content/60">
           Growing adds transparent padding toward the anchored edge — useful for outpaint prep.
         </p>
       )}

@@ -12,7 +12,7 @@ import { SelectionEngine } from '../core/selection/SelectionEngine';
 import { TransformEngine, getGizmoHandles, hitTestGizmo } from '../core/transform/TransformEngine';
 import { TypeTool } from '../core/text/TypeTool';
 import { ShapeTool } from '../core/shape/ShapeTool';
-import { floodFillFromBitmap } from '../core/selection/FloodFill';
+import { magicWandSelect } from '../core/selection/FloodFill';
 import { GradientTool } from '../core/gradient/GradientTool';
 import { CloneStampTool } from '../core/paint/CloneStampTool';
 import { docToLayer } from '../core/geometry/docToLayer';
@@ -23,7 +23,6 @@ export interface CanvasViewportHandle {
   fitToViewport: () => void;
   zoomIn: () => void;
   zoomOut: () => void;
-  setWandTolerance: (v: number) => void;
 }
 
 interface CanvasViewportProps {
@@ -68,8 +67,6 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
   const [isTyping,   setIsTyping]   = useState(false);
   const isPanningRef = useRef(false);
   const lastPointerIdRef = useRef<number | null>(null);
-  // Magic Wand tolerance — exposed via ToolHeader; module-level ref shared without re-render
-  const wandToleranceRef = useRef(32);
 
   /** Maps a document-space point into the active layer's bitmap space (E1).
    *  Every pixel tool (brush, eraser, clone, mask, wand) stamps into the layer
@@ -136,7 +133,6 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
       const rect = canvas.getBoundingClientRect();
       renderer.zoomAt(100, rect.left + rect.width / 2, rect.top + rect.height / 2);
     },
-    setWandTolerance: (v: number) => { wandToleranceRef.current = v; },
   }), []);
 
   useEffect(() => {
@@ -233,17 +229,12 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
       return;
     }
 
-    if (activeTool === 'magic-wand' && activeLayerId && doc) {
-      const layer = findLayerById(doc.layers, activeLayerId) as ImageLayer | undefined;
-      if (layer?.type === 'image') {
-        const layerPt = getLayerPoint(pt, layer);
-        if (layerPt) {
-          const tolerance = wandToleranceRef.current;
-          floodFillFromBitmap(layer.bitmap, layerPt.x, layerPt.y, tolerance, true)
-            .then(sel => editorDispatch({ type: 'SET_SELECTION', selection: sel }))
-            .catch(console.error);
-        }
-      }
+    if (activeTool === 'magic-wand') {
+      // Doc-space fill (sampling the composite or the active layer per
+      // wandSettings) — a click outside the document leaves the selection alone.
+      magicWandSelect(pt.x, pt.y)
+        .then(sel => { if (sel) editorDispatch({ type: 'SET_SELECTION', selection: sel }); })
+        .catch(console.error);
       return;
     }
 
