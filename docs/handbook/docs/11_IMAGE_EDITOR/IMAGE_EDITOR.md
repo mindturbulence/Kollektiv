@@ -29,7 +29,8 @@ image-editor/
     autosave/           IndexedDB 'kollektiv-editor-autosave' v2 (PNG blobs + masks, formatVersion 2)
     thumbnails/         per-layer thumbnail cache
   ui/                   ImageEditorPage, EditorToolbar (Image/Select/Adjust menus), ToolRail, ToolHeader, CanvasViewport,
-                        LayersPanel (Layers | History tabs), HistoryPanel, adjustments/*Panel, dialogs, GalleryBridge, hooks/useEditorShortcuts
+                        LayersPanel (Looks | Layers | History tabs), HistoryPanel, looks/LooksPanel (lazy), editorMode (Quick/Pro),
+                        adjustments/*Panel, dialogs, GalleryBridge, hooks/useEditorShortcuts
 ```
 Non-destructive grading is the **look layer**; the old dormant `AdjustmentLayer` type (never created, never rendered) was removed on 2026-09-29 (Jev triage: remove, 0.97). The Levels/Curves/Hue-Sat/Exposure dialogs stay destructive.
 
@@ -45,6 +46,8 @@ Key rules:
 - **The renderer skips frames whose store state is unchanged.** Work that changes pixels without dispatching (brush and clone strokes) must request a forced frame (`scheduleStrokeFrame`).
 - **Destructive vs undoable.** Every edit is a `HistoryCommand`; commands holding bitmaps declare them in `bitmapRefs` so the byte cap can account and free them.
 - **Dirty-rect stroke history.** Brush, eraser, mask and clone strokes keep only the stroked rectangle, before and after (`history/patchCommand.ts`); do/undo rebuild the layer bitmap from the current one plus the patch (`transferToImageBitmap` keeps it synchronous). Exact because history is linear. Adjustments, fill/delete and structural edits still swap whole bitmaps.
+- **Quick / Pro** (`ui/editorMode.ts`) is view state only — never the document. Quick trims the tool rail (`QUICK_TOOLS`; keyboard shortcuts still reach every tool), folds the menus into **More** and opens the Looks tab. Opening an image switches to Quick, a blank document to Pro. E2E tests that use menus/layers call `toPro(page)` after opening.
+- **Looks panel:** click replaces the active look (`LayerManager.applyLook`), Shift+click stacks; consecutive browsing clicks merge into one undo step via `HistoryManager.pushMergeable` (same `mergeKey`, no redo branch; merged redo replays the older do first). Inspector drags use `setLookRecipeLive` + `commitLookRecipe` (one step). Before/after is `core/looks/compare.ts` (on-screen painter only). Thumbnails come from `core/looks/thumbnails.ts` (proxy of the non-look layers, one shared LookRenderer).
 - **History panel** jumps with `jumpTo`, which steps undo/redo so every command runs in order — never set `historyIndex` directly.
 - Groups are one level deep and are **not composited as a unit** (children draw straight through).
 - The editor is its own chunk (`React.lazy` in `components/App.tsx`); `ag-psd` is a further lazy chunk loaded only when a PSD is opened.

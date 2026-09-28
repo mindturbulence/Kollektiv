@@ -7,6 +7,7 @@
 import React, { useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { dispatch, getSnapshot, subscribe } from '../core/store';
+import { useEditorMode, QUICK_TOOLS } from './editorMode';
 import type { ToolId } from '../core/types';
 import {
   MoveIcon, SquareDashedIcon, LassoIcon, LassoPolyIcon, WandIcon, CropIcon, BrushIcon, EraserIcon,
@@ -157,11 +158,13 @@ const FgBgSwatches: React.FC = () => {
 const ToolRail: React.FC = () => {
   const activeTool = useSyncExternalStore(subscribe, () => getSnapshot().activeTool);
   const [tip, setTip] = useState<TipState | null>(null);
+  const mode = useEditorMode();
+  const tools = mode === 'quick' ? TOOLS.filter(t => QUICK_TOOLS.has(t.tool)) : TOOLS;
 
   return (
     <div className="w-11 flex-shrink-0 flex flex-col items-stretch bg-base-100/85 backdrop-blur-md border-r border-base-content/5 overflow-y-auto overflow-x-hidden">
       <div className="flex flex-col items-stretch">
-        {TOOLS.map((def) => (
+        {tools.map((def) => (
           <ToolButton key={def.tool} def={def} activeTool={activeTool} onTip={setTip} />
         ))}
       </div>

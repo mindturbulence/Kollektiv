@@ -9,9 +9,9 @@ import { dispatch, getSnapshot, subscribe } from '../core/store';
 import * as HistoryManager from '../core/history/HistoryManager';
 import { ZOOM_STOPS, type AdjustmentPanel } from '../core/types';
 import { findLayerById } from '../core/layers/layerTree';
-import { fillSelection, deleteInSelection, addLookLayer } from '../core/layers/LayerManager';
-import { BUILTIN_LOOKS } from '../core/looks/builtins';
+import { fillSelection, deleteInSelection } from '../core/layers/LayerManager';
 import { SelectionEngine } from '../core/selection/SelectionEngine';
+import { useEditorMode, setEditorMode } from './editorMode';
 import {
   DocumentIcon, UndoIcon, RedoIcon, ChevronDownIcon,
   DownloadIcon, UploadIcon,
@@ -199,6 +199,29 @@ const ToolbarMenu: React.FC<{ label: string; items: MenuItem[] }> = ({ label, it
   );
 };
 
+/** Labelled segmented control (not an icon) so the mode is always legible —
+ *  the mitigation for Quick/Pro mode confusion (plan §5). */
+const ModeToggle: React.FC = () => {
+  const mode = useEditorMode();
+  return (
+    <div role="radiogroup" aria-label="Editor mode" className="flex border border-base-content/15">
+      {(['quick', 'pro'] as const).map((m) => (
+        <button
+          key={m}
+          type="button"
+          role="radio"
+          aria-checked={mode === m}
+          className={`h-7 px-2.5 text-xs font-mono ${mode === m ? 'bg-primary/15 text-primary' : 'text-base-content/60 hover:text-base-content'}`}
+          title={m === 'quick' ? 'Quick edit: looks and a few tools' : 'Pro: every tool and menu'}
+          onClick={() => setEditorMode(m)}
+        >
+          {m === 'quick' ? 'Quick' : 'Pro'}
+        </button>
+      ))}
+    </div>
+  );
+};
+
 const UndoRedoGroup: React.FC = () => {
   const canUndo = useSyncExternalStore(subscribe, () => HistoryManager.canUndo());
   const canRedo = useSyncExternalStore(subscribe, () => HistoryManager.canRedo());
@@ -242,6 +265,28 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
   const activeHasMask = activeLayer?.type === 'image' && !!activeLayer.mask;
   const noDoc = 'Open or create a document first';
   const noSelection = 'Make a selection first';
+  const mode = useEditorMode();
+
+  const imageItems: MenuItem[] = [
+    { label: 'Image Size…', shortcut: 'Ctrl+J', disabled: !hasDoc, reason: noDoc, onSelect: onImageSize },
+    { label: 'Canvas Size…', shortcut: 'Ctrl+K', disabled: !hasDoc, reason: noDoc, onSelect: onCanvasSize },
+    { label: 'Crop to Selection', shortcut: 'Ctrl+Shift+C', disabled: !hasSelection, reason: noSelection, onSelect: onCropToSelection },
+    { label: 'Export Layer Mask…', shortcut: 'Ctrl+Shift+M', disabled: !activeHasMask, reason: 'The active layer has no mask', onSelect: onExportMask },
+  ];
+  const selectItems: MenuItem[] = [
+    { label: 'Deselect', shortcut: 'Ctrl+D', disabled: !hasSelection, reason: noSelection, onSelect: () => SelectionEngine.deselect() },
+    // Menu-only: Ctrl+Shift+I is the browser's DevTools shortcut.
+    { label: 'Invert Selection', disabled: !hasSelection, reason: noSelection, onSelect: () => void SelectionEngine.invertSelection() },
+    { label: 'Fill with Foreground', shortcut: 'Shift+F5', disabled: !hasSelection, reason: noSelection, onSelect: () => void fillSelection() },
+    { label: 'Delete Contents', shortcut: 'Del', disabled: !hasSelection, reason: noSelection, onSelect: () => void deleteInSelection() },
+  ];
+  const adjustItems: MenuItem[] = ADJUSTMENTS.map(({ panel, label, shortcut }) => ({
+    label,
+    shortcut,
+    disabled: !activeIsImage,
+    reason: 'Select an image layer to adjust',
+    onSelect: () => dispatch({ type: 'OPEN_ADJUSTMENT', panel }),
+  }));
 
   return (
     // relative z-raised: backdrop-blur makes this a stacking context, so its
@@ -259,45 +304,18 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
       <DocumentTitle />
 
+      <ModeToggle />
+
       <div className="flex items-center border-l border-base-content/10 pl-1">
-        <ToolbarMenu
-          label="Image"
-          items={[
-            { label: 'Image Size…', shortcut: 'Ctrl+J', disabled: !hasDoc, reason: noDoc, onSelect: onImageSize },
-            { label: 'Canvas Size…', shortcut: 'Ctrl+K', disabled: !hasDoc, reason: noDoc, onSelect: onCanvasSize },
-            { label: 'Crop to Selection', shortcut: 'Ctrl+Shift+C', disabled: !hasSelection, reason: noSelection, onSelect: onCropToSelection },
-            { label: 'Export Layer Mask…', shortcut: 'Ctrl+Shift+M', disabled: !activeHasMask, reason: 'The active layer has no mask', onSelect: onExportMask },
-          ]}
-        />
-        <ToolbarMenu
-          label="Select"
-          items={[
-            { label: 'Deselect', shortcut: 'Ctrl+D', disabled: !hasSelection, reason: noSelection, onSelect: () => SelectionEngine.deselect() },
-            // Menu-only: Ctrl+Shift+I is the browser's DevTools shortcut.
-            { label: 'Invert Selection', disabled: !hasSelection, reason: noSelection, onSelect: () => void SelectionEngine.invertSelection() },
-            { label: 'Fill with Foreground', shortcut: 'Shift+F5', disabled: !hasSelection, reason: noSelection, onSelect: () => void fillSelection() },
-            { label: 'Delete Contents', shortcut: 'Del', disabled: !hasSelection, reason: noSelection, onSelect: () => void deleteInSelection() },
-          ]}
-        />
-        <ToolbarMenu
-          label="Adjust"
-          items={[
-            ...ADJUSTMENTS.map(({ panel, label, shortcut }) => ({
-              label,
-              shortcut,
-              disabled: !activeIsImage,
-              reason: 'Select an image layer to adjust',
-              onSelect: () => dispatch({ type: 'OPEN_ADJUSTMENT', panel }),
-            })),
-            // Phase 1 entry for looks; the Looks panel (Quick mode) replaces this.
-            ...BUILTIN_LOOKS.map((look) => ({
-              label: `Look: ${look.name}`,
-              disabled: !hasDoc,
-              reason: noDoc,
-              onSelect: () => void addLookLayer(look.build()),
-            })),
-          ]}
-        />
+        {mode === 'quick' ? (
+          <ToolbarMenu label="More" items={[...imageItems, ...selectItems, ...adjustItems]} />
+        ) : (
+          <>
+            <ToolbarMenu label="Image" items={imageItems} />
+            <ToolbarMenu label="Select" items={selectItems} />
+            <ToolbarMenu label="Adjust" items={adjustItems} />
+          </>
+        )}
       </div>
 
       <div className="border-l border-base-content/10 pl-2">

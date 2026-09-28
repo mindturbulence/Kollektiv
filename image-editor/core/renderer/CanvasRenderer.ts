@@ -16,6 +16,7 @@ import { ZOOM_STOPS } from '../types';
 import * as ThumbnailCache from '../thumbnails/ThumbnailCache';
 import { SelectionEngine } from '../selection/SelectionEngine';
 import { onLutsChanged } from '../looks/lutRegistry';
+import { onLookBypassChanged } from '../looks/compare';
 import { getGizmoHandles, docToCanvas } from '../transform/TransformEngine';
 import { findLayerById } from '../layers/layerTree';
 import { LayerPainter } from './LayerPainter';
@@ -36,6 +37,7 @@ export class CanvasRenderer {
 
   private unsubscribe: (() => void) | null = null;
   private offLuts: (() => void) | null = null;
+  private offBypass: (() => void) | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private rafId: number | null = null;
   private lastState: EditorState | null = null;
@@ -68,6 +70,7 @@ export class CanvasRenderer {
     CloneStampTool.setRequestFrame(this.scheduleStrokeFrame);
     // A lazily fetched LUT arrives without a store change — repaint for it.
     this.offLuts = onLutsChanged(this.scheduleStrokeFrame);
+    this.offBypass = onLookBypassChanged(this.scheduleStrokeFrame); // before/after toggles
     this.syncSize();
 
     const container = this.canvas.parentElement;
@@ -94,6 +97,8 @@ export class CanvasRenderer {
       this.unsubscribe();
       this.offLuts?.();
       this.offLuts = null;
+      this.offBypass?.();
+      this.offBypass = null;
       this.unsubscribe = null;
     }
     BrushEngine.setRequestFrame(null);

@@ -9,6 +9,7 @@
 import { parseCube, type CubeLut } from './cube';
 import { buildProcLut } from './procLuts';
 import type { Layer } from '../types';
+import type { LookRecipe } from './recipe';
 
 const _luts = new Map<string, CubeLut>();
 const _pending = new Map<string, Promise<void>>();
@@ -54,13 +55,17 @@ export function loadLut(assetId: string): Promise<void> {
 /** Loads every LUT the looks in `layers` need — call before an uncached,
  *  one-shot render (export, flatten, merge, wand) so it can't miss one. */
 export async function preloadLuts(layers: Layer[]): Promise<void> {
-  const ids: string[] = [];
+  const recipes: LookRecipe[] = [];
   const walk = (list: Layer[]) => list.forEach(l => {
     if (l.type === 'group') walk(l.children);
-    if (l.type === 'look') l.recipe.components.forEach(c => { if (c.kind === 'lut' && c.enabled) ids.push(c.assetId); });
+    if (l.type === 'look') recipes.push(l.recipe);
   });
   walk(layers);
-  await Promise.all(ids.map(id => (getLut(id) ? undefined : loadLut(id))));
+  await Promise.all(recipes.map(preloadRecipeLuts));
+}
+
+export async function preloadRecipeLuts(recipe: LookRecipe): Promise<void> {
+  await Promise.all(recipe.components.map(c => (c.kind === 'lut' && c.enabled && !getLut(c.assetId) ? loadLut(c.assetId) : undefined)));
 }
 
 export function onLutsChanged(fn: () => void): () => void {

@@ -16,6 +16,9 @@ import { getThumbnail } from '../core/thumbnails/ThumbnailCache';
 import { findLayerById } from '../core/layers/layerTree';
 import * as LayerManager from '../core/layers/LayerManager';
 import HistoryPanel from './HistoryPanel';
+import { useEditorMode } from './editorMode';
+// Own chunk: the gallery, thumbnail renderer and look inspector load on first use.
+const LooksPanel = React.lazy(() => import('./looks/LooksPanel'));
 import {
   EyeIcon, PlusIcon, DeleteIcon, LockIcon, LockOpenIcon, PhotoIcon,
   FolderClosedIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon,
@@ -234,7 +237,10 @@ const LayersPanel: React.FC = () => {
   const activeLayerId = useSyncExternalStore(subscribe, () => getSnapshot().activeLayerId);
   const paintTarget = useSyncExternalStore(subscribe, () => getSnapshot().paintTarget);
 
-  const [tab, setTab] = useState<'layers' | 'history'>('layers');
+  const mode = useEditorMode();
+  const [tab, setTab] = useState<'looks' | 'layers' | 'history'>(() => (mode === 'quick' ? 'looks' : 'layers'));
+  // Quick mode opens on Looks, Pro on Layers (plan §5); the tabs still switch freely.
+  useEffect(() => { setTab(mode === 'quick' ? 'looks' : 'layers'); }, [mode]);
   const [width, setWidth] = useState<number>(() => {
     const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
     const parsed = stored ? Number(stored) : DEFAULT_WIDTH;
@@ -386,7 +392,7 @@ const LayersPanel: React.FC = () => {
       />
       <div className="flex-1 flex flex-col min-w-0 border-l border-base-content/5">
         <header className="panel-header h-9 px-1 flex-shrink-0 flex items-stretch" role="tablist" aria-label="Right panel">
-          {(['layers', 'history'] as const).map((t) => (
+          {(['looks', 'layers', 'history'] as const).map((t) => (
             <button
               key={t}
               type="button"
@@ -397,12 +403,16 @@ const LayersPanel: React.FC = () => {
               }`}
               onClick={() => setTab(t)}
             >
-              {t === 'layers' ? 'Layers' : 'History'}
+              {t === 'looks' ? 'Looks' : t === 'layers' ? 'Layers' : 'History'}
             </button>
           ))}
         </header>
 
-        {tab === 'history' ? <HistoryPanel /> : (
+        {tab === 'looks' ? (
+          <React.Suspense fallback={<p className="px-3 py-4 text-xs font-mono text-base-content/60">Loading looks…</p>}>
+            <LooksPanel />
+          </React.Suspense>
+        ) : tab === 'history' ? <HistoryPanel /> : (
         <>
           <div className="px-3 py-2 flex flex-col gap-2 border-b border-base-content/5">
             <select

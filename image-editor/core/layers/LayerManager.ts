@@ -6,7 +6,7 @@
 // via HistoryManager.pushCommand, so all layer edits are undoable.
 
 import { dispatch, getSnapshot } from '../store';
-import { pushCommand } from '../history/HistoryManager';
+import { pushCommand, pushMergeable } from '../history/HistoryManager';
 import { findLayerById, findLayerLocation } from './layerTree';
 import type { BlendMode, HistoryCommand, ImageLayer, Layer, LayerMask, LookLayer, TextLayer, ShapeLayer, Rect } from '../types';
 import type { LookRecipe } from '../looks/recipe';
@@ -72,14 +72,65 @@ export function addLookLayer(recipe: LookRecipe): string | null {
     blendMode: 'normal',
     visible: true,
   };
-  pushCommand({
+  pushMergeable({
     id: crypto.randomUUID(),
     label: `Add look "${recipe.name}"`,
     timestamp: Date.now(),
+    mergeKey: `look:${layer.id}`, // browsing clicks on this look merge into this step
     do: () => dispatch({ type: 'ADD_LAYER', layer, insertAfterIndex: 0 }), // also makes it active
     undo: () => dispatch({ type: 'REMOVE_LAYER', layerId: layer.id }),
   });
   return layer.id;
+}
+
+function lookLayer(layerId: string): LookLayer | null {
+  const layer = findLayer(layerId);
+  return layer?.type === 'look' ? layer : null;
+}
+
+/** Replaces a look's recipe as one undo step; consecutive replacements of the
+ *  same look (browsing the gallery) merge into a single step. */
+export function setLookRecipe(layerId: string, recipe: LookRecipe): void {
+  const before = lookLayer(layerId)?.recipe;
+  if (!before || before === recipe) return;
+  pushMergeable({
+    id: crypto.randomUUID(),
+    label: `Look "${recipe.name}"`,
+    timestamp: Date.now(),
+    mergeKey: `look:${layerId}`,
+    do: () => dispatch({ type: 'SET_LOOK_RECIPE', layerId, recipe }),
+    undo: () => dispatch({ type: 'SET_LOOK_RECIPE', layerId, recipe: before }),
+  });
+}
+
+/** Gallery click (plan §5, Jev-decided): replace the active look, or add one
+ *  when the active layer isn't a look; `asNew` (Shift+click) always stacks. */
+export function applyLook(recipe: LookRecipe, asNew = false): string | null {
+  const { activeLayerId } = getSnapshot();
+  const active = activeLayerId ? lookLayer(activeLayerId) : null;
+  if (active && !asNew) {
+    setLookRecipe(active.id, recipe);
+    return active.id;
+  }
+  return addLookLayer(recipe);
+}
+
+/** Inspector slider drag: update without history (like opacity, review H8)… */
+export function setLookRecipeLive(layerId: string, recipe: LookRecipe): void {
+  dispatch({ type: 'SET_LOOK_RECIPE', layerId, recipe });
+}
+
+/** …then one command on release, from the recipe the drag started with. */
+export function commitLookRecipe(layerId: string, before: LookRecipe): void {
+  const after = lookLayer(layerId)?.recipe;
+  if (!after || after === before) return;
+  pushCommand({
+    id: crypto.randomUUID(),
+    label: `Edit look "${after.name}"`,
+    timestamp: Date.now(),
+    do: () => dispatch({ type: 'SET_LOOK_RECIPE', layerId, recipe: after }),
+    undo: () => dispatch({ type: 'SET_LOOK_RECIPE', layerId, recipe: before }),
+  });
 }
 
 /** Removes the given layer from wherever it lives in the tree (top-level or

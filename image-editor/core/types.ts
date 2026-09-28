@@ -270,6 +270,9 @@ export interface HistoryCommand {
    *  surviving command and no live layer reference. Optional — structural
    *  commands (no bitmaps) may omit it. Values may nest (objects/arrays). */
   bitmapRefs?: unknown;
+  /** Commands with the same key pushed back-to-back merge into one undo step
+   *  (HistoryManager.pushMergeable) — e.g. clicking through looks while browsing. */
+  mergeKey?: string;
 }
 
 // ─── Editor Actions (dispatched to EditorStore) ───────────────────────────────
@@ -319,7 +322,10 @@ export type EditorAction =
   | { type: 'PUSH_HISTORY'; command: HistoryCommand }
   | { type: 'UNDO' }
   | { type: 'REDO' }
-  | { type: 'CLEAR_HISTORY' };
+  | { type: 'CLEAR_HISTORY' }
+  /** Swaps the newest command (only when there is no redo branch). */
+  | { type: 'REPLACE_TOP_HISTORY'; command: HistoryCommand }
+  | { type: 'SET_LOOK_RECIPE'; layerId: string; recipe: LookRecipe };
 
 // ─── Editor State ─────────────────────────────────────────────────────────────
 

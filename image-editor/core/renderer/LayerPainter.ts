@@ -12,6 +12,7 @@ import { BrushEngine } from '../paint/BrushEngine';
 import { CloneStampTool } from '../paint/CloneStampTool';
 import { LookRenderer } from '../looks/LookRenderer';
 import { lutRegistryVersion } from '../looks/lutRegistry';
+import { isLookBypassed } from '../looks/compare';
 import { getSnapshot } from '../store';
 
 /** Renders `layers` (index 0 = topmost, drawn bottom-up) into a width×height
@@ -65,7 +66,7 @@ export class LayerPainter {
    *  (showAdjustmentPreviews) caches the result up to the topmost look. */
   drawLayers(ctx: CanvasRenderingContext2D, layers: Layer[]): void {
     let top = -1; // index of the topmost visible look (smallest index)
-    if (this.showAdjustmentPreviews) {
+    if (this.showAdjustmentPreviews && !isLookBypassed()) {
       for (let i = 0; i < layers.length; i++) {
         if (layers[i].type === 'look' && layers[i].visible) { top = i; break; }
       }
@@ -127,6 +128,7 @@ export class LayerPainter {
     const canvasEl = ctx.canvas;
     const w = canvasEl.width, h = canvasEl.height;
     if (w === 0 || h === 0 || layer.opacity <= 0 || layer.recipe.components.every(c => !c.enabled)) return;
+    if (this.showAdjustmentPreviews && isLookBypassed()) return; // before/after, on screen only
     if (this.lookRenderer === undefined) {
       try { this.lookRenderer = new LookRenderer(); } catch { this.lookRenderer = null; }
     }

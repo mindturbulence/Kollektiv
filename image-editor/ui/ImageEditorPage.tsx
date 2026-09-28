@@ -18,6 +18,7 @@ import { findLayerById } from '../core/layers/layerTree';
 import { getSourceItemMeta, loadGalleryImage, saveToGallery, willConvertToJpeg } from './GalleryBridge';
 import EditorToolbar from './EditorToolbar';
 import ToolRail from './ToolRail';
+import { setEditorMode } from './editorMode';
 import ToolHeader from './ToolHeader';
 import CanvasViewport, { type CanvasViewportHandle } from './CanvasViewport';
 import LayersPanel from './LayersPanel';
@@ -164,6 +165,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
           // Update-original target (E8): only meaningful for gallery sources.
           savedItemIdRef.current = openPayload.kind === 'gallery' ? openPayload.galleryItemId : null;
           loadDocument(doc);
+          setEditorMode(openPayload.kind === 'blank' ? 'pro' : 'quick'); // opened images start in Quick (owner decision)
           requestAnimationFrame(() => viewportRef.current?.fitToViewport());
         })
         .catch((err) => {
@@ -274,6 +276,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
       });
       sourceMetaRef.current = null;
       loadDocument(doc);
+      setEditorMode('quick');
       setIsNewDocOpen(false);
       requestAnimationFrame(() => viewportRef.current?.fitToViewport());
     } catch (err) {
@@ -389,6 +392,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
       try {
         const doc = await createBlankDocument(width, height, background);
         loadDocument(doc);
+        setEditorMode('pro'); // a blank canvas is a Pro workflow
         setIsNewDocOpen(false);
         requestAnimationFrame(() => viewportRef.current?.fitToViewport());
       } catch (err) {

@@ -86,6 +86,7 @@ test.describe('Image Editor entry', () => {
         await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
         await (await chooser).setFiles({ name: 'red-banner.png', mimeType: 'image/png', buffer: png });
         await expect(page.getByText('321 × 123px')).toBeVisible({ timeout: 15_000 });
+        await toPro(page);
 
         // Ctrl+Shift+M used to fall into the Ctrl+M (Curves) case.
         await page.keyboard.press('Control+Shift+M');
@@ -166,6 +167,11 @@ async function pixelAt(page: Page, docX: number, docY: number): Promise<number[]
 
 /** Fit-to-viewport runs a frame after the document opens; coordinates computed
  *  before it settles miss the canvas. Wait for the start dialog to leave and the zoom label to settle. */
+/** Opening an image starts in Quick mode; tests of menus/layers switch to Pro. */
+async function toPro(page: Page) {
+    await page.getByRole('radio', { name: 'Pro' }).click();
+}
+
 async function waitForFit(page: Page) {
     // The Open-or-Create dialog animates out after the file loads and would eat the first drag.
     await expect(page.getByRole('dialog', { name: /Open or Create/i })).toHaveCount(0, { timeout: 10_000 });
@@ -191,6 +197,7 @@ test('magic wand selection clips the brush, even on a blank layer', async ({ pag
     await expect(page.getByText('400 × 300px')).toBeVisible({ timeout: 15_000 });
 
     await waitForFit(page);
+    await toPro(page);
     // Paint on a fresh blank layer: the wand samples all layers, so it selects the disc.
     await page.getByRole('button', { name: 'New blank layer' }).click();
     await page.keyboard.press('w');
@@ -242,6 +249,7 @@ test('Invert Selection, History panel jumps, and Levels opening below the toolba
     await expect(page.getByText('400 × 300px')).toBeVisible({ timeout: 15_000 });
 
     await waitForFit(page);
+    await toPro(page);
     // Select the left half, then invert → the right half is selected.
     await page.keyboard.press('m');
     const a = await docToClient(page, 4, 4);
@@ -317,6 +325,7 @@ test('opens a layered PSD as a layered document', async ({ page }) => {
     await (await chooser).setFiles({ name: 'layers.psd', mimeType: 'image/vnd.adobe.photoshop', buffer: psd });
 
     await expect(page.getByText('300 × 200px')).toBeVisible({ timeout: 15_000 });
+    await toPro(page); // the layer list is on the Layers tab
     await expect(page.getByText('layers', { exact: true })).toBeVisible();
     const rows = page.locator('[draggable]');
     await expect(rows).toHaveCount(2);
@@ -341,21 +350,21 @@ test('a look layer grades what is below it, not what is above; strength and undo
     await waitForFit(page);
     const spread = (p: number[]) => Math.max(...p) - Math.min(...p);
 
-    // Grainy Mono: saturation −1 → the red half turns grey.
-    await page.getByRole('button', { name: 'Adjust', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Look: Grainy Mono' }).click();
-    await expect(page.locator('[draggable]').first()).toContainText('Grainy Mono');
+    // Quick mode opens on the Looks tab. Grainy Mono: saturation −1 → the red half turns grey.
+    await page.getByRole('option', { name: /Grainy Mono/ }).click();
+    await expect(page.getByRole('option', { name: /Grainy Mono/ })).toHaveAttribute('aria-selected', 'true');
     await expect.poll(async () => spread(await pixelAt(page, 300, 150)), { timeout: 5_000 }).toBeLessThan(40);
 
     // Strength = layer opacity: 0 shows the original red.
-    const slider = page.locator('input[type=range]').first();
+    const slider = page.getByLabel('Look strength');
     await slider.fill('0');
     await expect.poll(async () => (await pixelAt(page, 300, 150))[0], { timeout: 5_000 }).toBeGreaterThan(150);
     await slider.fill('100');
     await expect.poll(async () => spread(await pixelAt(page, 300, 150)), { timeout: 5_000 }).toBeLessThan(40);
 
     // Red foreground (via the Shape tool's fill input), then the brush.
-    // Tool-rail clicks, not shortcuts: focus is still in the opacity slider, where keys are ignored.
+    // Pro mode for the Shape tool; tool-rail clicks, not shortcuts: focus is still in the slider.
+    await toPro(page);
     await page.getByRole('button', { name: /^Shape/ }).first().click();
     await page.locator('input[type=color]').first().fill('#ff2020');
     const draw = async (x0: number, x1: number, y: number) => {
@@ -367,6 +376,7 @@ test('a look layer grades what is below it, not what is above; strength and undo
     };
 
     // Paint ABOVE the look (a new top layer): the red stroke stays saturated.
+    await page.getByRole('tab', { name: 'Layers' }).click();
     await page.getByRole('button', { name: 'New blank layer' }).click();
     await page.getByRole('button', { name: /^Brush/ }).first().click();
     await draw(220, 380, 60);
@@ -401,6 +411,8 @@ test('LUT looks: a procedural LUT grades at once; a bundled .cube LUT loads lazi
         x.fillStyle = '#c03030'; x.fillRect(200, 0, 200, 300);
         return c.toDataURL('image/png');
     })).split(',')[1], 'base64');
+    // The gallery fetches the bundled file: LUT lazily once the Looks panel renders thumbnails.
+    const lutRequest = page.waitForRequest(r => r.url().endsWith('/looks/cold-vs-warm.cube'), { timeout: 30_000 });
     const chooser = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
     await (await chooser).setFiles({ name: 'lut.png', mimeType: 'image/png', buffer: png });
@@ -410,16 +422,67 @@ test('LUT looks: a procedural LUT grades at once; a bundled .cube LUT loads lazi
     const original = await pixelAt(page, 300, 150);
 
     // proc:hard-mono → grey.
-    await page.getByRole('button', { name: 'Adjust', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Look: Hard Mono' }).click();
+    await page.getByRole('option', { name: /Hard Mono/ }).click();
     await expect.poll(async () => spread(await pixelAt(page, 300, 150)), { timeout: 5_000 }).toBeLessThan(40);
 
-    // Swap for file:cold-vs-warm (fetched from /looks/): hide Hard Mono, add Cold vs Warm.
-    const lutRequest = page.waitForRequest(r => r.url().endsWith('/looks/cold-vs-warm.cube'));
-    await page.getByRole('button', { name: /^Hide layer/ }).first().click();
-    await page.getByRole('button', { name: 'Adjust', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Look: Cold vs Warm' }).click();
+    // Cold vs Warm (file:, fetched from /looks/ — the gallery thumbnails may already
+    // have fetched it): the click replaces Hard Mono on the same look layer.
     await lutRequest;
+    await page.getByRole('option', { name: /Cold vs Warm/ }).click();
     // Graded (−67% saturation) but not grey, and different from the original red.
     await expect.poll(async () => spread(await pixelAt(page, 300, 150)), { timeout: 8_000 }).toBeLessThan(spread(original) - 40);
+});
+
+test('Quick mode: trimmed tools, More menu, Looks gallery, merged browsing undo, compare and inspector', async ({ page }) => {
+    await bootToAppShell(page, 'image_editor');
+    const png = Buffer.from((await page.evaluate(() => {
+        const c = document.createElement('canvas'); c.width = 400; c.height = 300;
+        const x = c.getContext('2d')!;
+        x.fillStyle = '#2040c0'; x.fillRect(0, 0, 200, 300);
+        x.fillStyle = '#c03030'; x.fillRect(200, 0, 200, 300);
+        return c.toDataURL('image/png');
+    })).split(',')[1], 'base64');
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
+    await (await chooser).setFiles({ name: 'quick.png', mimeType: 'image/png', buffer: png });
+    await expect(page.getByText('400 × 300px')).toBeVisible({ timeout: 15_000 });
+    await waitForFit(page);
+    const spread = (p: number[]) => Math.max(...p) - Math.min(...p);
+
+    // Opened images start in Quick: trimmed rail, one More menu, Looks tab.
+    await expect(page.getByRole('radio', { name: 'Quick' })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('button', { name: /^Marquee/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^Brush/ })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'More', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Adjust', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Looks' })).toHaveAttribute('aria-selected', 'true');
+    // All 16 thumbnails render on the user's image.
+    await expect(page.getByRole('option').locator('canvas')).toHaveCount(16, { timeout: 20_000 });
+    await page.screenshot({ path: 'test-results/looks-quick-mode.png' });
+
+    // Browsing three looks = one undo step.
+    await page.getByRole('option', { name: /Warm Portrait/ }).click();
+    await page.getByRole('option', { name: /Teal & Orange/ }).click();
+    await page.getByRole('option', { name: /Hard Mono/ }).click();
+    await expect.poll(async () => spread(await pixelAt(page, 300, 150)), { timeout: 5_000 }).toBeLessThan(40);
+
+    // Hold Compare → the original red; release → graded again.
+    const compare = page.getByRole('button', { name: 'Compare' });
+    const box = (await compare.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await expect.poll(async () => spread(await pixelAt(page, 300, 150)), { timeout: 5_000 }).toBeGreaterThan(100);
+    await page.mouse.up();
+    await expect.poll(async () => spread(await pixelAt(page, 300, 150)), { timeout: 5_000 }).toBeLessThan(40);
+
+    // Inspector: turning the film grade off brings the colour back.
+    await page.getByRole('button', { name: /Adjust look/ }).click();
+    await page.getByRole('checkbox', { name: 'Film grade' }).uncheck();
+    await expect.poll(async () => spread(await pixelAt(page, 300, 150)), { timeout: 5_000 }).toBeGreaterThan(100);
+
+    await page.getByRole('tab', { name: 'History' }).click();
+    // Three browsing clicks merged into one step, labelled with the look they ended on.
+    await expect(page.getByRole('button', { name: /^(Add look|Look) "/ })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Look "Hard Mono"', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Edit look/ })).toHaveCount(1); // the inspector toggle
 });

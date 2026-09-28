@@ -518,6 +518,24 @@ export function dispatch(action: EditorAction): void {
       break;
     }
 
+    case 'REPLACE_TOP_HISTORY': {
+      if (prev.historyIndex < 0 || prev.historyIndex !== prev.history.length - 1) return;
+      const history = [...prev.history];
+      history[prev.historyIndex] = action.command;
+      _state = { ...prev, history };
+      break;
+    }
+
+    case 'SET_LOOK_RECIPE': {
+      if (!prev.document) return;
+      const target = findLayerById(prev.document.layers, action.layerId);
+      if (!target || target.type !== 'look') return;
+      const layers = updateLayerById(prev.document.layers, action.layerId, { recipe: action.recipe, name: action.recipe.name } as Partial<Layer>);
+      if (layers === prev.document.layers) return;
+      _state = { ...prev, isDirty: true, document: { ...prev.document, layers } };
+      break;
+    }
+
     case 'CLEAR_HISTORY': {
       if (prev.history.length === 0) return;
       closeDroppedHistoryBitmaps(prev.history, collectDocumentBitmaps(prev.document));

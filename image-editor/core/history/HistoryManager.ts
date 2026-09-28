@@ -19,6 +19,26 @@ export function pushCommand(command: HistoryCommand): void {
   command.do();
 }
 
+/** Like pushCommand, but if the newest command (with no redo branch) has the
+ *  same `mergeKey`, the two collapse into one undo step: undo() is the older
+ *  command's, do() replays the older do() then this one (so a redo after
+ *  "add look" + "change recipe" re-adds the layer before restyling it). */
+export function pushMergeable(command: HistoryCommand): void {
+  const { history, historyIndex } = getSnapshot();
+  const top = history[historyIndex];
+  if (command.mergeKey && top?.mergeKey === command.mergeKey && historyIndex === history.length - 1) {
+    const merged: HistoryCommand = {
+      ...command,
+      do: () => { top.do(); command.do(); },
+      undo: top.undo,
+    };
+    dispatch({ type: 'REPLACE_TOP_HISTORY', command: merged });
+    command.do();
+    return;
+  }
+  pushCommand(command);
+}
+
 /** Reverts the most recently applied command, if any. */
 export function undo(): void {
   const { history, historyIndex } = getSnapshot();
