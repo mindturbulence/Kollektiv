@@ -17,10 +17,13 @@ export const LOOK_CATEGORIES: { id: LookCategory; label: string }[] = [
 
 export interface BuiltinLook { key: string; name: string; category: LookCategory; build: () => LookRecipe }
 
-/** A LUT look with a touch of grain, the common finishing pair. */
+/** A LUT look with a touch of grain (unless `extra` brings its own), the common finishing pair. */
 const lutLook = (key: string, name: string, category: LookCategory, assetId: string, extra: LookComponent[] = []): BuiltinLook => ({
   key, name, category,
-  build: () => makeRecipe(name, [{ ...D.lut, assetId }, ...extra, { ...D.grain, amount: 0.15, size: 1.3 }]),
+  build: () => makeRecipe(name, [
+    { ...D.lut, assetId }, ...extra,
+    ...(extra.some(c => c.kind === 'grain') ? [] : [{ ...D.grain, amount: 0.15, size: 1.3 }]),
+  ]),
 });
 
 export const BUILTIN_LOOKS: BuiltinLook[] = [
@@ -37,6 +40,65 @@ export const BUILTIN_LOOKS: BuiltinLook[] = [
   lutLook('hard-mono', 'Hard Mono', 'film_bw', 'proc:hard-mono', [{ ...D.vignette, amount: -0.25 }]),
   lutLook('selenium', 'Selenium', 'film_bw', 'proc:selenium'),
   lutLook('sepia', 'Sepia', 'film_bw', 'proc:sepia'),
+  // Phase 3 looks built on halation/bloom, light leaks, fringe and frames
+  // (categories Jev-triaged 2026-09-29; Pastel Haze 0.59 → decided by hand).
+  lutLook('golden-hour', 'Golden Hour', 'film_color', 'proc:warm-portrait', [
+    { ...D.halation, amount: 0.35, radius: 20 }, { ...D.lightLeak, amount: 0.3, hue: 32, seed: 4 },
+  ]),
+  lutLook('expired-film', 'Expired Film', 'film_color', 'proc:faded-print', [
+    { ...D.lightLeak, amount: 0.55, hue: 18, seed: 11 }, { ...D.chromaticAberration, amount: 2 },
+    { ...D.grain, amount: 0.45, size: 1.8 }, { ...D.vignette, amount: -0.35 },
+  ]),
+  lutLook('lomo', 'Lomo', 'film_color', 'proc:vivid-slide', [
+    { ...D.vignette, amount: -0.6, midpoint: 0.45 }, { ...D.chromaticAberration, amount: 3 },
+    { ...D.lightLeak, amount: 0.25, hue: 350, seed: 3 },
+  ]),
+  lutLook('summer-leak', 'Summer Leak', 'film_color', 'proc:warm-portrait', [{ ...D.lightLeak, amount: 0.6, hue: 40, seed: 7 }]),
+  lutLook('neon-night', 'Neon Night', 'cinematic', 'proc:tungsten-night', [
+    { ...D.bloom, amount: 0.5, radius: 36, threshold: 0.55 }, { ...D.halation, amount: 0.4, radius: 18 },
+    { ...D.chromaticAberration, amount: 3 },
+  ]),
+  lutLook('anamorphic', 'Anamorphic', 'cinematic', 'proc:teal-orange', [
+    { ...D.bloom, amount: 0.3, radius: 64, threshold: 0.6 }, { ...D.chromaticAberration, amount: 4 },
+    { ...D.vignette, amount: -0.3 },
+  ]),
+  lutLook('instant-print', 'Instant Print', 'fade_matte', 'proc:cool-pastel', [
+    { ...D.fade, amount: 0.2 }, { ...D.frame, style: 'polaroid', width: 0.05, color: '#f6f3ec' },
+  ]),
+  lutLook('pastel-haze', 'Pastel Haze', 'fade_matte', 'proc:cool-pastel', [
+    { ...D.bloom, amount: 0.3, radius: 48, threshold: 0.5 }, { ...D.lightLeak, amount: 0.3, hue: 330, seed: 9 },
+  ]),
+  lutLook('noir-glow', 'Noir Glow', 'film_bw', 'proc:hard-mono', [
+    { ...D.bloom, amount: 0.35, radius: 40, threshold: 0.6 }, { ...D.grain, amount: 0.5, size: 1.8 },
+    { ...D.vignette, amount: -0.5 },
+  ]),
+  lutLook('darkroom-print', 'Darkroom Print', 'film_bw', 'proc:selenium', [
+    { ...D.grain, amount: 0.35, size: 1.6 }, { ...D.frame, style: 'rounded', width: 0.04, color: '#111111' },
+  ]),
+  // Procedural textures (Jev: Old Print → Film B&W 0.93; Dusty Film 0.49 → decided by hand).
+  lutLook('old-print', 'Old Print', 'film_bw', 'proc:sepia', [
+    { ...D.paper, amount: 0.5, scale: 7 }, { ...D.dust, amount: 0.45, scratches: 0.5, seed: 5 },
+    { ...D.vignette, amount: -0.35 },
+  ]),
+  lutLook('dusty-film', 'Dusty Film', 'fade_matte', 'proc:faded-print', [
+    { ...D.dust, amount: 0.5, scratches: 0.25, seed: 13 }, { ...D.grain, amount: 0.35, size: 1.6 },
+  ]),
+  {
+    key: 'dream-glow', name: 'Dream Glow', category: 'fade_matte',
+    build: () => makeRecipe('Dream Glow', [
+      { ...D.develop, contrast: -0.15 },
+      { ...D.bloom, amount: 0.6, radius: 80, threshold: 0.45 },
+      { ...D.fade, amount: 0.2 },
+    ]),
+  },
+  {
+    key: 'matte-frame', name: 'Matte Frame', category: 'fade_matte',
+    build: () => makeRecipe('Matte Frame', [
+      { ...D.curve, rgb: [[0, 0.1], [0.3, 0.3], [0.75, 0.78], [1, 0.95]] },
+      { ...D.fade, amount: 0.25 },
+      { ...D.frame, style: 'thin', width: 0.05, color: '#f4f1ea' },
+    ]),
+  },
   {
     key: 'warm-fade', name: 'Warm Fade', category: 'fade_matte',
     build: () => makeRecipe('Warm Fade', [

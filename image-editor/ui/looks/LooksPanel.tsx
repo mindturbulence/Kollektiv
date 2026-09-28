@@ -12,7 +12,9 @@ import { BUILTIN_LOOKS, LOOK_CATEGORIES, type LookCategory } from '../../core/lo
 import { renderThumbnails } from '../../core/looks/thumbnails';
 import { onLutsChanged } from '../../core/looks/lutRegistry';
 import { setLookBypass } from '../../core/looks/compare';
-import { COMPONENT_DEFAULTS, type LookComponent, type LookComponentKind, type LookRecipe } from '../../core/looks/recipe';
+import { varyRecipe } from '../../core/looks/randomize';
+import { useFavourites, toggleFavourite } from './favourites';
+import { COMPONENT_DEFAULTS, HSL_BAND_HUES, type FrameStyle, type HslBand, type LookComponent, type LookComponentKind, type LookRecipe } from '../../core/looks/recipe';
 import type { Layer, LookLayer } from '../../core/types';
 
 /** Only the non-look layers decide what the thumbnails look like. */
@@ -41,14 +43,24 @@ const INSPECTOR: Partial<Record<LookComponentKind, [string, number, number, numb
   fade: [['amount', 0, 1, 0.05, 'Fade']],
   vignette: [['amount', -1, 1, 0.05, 'Vignette']],
   grain: [['amount', 0, 1, 0.05, 'Grain'], ['size', 0.5, 6, 0.1, 'Grain size']],
+  chromaticAberration: [['amount', 0, 20, 0.5, 'Fringe']],
+  lightLeak: [['amount', 0, 1, 0.05, 'Leak'], ['hue', 0, 360, 5, 'Leak colour']],
+  halation: [['amount', 0, 1, 0.05, 'Halation'], ['radius', 2, 120, 1, 'Spread']],
+  bloom: [['amount', 0, 1, 0.05, 'Glow'], ['radius', 2, 200, 1, 'Spread'], ['threshold', 0, 1, 0.05, 'Threshold']],
+  frame: [['width', 0, 0.2, 0.005, 'Border']],
+  paper: [['amount', 0, 1, 0.05, 'Paper'], ['scale', 1, 40, 0.5, 'Fibre size']],
+  dust: [['amount', 0, 1, 0.05, 'Dust'], ['scratches', 0, 1, 0.25, 'Scratches']],
 };
-const ADDABLE: LookComponentKind[] = ['develop', 'splitTone', 'fade', 'vignette', 'grain'];
+const ADDABLE: LookComponentKind[] = ['develop', 'hsl', 'splitTone', 'fade', 'vignette', 'grain', 'halation', 'bloom', 'lightLeak', 'chromaticAberration', 'paper', 'dust', 'frame'];
 const KIND_LABEL: Record<LookComponentKind, string> = {
   develop: 'Develop', lut: 'Film grade', curve: 'Curve', splitTone: 'Split tone', fade: 'Fade', vignette: 'Vignette', grain: 'Grain',
+  chromaticAberration: 'Lens fringe', lightLeak: 'Light leak', halation: 'Halation', bloom: 'Glow', frame: 'Frame', hsl: 'Colour mix', paper: 'Paper', dust: 'Dust & scratches',
 };
+const BAND_NAMES = ['Red', 'Orange', 'Yellow', 'Green', 'Aqua', 'Blue', 'Purple', 'Magenta'];
 
 const Inspector: React.FC<{ look: LookLayer }> = ({ look }) => {
   const before = useRef<LookRecipe | null>(null);
+  const [band, setBand] = useState(0);
   const begin = () => { if (!before.current) before.current = look.recipe; };
   const commit = () => { if (before.current) { LayerManager.commitLookRecipe(look.id, before.current); before.current = null; } };
   const update = (index: number, patch: Partial<LookComponent>) => {
@@ -69,6 +81,43 @@ const Inspector: React.FC<{ look: LookLayer }> = ({ look }) => {
               onChange={e => { update(i, { enabled: e.target.checked }); commit(); }} />
             {KIND_LABEL[c.kind]}
           </label>
+          {c.enabled && c.kind === 'hsl' && (
+            <div className="flex flex-col gap-1.5 pl-6">
+              <div className="flex gap-1" role="radiogroup" aria-label="Colour band">
+                {HSL_BAND_HUES.map((h, b) => (
+                  <button key={h} type="button" role="radio" aria-checked={band === b} aria-label={BAND_NAMES[b]} title={BAND_NAMES[b]}
+                    className={`w-5 h-5 rounded-full ${band === b ? 'ring-2 ring-primary ring-offset-1 ring-offset-base-200' : ''}`}
+                    style={{ background: `hsl(${h} 80% 55%)` }} onClick={() => setBand(b)} />
+                ))}
+              </div>
+              {(['Hue', 'Saturation', 'Lightness'] as const).map((label, k) => (
+                <label key={label} className="flex items-center gap-2 text-xs font-mono text-base-content/60">
+                  <span className="w-24 shrink-0">{BAND_NAMES[band]} {label.toLowerCase()}</span>
+                  <input type="range" className="range range-xs range-primary flex-1"
+                    min={k === 0 ? -30 : -1} max={k === 0 ? 30 : 1} step={k === 0 ? 1 : 0.05}
+                    value={c.bands[band][k]}
+                    onChange={e => {
+                      const bands = c.bands.map((bv, bi) => (bi === band ? bv.map((v, vi) => (vi === k ? Number(e.target.value) : v)) : bv)) as HslBand[];
+                      update(i, { bands });
+                    }}
+                    onPointerUp={commit} onKeyUp={commit} onBlur={commit} />
+                </label>
+              ))}
+            </div>
+          )}
+          {c.enabled && c.kind === 'frame' && (
+            <label className="flex items-center gap-2 pl-6 text-xs font-mono text-base-content/60">
+              <span className="w-24 shrink-0">Style</span>
+              <select className="select select-xs select-bordered rounded-none flex-1 text-xs" value={c.style}
+                onChange={e => { update(i, { style: e.target.value as FrameStyle }); commit(); }}>
+                <option value="thin">Thin border</option>
+                <option value="polaroid">Instant print</option>
+                <option value="rounded">Rounded matte</option>
+              </select>
+              <input type="color" aria-label="Frame colour" className="w-7 h-6 bg-transparent" value={c.color}
+                onChange={e => update(i, { color: e.target.value })} onBlur={commit} />
+            </label>
+          )}
           {c.enabled && (INSPECTOR[c.kind] ?? []).map(([field, min, max, step, label]) => (
             <label key={field} className="flex items-center gap-2 pl-6 text-xs font-mono text-base-content/60">
               <span className="w-24 shrink-0">{label}</span>
@@ -95,7 +144,9 @@ const Inspector: React.FC<{ look: LookLayer }> = ({ look }) => {
 const LooksPanel: React.FC = () => {
   const document = useSyncExternalStore(subscribe, () => getSnapshot().document);
   const activeLayerId = useSyncExternalStore(subscribe, () => getSnapshot().activeLayerId);
-  const [category, setCategory] = useState<LookCategory | 'all'>('all');
+  const [category, setCategory] = useState<LookCategory | 'all' | 'favourites'>('all');
+  const favourites = useFavourites();
+  const randomSeed = useRef(1);
   const [thumbs, setThumbs] = useState<(ImageBitmap | undefined)[]>([]);
   const [gpuOk, setGpuOk] = useState(true);
   const [showInspector, setShowInspector] = useState(false);
@@ -154,12 +205,13 @@ const LooksPanel: React.FC = () => {
 
   const active = activeLayerId ? findLayerById(document.layers, activeLayerId) : undefined;
   const activeLook = active?.type === 'look' ? active : null;
-  const visible = BUILTIN_LOOKS.map((l, i) => ({ l, i })).filter(({ l }) => category === 'all' || l.category === category);
+  const visible = BUILTIN_LOOKS.map((l, i) => ({ l, i })).filter(({ l }) =>
+    category === 'all' || (category === 'favourites' ? favourites.has(l.key) : l.category === category));
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
       <div className="flex flex-wrap gap-1 px-2 py-2 border-b border-base-content/5" role="tablist" aria-label="Look categories">
-        {[{ id: 'all' as const, label: 'All' }, ...LOOK_CATEGORIES].map(c => (
+        {[{ id: 'all' as const, label: 'All' }, { id: 'favourites' as const, label: '★ Favourites' }, ...LOOK_CATEGORIES].map(c => (
           <button key={c.id} type="button" role="tab" aria-selected={category === c.id}
             className={`h-6 px-2 text-xs font-mono normal-case tracking-normal font-normal border ${category === c.id ? 'border-primary text-primary bg-primary/10' : 'border-base-content/15 text-base-content/70 hover:text-base-content'}`}
             onClick={() => setCategory(c.id)}>
@@ -169,17 +221,28 @@ const LooksPanel: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0 p-2">
+        {category === 'favourites' && visible.length === 0 && (
+          <p className="text-xs font-mono text-base-content/60 p-2">Star a look (☆ on its preview) to keep it here.</p>
+        )}
         <div className="grid grid-cols-2 gap-2" role="listbox" aria-label="Looks">
           {visible.map(({ l, i }) => {
             const selected = activeLook?.recipe.name === l.name;
+            const fav = favourites.has(l.key);
             return (
-              <button key={l.key} type="button" role="option" aria-selected={selected}
-                title={`${l.name} — click to apply, Shift+click to stack as a new look`}
-                className={`flex flex-col gap-1 p-1 text-left normal-case tracking-normal font-normal border ${selected ? 'border-primary' : 'border-transparent hover:border-base-content/30'}`}
-                onClick={e => LayerManager.applyLook(l.build(), e.shiftKey)}>
-                <Thumb bitmap={thumbs[i]} label={l.name} />
-                <span className="text-xs truncate">{l.name}</span>
-              </button>
+              <div key={l.key} className="relative">
+                <button type="button" role="option" aria-selected={selected}
+                  title={`${l.name} — click to apply, Shift+click to stack as a new look`}
+                  className={`w-full flex flex-col gap-1 p-1 text-left normal-case tracking-normal font-normal border ${selected ? 'border-primary' : 'border-transparent hover:border-base-content/30'}`}
+                  onClick={e => LayerManager.applyLook(l.build(), e.shiftKey)}>
+                  <Thumb bitmap={thumbs[i]} label={l.name} />
+                  <span className="text-xs truncate">{l.name}</span>
+                </button>
+                <button type="button" aria-pressed={fav} aria-label={fav ? `Unfavourite ${l.name}` : `Favourite ${l.name}`}
+                  className={`absolute top-2 right-2 w-6 h-6 flex items-center justify-center bg-black/45 text-sm normal-case tracking-normal font-normal ${fav ? 'text-primary' : 'text-white/70 hover:text-white'}`}
+                  onClick={() => toggleFavourite(l.key)}>
+                  {fav ? '★' : '☆'}
+                </button>
+              </div>
             );
           })}
         </div>
@@ -188,12 +251,17 @@ const LooksPanel: React.FC = () => {
       {activeLook && (
         // Capped so an open inspector never squeezes the gallery; scrolls on its own.
         <div className="flex flex-col gap-2 p-3 border-t border-base-content/5 max-h-[45%] overflow-y-auto shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="flex-1 text-sm truncate">{activeLook.recipe.name}</span>
+          <span className="text-sm truncate">{activeLook.recipe.name}</span>
+          <div className="flex flex-wrap items-center gap-1.5">
             <button type="button" className="h-6 px-2 text-xs font-mono normal-case tracking-normal font-normal border border-base-content/15 hover:border-primary hover:text-primary"
               onPointerDown={() => setLookBypass(true)} onPointerUp={() => setLookBypass(false)} onPointerLeave={() => setLookBypass(false)}
               title="Hold to see the image without its looks (or hold \)">
               Compare
+            </button>
+            <button type="button" className="h-6 px-2 text-xs font-mono normal-case tracking-normal font-normal border border-base-content/15 hover:border-primary hover:text-primary"
+              title="A seeded variation of this look (grain, fade, tints, leaks)"
+              onClick={() => { randomSeed.current += 1; LayerManager.setLookRecipe(activeLook.id, varyRecipe(activeLook.recipe, Date.now() + randomSeed.current)); }}>
+              Randomize
             </button>
             <button type="button" className="h-6 px-2 text-xs font-mono normal-case tracking-normal font-normal border border-base-content/15 hover:border-error hover:text-error"
               onClick={() => LayerManager.removeLayer(activeLook.id)}>

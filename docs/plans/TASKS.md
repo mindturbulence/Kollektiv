@@ -12,6 +12,8 @@ Legend: **S** small · **M** medium · **L** large. Check items off here; delete
 ## 1. Image Editor
 
 - [ ] **Looks / Quick-Edit / RAW** — the active plan: [2026-09-28-image-editor-looks.md](2026-09-28-image-editor-looks.md). **L** (~11.5–14 wks)
+  Phases 1–3 done (2026-09-29); next Phase 4 RAW/DNG, then Phase 5. Phase 0 still needs the owner's `#looks-lab` results.
+- [ ] **Optional: CC0 texture scans** (paper/dust/light-leak photos from ambientCG-style CC0 sources, listed in `public/looks/LICENSES.md`) if the procedural textures feel too clean. **S**
 
 ## 2. Assets Manager (Utilities → `assets_manager`)
 

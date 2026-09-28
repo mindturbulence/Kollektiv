@@ -456,8 +456,8 @@ test('Quick mode: trimmed tools, More menu, Looks gallery, merged browsing undo,
     await expect(page.getByRole('button', { name: 'More', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Adjust', exact: true })).toHaveCount(0);
     await expect(page.getByRole('tab', { name: 'Looks' })).toHaveAttribute('aria-selected', 'true');
-    // All 16 thumbnails render on the user's image.
-    await expect(page.getByRole('option').locator('canvas')).toHaveCount(16, { timeout: 20_000 });
+    // Every catalog thumbnail renders on the user's image.
+    await expect(page.getByRole('option').locator('canvas')).toHaveCount(30, { timeout: 30_000 });
     await page.screenshot({ path: 'test-results/looks-quick-mode.png' });
 
     // Browsing three looks = one undo step.
@@ -485,4 +485,90 @@ test('Quick mode: trimmed tools, More menu, Looks gallery, merged browsing undo,
     await expect(page.getByRole('button', { name: /^(Add look|Look) "/ })).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Look "Hard Mono"', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: /Edit look/ })).toHaveCount(1); // the inspector toggle
+});
+
+test('Phase 3 effects: glow spreads past highlights, frames and light leaks draw, randomize and favourites work', async ({ page }) => {
+    await bootToAppShell(page, 'image_editor');
+    // 400×300 black with a white square in the middle (150..250 × 100..200).
+    const png = Buffer.from((await page.evaluate(() => {
+        const c = document.createElement('canvas'); c.width = 400; c.height = 300;
+        const x = c.getContext('2d')!;
+        x.fillStyle = '#000'; x.fillRect(0, 0, 400, 300);
+        x.fillStyle = '#fff'; x.fillRect(150, 100, 100, 100);
+        return c.toDataURL('image/png');
+    })).split(',')[1], 'base64');
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
+    await (await chooser).setFiles({ name: 'fx.png', mimeType: 'image/png', buffer: png });
+    await expect(page.getByText('400 × 300px')).toBeVisible({ timeout: 15_000 });
+    await waitForFit(page);
+    const lum = (p: number[]) => (p[0] + p[1] + p[2]) / 3;
+    const beside = await pixelAt(page, 262, 150); // 12 px right of the square — black before
+
+    // Neon Night: bloom + halation spread light past the highlight.
+    await page.getByRole('option', { name: /Neon Night/ }).click();
+    await expect.poll(async () => lum(await pixelAt(page, 262, 150)), { timeout: 8_000 }).toBeGreaterThan(lum(beside) + 12);
+
+    // Instant Print: an off-white instant-print frame with a thick bottom border.
+    await page.getByRole('option', { name: /Instant Print/ }).click();
+    await expect.poll(async () => lum(await pixelAt(page, 200, 290)), { timeout: 8_000 }).toBeGreaterThan(220);
+    expect(lum(await pixelAt(page, 5, 150))).toBeGreaterThan(220);          // side border
+    // Darkroom Print: a black rounded border.
+    await page.getByRole('option', { name: /Darkroom Print/ }).click();
+    await expect.poll(async () => lum(await pixelAt(page, 200, 296)), { timeout: 8_000 }).toBeLessThan(30);
+
+    // Summer Leak: the black edges pick up a warm leak.
+    await page.getByRole('option', { name: /Summer Leak/ }).click();
+    await expect.poll(async () => {
+        const px = await Promise.all([[20, 20], [380, 20], [20, 280], [380, 280], [200, 20], [20, 150]].map(([x, y]) => pixelAt(page, x, y)));
+        return Math.max(...px.map(p => p[0] - p[2]));                          // warm: red above blue somewhere
+    }, { timeout: 8_000 }).toBeGreaterThan(15);
+
+    // Randomize changes the look (grain/leak reseed) — the image changes.
+    const before = await Promise.all([[20, 20], [380, 280], [200, 20]].map(([x, y]) => pixelAt(page, x, y)));
+    await page.getByRole('button', { name: 'Randomize' }).click();
+    await expect.poll(async () => {
+        const after = await Promise.all([[20, 20], [380, 280], [200, 20]].map(([x, y]) => pixelAt(page, x, y)));
+        return after.some((p, i) => p.some((v, j) => Math.abs(v - before[i][j]) > 3));
+    }, { timeout: 8_000 }).toBe(true);
+
+    // Favourites: star one look and filter to it.
+    await page.getByRole('button', { name: 'Favourite Lomo' }).click();
+    await page.getByRole('tab', { name: /Favourites/ }).click();
+    await expect(page.getByRole('option')).toHaveCount(1);
+    await expect(page.getByRole('option', { name: /Lomo/ })).toBeVisible();
+
+    // Old Print (procedural paper + dust): a flat black area gains texture.
+    await page.getByRole('tab', { name: 'All', exact: true }).click();
+    await page.getByRole('option', { name: /Old Print/ }).click();
+    await expect.poll(async () => {
+        const px = await Promise.all([30, 45, 60, 75, 90, 105, 120].map(x => pixelAt(page, x, 40)));
+        const l = px.map(p => p[0] + p[1] + p[2]);
+        return Math.max(...l) - Math.min(...l);
+    }, { timeout: 8_000 }).toBeGreaterThan(3);
+});
+
+test('HSL colour mix: desaturating the red band greys reds and leaves blues', async ({ page }) => {
+    await bootToAppShell(page, 'image_editor');
+    const png = Buffer.from((await page.evaluate(() => {
+        const c = document.createElement('canvas'); c.width = 400; c.height = 300;
+        const x = c.getContext('2d')!;
+        x.fillStyle = '#2040c0'; x.fillRect(0, 0, 200, 300);
+        x.fillStyle = '#c03030'; x.fillRect(200, 0, 200, 300);
+        return c.toDataURL('image/png');
+    })).split(',')[1], 'base64');
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
+    await (await chooser).setFiles({ name: 'hsl.png', mimeType: 'image/png', buffer: png });
+    await expect(page.getByText('400 × 300px')).toBeVisible({ timeout: 15_000 });
+    await waitForFit(page);
+    const spread = (p: number[]) => Math.max(...p) - Math.min(...p);
+
+    await page.getByRole('option', { name: /Soft Matte/ }).click();            // a look without a LUT
+    await page.getByRole('button', { name: /Adjust look/ }).click();
+    await page.getByRole('button', { name: '+ Colour mix' }).click();
+    await page.getByRole('radio', { name: 'Red' }).click();
+    await page.getByLabel(/Red saturation/).fill('-1');
+    await expect.poll(async () => spread(await pixelAt(page, 300, 150)), { timeout: 5_000 }).toBeLessThan(25);
+    expect(spread(await pixelAt(page, 100, 150))).toBeGreaterThan(80);           // blue half keeps its colour
 });

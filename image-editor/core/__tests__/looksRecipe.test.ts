@@ -52,7 +52,7 @@ describe('parseRecipe', () => {
       formatVersion: LOOK_FORMAT_VERSION, name: 'X',
       components: [
         { kind: 'develop', exposure: 99 },
-        { kind: 'halation', threshold: 0.8 },
+        { kind: 'from-a-newer-build', threshold: 0.8 },
         { kind: 'lut', strength: 0.5 },
         { kind: 'fade', amount: -3, enabled: false },
         { kind: 'curve', rgb: [[1, 1], [0, 0.2], 'x'] },
@@ -107,5 +107,50 @@ describe('procedural LUTs and the built-in catalog', () => {
     globalThis.fetch = (() => new Promise(() => {})) as typeof fetch; // never resolves
     expect(getLut('file:cold-vs-warm')).toBeUndefined();
     globalThis.fetch = orig;
+  });
+});
+
+describe('varyRecipe', () => {
+  it('is deterministic per seed, stays in range and keeps structure', async () => {
+    const { varyRecipe } = await import('../looks/randomize');
+    const { BUILTIN_LOOKS } = await import('../looks/builtins');
+    const base = BUILTIN_LOOKS.find(l => l.key === 'expired-film')!.build();
+    const a = varyRecipe(base, 42), b = varyRecipe(base, 42), c = varyRecipe(base, 43);
+    expect(a).toEqual(b);
+    expect(a).not.toEqual(c);
+    expect(a.components.map(x => x.kind)).toEqual(base.components.map(x => x.kind));
+    // Varied recipes are still valid recipes (parseRecipe clamps nothing away).
+    expect(parseRecipe(JSON.parse(JSON.stringify(a)))).toEqual(a);
+  });
+
+  it('no built-in look carries a duplicate component kind', async () => {
+    const { BUILTIN_LOOKS } = await import('../looks/builtins');
+    for (const l of BUILTIN_LOOKS) {
+      const kinds = l.build().components.map(c => c.kind);
+      expect(new Set(kinds).size, l.key).toBe(kinds.length);
+    }
+  });
+});
+
+describe('hsl component', () => {
+  it('parses to exactly 8 clamped bands', () => {
+    const r = parseRecipe({ formatVersion: LOOK_FORMAT_VERSION, components: [{ kind: 'hsl', bands: [[90, -5, 0.5], 'x', [1, 1, 1]] }] })!;
+    const hsl = r.components[0] as Extract<typeof r.components[number], { kind: 'hsl' }>;
+    expect(hsl.bands).toHaveLength(8);
+    expect(hsl.bands[0]).toEqual([30, -1, 0.5]);
+    expect(hsl.bands[1]).toEqual([0, 0, 0]);
+    expect(hsl.bands[2]).toEqual([1, 1, 1]);
+  });
+});
+
+describe('texture components', () => {
+  it('parses paper and dust with clamping and defaults', () => {
+    const r = parseRecipe({ formatVersion: LOOK_FORMAT_VERSION, components: [
+      { kind: 'paper', amount: 9, scale: 0 }, { kind: 'dust', scratches: 0.5 },
+    ] })!;
+    expect(r.components).toEqual([
+      { kind: 'paper', enabled: true, amount: 1, scale: 1 },
+      { kind: 'dust', enabled: true, amount: 0.4, scratches: 0.5, seed: 1 },
+    ]);
   });
 });
