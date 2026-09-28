@@ -34,6 +34,7 @@
     "@playwright/mcp": "^0.0.78",
     "@ricky0123/vad-web": "^0.0.30",
     "@tailwindcss/typography": "^0.5.19",
+    "ag-psd": "31.0.2",
     "defuddle": "^0.19.2",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

@@ -37,6 +37,14 @@ export function redo(): void {
   nextCmd.do();
 }
 
+/** Moves to `index` in the stack (-1 = before the first surviving command) by
+ *  stepping undo/redo, so every command's do()/undo() runs in order. */
+export function jumpTo(index: number): void {
+  const target = Math.max(-1, Math.min(index, getSnapshot().history.length - 1));
+  while (getSnapshot().historyIndex > target) undo();
+  while (getSnapshot().historyIndex < target) redo();
+}
+
 /** Whether there is a command available to undo. */
 export function canUndo(): boolean {
   return getSnapshot().historyIndex >= 0;

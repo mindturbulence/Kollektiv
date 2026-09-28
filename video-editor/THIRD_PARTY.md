@@ -1,7 +1,7 @@
 # Third-party code in the video editor
 
 Kollektiv is GPL-3.0. Parts of `video-editor/` are ported from two MIT-licensed
-browser video editors (see `docs/plans/2026-09-26-video-editor-plan.md`). Every
+browser video editors (see docs/handbook/docs/07_VIDEO_EDITOR/VIDEO_EDITOR.md). Every
 ported file starts with a `Ported from <repo>@<sha> <path>` header (or an
 equivalent comment naming the source). MIT permits this; the notices below must
 stay with the code. No code from VERT (AGPL-3.0) is used.

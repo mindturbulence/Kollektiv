@@ -1,6 +1,6 @@
 // ─── Kollektiv Video Editor — shared contract ────────────────────────────────
 // Every module codes against these types. Change them only in a coordinated
-// step (see docs/plans/2026-09-26-video-editor-plan.md §7). Times are seconds
+// step (video-editor plan §7, git history 3bc6f65). Times are seconds
 // (float) on the timeline clock; frame snapping uses ProjectSettings.fps.
 
 // ─── Project model ────────────────────────────────────────────────────────────

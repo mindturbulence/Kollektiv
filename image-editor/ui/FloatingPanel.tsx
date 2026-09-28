@@ -26,7 +26,16 @@ const FloatingPanel: React.FC<FloatingPanelProps> = ({
   children,
   footer,
 }) => {
-  const [pos,  setPos]  = useState({ x: defaultX, y: defaultY });
+  // Open inside the canvas viewport: a fixed viewport-space default landed on
+  // the editor toolbar, and this portalled panel then covered its menus.
+  const [pos,  setPos]  = useState(() => {
+    const area = document.querySelector('[data-editor-viewport]')?.getBoundingClientRect();
+    if (!area) return { x: defaultX, y: defaultY };
+    return {
+      x: Math.min(Math.max(defaultX, area.left + 16), Math.max(area.left + 16, area.right - defaultWidth - 16)),
+      y: Math.max(defaultY, area.top + 16),
+    };
+  });
   const [size, setSize] = useState({ w: defaultWidth, h: defaultHeight });
 
   const dragRef   = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(null);

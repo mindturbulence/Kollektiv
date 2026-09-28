@@ -49,7 +49,7 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 > **2026-07-25 — Recent implementations:** Phases 1–3 of the product roadmap
 > are complete (robustness, feature enrichment, polish). Full 8-layer MCP
 > architecture and Knowledge/Obsidian architecture also implemented. See
-> [ISSUES.md](../ISSUES.md#changelog-resolved-issues) for the complete changelog.
+> the resolved-issues changelog in git history (`docs/ISSUES.md` at commit `3bc6f65`).
 
 > **2026-07-26 — Multi-engine free web search:** Modular `services/webSearchEngines/` directory
 > with DuckDuckGo, Brave, Exa, and Bing engines. Orchestrator runs engines in parallel,
@@ -79,7 +79,7 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 > typed `AppEvents` event bus, entry bundle 4.1 → 2.6 MB, CI with a Playwright job, and the
 > `sanrita` light theme. Unused `helmet`/`cors`/`vfile` removed. 1549 tests, e2e green.
 > Record: [ARCHITECTURE_CONSTITUTION.md → Phase 8](docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md);
-> open items: `docs/plans/2026-09-24-app-review-and-revision-plan.md` → "Remaining work".
+> open items: `docs/plans/TASKS.md`.
 
 > **2026-09-28 — Video Editor (v1 + v2):** A new `video_editor` tab, built from selected MIT
 > ports of openreel-video and FreeCut on mediabunny and WebCodecs, with no COOP/COEP needed.
@@ -109,6 +109,7 @@ The architecture set is organized as a practical handbook for contributors and m
 - [docs/09_AI_WORKER/AI_WORKER_RULES.md](docs/09_AI_WORKER/AI_WORKER_RULES.md) — implementation and review rules
 - [docs/08_IMPLEMENTATION/ADD_NEW_TOOL.md](docs/08_IMPLEMENTATION/ADD_NEW_TOOL.md) — step-by-step guide for adding a new assistant tool and passing MCP gates
 - [docs/10_EXAMPLES/CREATE_CAPABILITY.md](docs/10_EXAMPLES/CREATE_CAPABILITY.md) — example path for adding a new capability
+- [docs/11_IMAGE_EDITOR/IMAGE_EDITOR.md](docs/11_IMAGE_EDITOR/IMAGE_EDITOR.md) — layered image editor: one compositor, doc/bitmap space, selections, two-tier adjustments, tests
 - [contracts/interfaces.md](contracts/interfaces.md) — implementation-facing contracts and data shapes
 - [diagrams/README.md](diagrams/README.md) — diagram inventory and architecture views
 - [schemas/capability.manifest.json](schemas/capability.manifest.json) — example capability manifest schema

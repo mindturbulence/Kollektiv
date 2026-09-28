@@ -45,52 +45,29 @@ async function bootToAppShell(page: Page) {
     await expect(page.locator('.app-header')).toBeVisible({ timeout: 30_000 });
 }
 
-// FloatingAssistantAvatar was removed in 42aee0d (Sep 22): replaced by a
-// pop-out button on AssistantPage. These tests are skipped until the relay
-// protocol is re-tested against the new surface.
-test.describe.skip('Assistant avatar relay', () => {
-    test('floating avatar widget mounts on the app shell', async ({ page }) => {
-        await bootToAppShell(page);
-        // Portal-rendered into <body>; identified by its aria-label.
-        await expect(page.locator('[aria-label^="Assistant avatar"]')).toBeVisible({ timeout: 10_000 });
-    });
-
-    test('embed surface renders and receives relayed snapshots', async ({ page }) => {
+// The in-app floating avatar was removed in 42aee0d; the relay protocol still
+// serves the #avatar-panel embed (extension side panel), which is tested here.
+test.describe('Assistant avatar relay', () => {
+    test('embed receives snapshots and its commands reach the main app', async ({ page }) => {
         await bootToAppShell(page);
 
         // The embed page (extension-iframe stand-in) in the same context —
-        // BroadcastChannel is same-origin, so main ↔ embed relay works.
+        // BroadcastChannel is same-origin, so main <-> embed relay works.
         const embed = await page.context().newPage();
         await embed.goto('/#avatar-panel');
 
-        // Panel content is either AWAITING UPLINK (relay not answered yet) or
-        // the live panel (GO LIVE button) if a snapshot beat first paint —
-        // both prove the surface booted.
-        const goLive = embed.getByRole('button', { name: /GO LIVE|END LINK/ });
-        const rendered = await Promise.race([
-            goLive.waitFor({ timeout: 15_000 }).then(() => 'panel'),
-            embed.getByText('AWAITING UPLINK').waitFor({ timeout: 15_000 }).then(() => 'standby'),
-            new Promise(r => setTimeout(() => r('nothing'), 15_000)),
-        ]);
-        expect(rendered).not.toBe('nothing');
+        // Main -> embed: the panel controls only render once a snapshot arrives
+        // ("Waiting for connection" until then).
+        const goLive = embed.getByRole('button', { name: 'GO LIVE' });
+        await expect(goLive).toBeVisible({ timeout: 20_000 });
 
-        // Relay round-trip: the panel's controls only render once a snapshot
-        // has arrived over the channel. If standby showed first, wait for it.
-        if (rendered === 'standby') {
-            await expect(goLive).toBeVisible({ timeout: 8_000 });
-        }
-
-        // Session state propagates main → embed: toggling live in the main
-        // app (no API key in CI → error) must flip the embed's button label
-        // or surface FAULT within a few seconds.
-        //
-        // Locator note: FAULT intentionally appears twice in the fault state
-        // (sigil status label + "SYSTEM FAULT" message), so a bare getByText
-        // would be a strict-mode violation. Pin to the exact sigil label.
-        await page.locator('[aria-label^="Assistant avatar"]').click();
+        // Embed -> main: GO LIVE is relayed as a command; the main app starts a
+        // session (no API key in CI -> connecting or error), and the new state
+        // must come back to the embed.
+        await goLive.click();
         await expect(
-            embed.getByRole('button', { name: /END LINK|LINKING/ })
-                .or(embed.getByText('FAULT', { exact: true }))
+            embed.getByRole('button', { name: /END LINK|Connecting/ })
+                .or(embed.getByText('Error', { exact: true }))
         ).toBeVisible({ timeout: 15_000 });
     });
 });

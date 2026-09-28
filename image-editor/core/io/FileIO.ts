@@ -30,7 +30,7 @@ export function exceedsMaxDim(width: number, height: number): boolean {
 }
 
 /** Builds a flat ImageLayer wrapping a decoded/generated ImageBitmap. */
-function bitmapToLayer(bitmap: ImageBitmap, name: string): ImageLayer {
+export function bitmapToLayer(bitmap: ImageBitmap, name: string): ImageLayer {
   return {
     id: crypto.randomUUID(),
     name,
@@ -237,7 +237,7 @@ export function openFilePicker(): Promise<File | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
+    input.accept = 'image/*,.psd';
     input.style.display = 'none';
     let settled = false;
 

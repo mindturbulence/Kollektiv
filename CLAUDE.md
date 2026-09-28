@@ -46,7 +46,7 @@ Store all implementation/feature plan documents in `docs/plans/` (e.g. `docs/pla
 
 ## License hygiene (MANDATORY)
 
-Kollektiv is GPL-3.0; VERT (VERT-sh/VERT) is AGPL-3.0. The planned Converter feature (docs/plans/utilities-vert-conversion-plan.md) must use the underlying libraries only (`@imagemagick/magick-wasm`, `@ffmpeg/ffmpeg` — Apache/LGPL/GPL-compatible) and must NEVER port or copy VERT's source code (its SvelteKit glue, converters, or UI) — importing AGPL code would force this entire repo to AGPL-3.0.
+Kollektiv is GPL-3.0; VERT (VERT-sh/VERT) is AGPL-3.0. The Converter feature (shipped; see ARCHITECTURE_CONSTITUTION § Web Worker pattern) must use the underlying libraries only (`@imagemagick/magick-wasm`, `@ffmpeg/ffmpeg` — Apache/LGPL/GPL-compatible) and must NEVER port or copy VERT's source code (its SvelteKit glue, converters, or UI) — importing AGPL code would force this entire repo to AGPL-3.0.
 
 ## Code Quality Rules (STRICT)
 

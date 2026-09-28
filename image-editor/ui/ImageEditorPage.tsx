@@ -8,7 +8,9 @@ import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore }
 import { createPortal } from 'react-dom';
 import { dispatch, getSnapshot, resetStore, subscribe } from '../core/store';
 import type { EditorDocument, EditorOpenPayload } from '../core/types';
-import { exportToBlob, importFromPayload, openFilePicker, importImage, createBlankDocument, exportMaskToBlob } from '../core/io/FileIO';
+import { exportToBlob, importFromPayload, openFilePicker, importImage, createBlankDocument, exportMaskToBlob, bitmapToLayer } from '../core/io/FileIO';
+import { importPsd, isPsdFile } from '../core/io/psdImport';
+import { rasterizeLayersToCanvas } from '../core/renderer/LayerPainter';
 import * as AutosaveService from '../core/autosave/AutosaveService';
 import { disposeTools } from '../core/toolsRegistry';
 import { addLayer, cropToSelection } from '../core/layers/LayerManager';
@@ -265,7 +267,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
   /** Opens an image file as a new document sized to the image. */
   const openFileAsDocument = useCallback(async (file: File) => {
     try {
-      const doc = await importFromPayload({
+      const doc = isPsdFile(file) ? await importPsd(file) : await importFromPayload({
         kind: 'blob',
         blob: file,
         title: file.name.replace(/\.[^.]+$/, '') || undefined,
@@ -281,7 +283,8 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
 
   /** With a document open, a file becomes a new top layer; without one, it becomes the document. */
   const openOrPlaceFile = useCallback(async (file: File) => {
-    if (!file.type.startsWith('image/')) {
+    const psd = isPsdFile(file);
+    if (!psd && !file.type.startsWith('image/')) {
       showGlobalFeedback?.(`Not an image: ${file.name}`, true);
       return;
     }
@@ -290,6 +293,14 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
       return;
     }
     try {
+      if (psd) {
+        // Into an open document a PSD is placed flattened, as one undoable layer.
+        const doc = await importPsd(file);
+        const flat = rasterizeLayersToCanvas(doc.layers, doc.width, doc.height);
+        if (!flat) throw new Error('Could not flatten the PSD.');
+        addLayer(bitmapToLayer(await createImageBitmap(flat), doc.title));
+        return;
+      }
       addLayer(await importImage(file));
     } catch (err) {
       showGlobalFeedback?.(`Failed to import image: ${err instanceof Error ? err.message : String(err)}`, true);

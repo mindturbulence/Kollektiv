@@ -267,11 +267,32 @@ export const SelectionEngine = {
     return selection?.shape.kind === 'raster' ? rasterPaths(selection)?.outline ?? null : null;
   },
 
-  invertSelection(docWidth: number, docHeight: number): void {
-    // M4: simple rect inversion only
-    dispatch({ type: 'SET_SELECTION', selection: null });
-    // Full inversion (raster mask) deferred
-    void docWidth; void docHeight;
+  /** Inverts the active selection into a document-sized raster selection
+   *  (everything that was unselected). No-op without a selection. */
+  async invertSelection(): Promise<void> {
+    const { selection, document: doc } = getSnapshot();
+    if (!selection || !doc) return;
+    const oc = new OffscreenCanvas(doc.width, doc.height);
+    const ctx = oc.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, doc.width, doc.height);
+    ctx.globalCompositeOperation = 'destination-out';
+    if (selection.shape.kind === 'raster') {
+      ctx.drawImage(selection.shape.mask, 0, 0);
+    } else {
+      const clip = SelectionEngine.getSelectionClip();
+      if (clip) ctx.fill(clip);
+    }
+    const mask = await createImageBitmap(oc);
+    dispatch({
+      type: 'SET_SELECTION',
+      selection: {
+        shape: { kind: 'raster', mask },
+        bounds: { x: 0, y: 0, width: doc.width, height: doc.height },
+        feather: selection.feather,
+      },
+    });
   },
 
   // ── Lasso freehand ─────────────────────────────────────────────────────────

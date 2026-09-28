@@ -207,7 +207,10 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
                           aria-selected={selectedIndex === globalIdx}
                           data-index={globalIdx}
                           onClick={() => execute(cmd)}
-                          onMouseEnter={() => setSelectedIndex(globalIdx)}
+                          // mousemove, not mouseenter: results re-render under a resting
+                          // pointer while typing, and mouseenter would hijack the
+                          // selection so Enter opened the row under the cursor.
+                          onMouseMove={() => { if (selectedIndex !== globalIdx) setSelectedIndex(globalIdx); }}
                           className={`w-full flex items-center gap-3 px-5 py-2.5 text-left transition-colors duration-75 ${
                             selectedIndex === globalIdx
                               ? 'bg-primary/10 text-primary'

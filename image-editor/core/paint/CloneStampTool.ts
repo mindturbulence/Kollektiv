@@ -3,11 +3,12 @@
 // Same OffscreenCanvas approach as BrushEngine but reads from source bitmap.
 // No React imports.
 
-import { getSnapshot, dispatch } from '../store';
+import { getSnapshot } from '../store';
 import { pushCommand } from '../history/HistoryManager';
 import { findLayerById } from '../layers/layerTree';
 import { selectionMaskInBitmapSpace, composeStroke } from '../geometry/selectionClip';
-import type { HistoryCommand, ImageLayer } from '../types';
+import { makePatchCommand, dirtyRect } from '../history/patchCommand';
+import type { ImageLayer } from '../types';
 
 // ─── State ───────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,7 @@ let _strokeStart:  { x: number; y: number } | null = null; // pointer at stroke 
 let _lastStamp:    { x: number; y: number } | null = null;
 let _stroke:       OffscreenCanvas | null = null; // this stroke's cloned dabs only
 let _selMask:      OffscreenCanvas | null = null; // active selection, in bitmap space (E5)
+let _bounds:       { minX: number; minY: number; maxX: number; maxY: number } | null = null; // dirty rect
 let _isStroking    = false;
 
 /** Frame pump registered by the active CanvasRenderer (live preview, H4). */
@@ -43,6 +45,10 @@ function paintStamp(destX: number, destY: number, pressure: number): void {
   // px, weighted by pressure (review H6 — was hard-coded 0.5 pressure).
   const radius = Math.max(0.5, (brush.size / 2) * _sourceScale * Math.max(0.1, pressure));
   const alpha  = (brush.opacity / 100) * (brush.flow / 100) * Math.max(0.1, pressure);
+
+  _bounds = _bounds
+    ? { minX: Math.min(_bounds.minX, destX - radius), minY: Math.min(_bounds.minY, destY - radius), maxX: Math.max(_bounds.maxX, destX + radius), maxY: Math.max(_bounds.maxY, destY + radius) }
+    : { minX: destX - radius, minY: destY - radius, maxX: destX + radius, maxY: destY + radius };
 
   // Into the stroke buffer; composite() cuts it to the selection (E5).
   ctx.save();
@@ -136,6 +142,7 @@ export const CloneStampTool = {
     _destCtx     = _destCanvas.getContext('2d')!;
     _destCtx.drawImage(destLayer.bitmap, 0, 0);
     _strokeStart = null; // set on first addPoint
+    _bounds      = null;
     _lastStamp   = null;
     _stroke      = new OffscreenCanvas(destLayer.intrinsicWidth, destLayer.intrinsicHeight);
     // Rasterize the selection into bitmap space once per stroke (E5).
@@ -160,6 +167,7 @@ export const CloneStampTool = {
     const layerId    = _destLayerId;
     const prevBitmap = _prevBitmap;
     const canvas     = _destCanvas;
+    const b          = _bounds;
 
     _destLayerId = null;
     _destCanvas  = null;
@@ -169,17 +177,11 @@ export const CloneStampTool = {
     _lastStamp   = null;
     _stroke      = null;
     _selMask     = null;
+    _bounds      = null;
 
-    void createImageBitmap(canvas).then(newBitmap => {
-      const cmd: HistoryCommand = {
-        id: crypto.randomUUID(), label: 'Clone stamp stroke', timestamp: Date.now(),
-        // H3: declare held bitmaps so the byte-cap can account and free them.
-        bitmapRefs: { 'new (do)': newBitmap, 'prev (undo)': prevBitmap },
-        do:   () => dispatch({ type: 'REPLACE_LAYER_BITMAP', layerId, bitmap: newBitmap }),
-        undo: () => dispatch({ type: 'REPLACE_LAYER_BITMAP', layerId, bitmap: prevBitmap }),
-      };
-      pushCommand(cmd);
-    });
+    const rect = b && dirtyRect(b.minX, b.minY, b.maxX, b.maxY, 1, canvas.width, canvas.height);
+    void makePatchCommand({ label: 'Clone stamp stroke', layerId, target: 'color', rect, before: prevBitmap, after: canvas })
+      .then(pushCommand);
   },
 
   dispose(): void {
@@ -189,6 +191,7 @@ export const CloneStampTool = {
     _sourceScale   = 1;
     _stroke        = null;
     _selMask       = null;
+    _bounds        = null;
     _destCanvas    = null;
     _destCtx       = null;
     _destLayerId   = null;

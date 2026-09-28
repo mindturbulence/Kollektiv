@@ -15,6 +15,7 @@ import { importImage, openFilePicker } from '../core/io/FileIO';
 import { getThumbnail } from '../core/thumbnails/ThumbnailCache';
 import { findLayerById } from '../core/layers/layerTree';
 import * as LayerManager from '../core/layers/LayerManager';
+import HistoryPanel from './HistoryPanel';
 import {
   EyeIcon, PlusIcon, DeleteIcon, LockIcon, LockOpenIcon, PhotoIcon,
   FolderClosedIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon,
@@ -233,6 +234,7 @@ const LayersPanel: React.FC = () => {
   const activeLayerId = useSyncExternalStore(subscribe, () => getSnapshot().activeLayerId);
   const paintTarget = useSyncExternalStore(subscribe, () => getSnapshot().paintTarget);
 
+  const [tab, setTab] = useState<'layers' | 'history'>('layers');
   const [width, setWidth] = useState<number>(() => {
     const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
     const parsed = stored ? Number(stored) : DEFAULT_WIDTH;
@@ -381,205 +383,220 @@ const LayersPanel: React.FC = () => {
         }}
       />
       <div className="flex-1 flex flex-col min-w-0 border-l border-base-content/5">
-        <header className="panel-header h-9 px-3 flex-shrink-0">
-          <h3 className="self-center text-xs font-display uppercase tracking-widest text-base-content/70">
-            Layers
-          </h3>
+        <header className="panel-header h-9 px-1 flex-shrink-0 flex items-stretch" role="tablist" aria-label="Right panel">
+          {(['layers', 'history'] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              role="tab"
+              aria-selected={tab === t}
+              className={`px-3 text-xs font-display uppercase tracking-widest border-b-2 ${
+                tab === t ? 'text-primary border-primary' : 'text-base-content/60 border-transparent hover:text-base-content'
+              }`}
+              onClick={() => setTab(t)}
+            >
+              {t === 'layers' ? 'Layers' : 'History'}
+            </button>
+          ))}
         </header>
 
-        <div className="px-3 py-2 flex flex-col gap-2 border-b border-base-content/5">
-          <select
-            className="select select-sm select-bordered rounded-none w-full text-xs font-mono"
-            value={activeLayer?.blendMode ?? 'normal'}
-            disabled={!activeLayer || activeLayerIsGroup}
-            title={activeLayerIsGroup ? 'Group blend mode is not composited yet — applies per-child' : undefined}
-            onChange={(e) =>
-              activeLayerId &&
-              LayerManager.setLayerBlendMode(activeLayerId, e.target.value as BlendMode)
-            }
-          >
-            <optgroup label="Native">
-              {NATIVE_BLEND_MODES.map((mode) => (
-                <option key={mode} value={mode}>{mode}</option>
-              ))}
-            </optgroup>
-            <optgroup label="Manual (GPU)">
-              {MANUAL_BLEND_MODES.map((mode) => (
-                <option key={mode} value={mode}>{mode}</option>
-              ))}
-            </optgroup>
-          </select>
-          <label className="flex items-center gap-2 text-xs font-mono text-base-content/70">
-            Opacity
-            <input
-              type="range"
-              className="range range-xs range-primary flex-1"
-              min={0}
-              max={100}
-              value={activeLayer?.opacity ?? 100}
+        {tab === 'history' ? <HistoryPanel /> : (
+        <>
+          <div className="px-3 py-2 flex flex-col gap-2 border-b border-base-content/5">
+            <select
+              className="select select-sm select-bordered rounded-none w-full text-xs font-mono"
+              value={activeLayer?.blendMode ?? 'normal'}
               disabled={!activeLayer || activeLayerIsGroup}
-              // H8: drag live WITHOUT history (a drag used to push dozens of
-              // commands and evict real undo history), then ONE command on
-              // commit (pointerup / key release).
-              onPointerDown={(e) => {
-                opacityBeforeDragRef.current = activeLayer?.opacity ?? 100;
-                e.currentTarget.setPointerCapture(e.pointerId);
-              }}
+              title={activeLayerIsGroup ? 'Group blend mode is not composited yet — applies per-child' : undefined}
               onChange={(e) =>
                 activeLayerId &&
-                LayerManager.setLayerOpacityLive(activeLayerId, Number(e.target.value))
+                LayerManager.setLayerBlendMode(activeLayerId, e.target.value as BlendMode)
               }
-              onPointerUp={() => {
-                if (activeLayerId && opacityBeforeDragRef.current !== null) {
-                  LayerManager.commitLayerOpacity(activeLayerId, opacityBeforeDragRef.current);
-                  opacityBeforeDragRef.current = null;
-                }
-              }}
-              onKeyDown={() => {
-                if (opacityBeforeDragRef.current === null) {
+            >
+              <optgroup label="Native">
+                {NATIVE_BLEND_MODES.map((mode) => (
+                  <option key={mode} value={mode}>{mode}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Manual (GPU)">
+                {MANUAL_BLEND_MODES.map((mode) => (
+                  <option key={mode} value={mode}>{mode}</option>
+                ))}
+              </optgroup>
+            </select>
+            <label className="flex items-center gap-2 text-xs font-mono text-base-content/70">
+              Opacity
+              <input
+                type="range"
+                className="range range-xs range-primary flex-1"
+                min={0}
+                max={100}
+                value={activeLayer?.opacity ?? 100}
+                disabled={!activeLayer || activeLayerIsGroup}
+                // H8: drag live WITHOUT history (a drag used to push dozens of
+                // commands and evict real undo history), then ONE command on
+                // commit (pointerup / key release).
+                onPointerDown={(e) => {
                   opacityBeforeDragRef.current = activeLayer?.opacity ?? 100;
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                }}
+                onChange={(e) =>
+                  activeLayerId &&
+                  LayerManager.setLayerOpacityLive(activeLayerId, Number(e.target.value))
                 }
-              }}
-              onBlur={() => {
-                if (activeLayerId && opacityBeforeDragRef.current !== null) {
-                  LayerManager.commitLayerOpacity(activeLayerId, opacityBeforeDragRef.current);
-                  opacityBeforeDragRef.current = null;
-                }
-              }}
-            />
-            <span className="w-10 text-right">{activeLayerIsGroup ? '—' : `${activeLayer?.opacity ?? 100}%`}</span>
-          </label>
-        </div>
-        <div
-          className="flex-1 overflow-y-auto min-h-0"
-          onDragEnd={() => { setDragLayerId(null); setDragOverLayerId(null); }}
-        >
-          {rows.map(({ layer, depth }) => (
-            <LayerRow
-              key={layer.id}
-              layer={layer}
-              depth={depth}
-              active={layer.id === activeLayerId}
-              selected={selectedIds.has(layer.id)}
-              dropSide={dropSideFor(layer.id)}
-              isExpanded={expandedIds.has(layer.id)}
-              paintingMask={layer.id === activeLayerId && paintTarget === 'mask'}
-              onToggleExpand={() => setExpandedIds((prev) => {
-                const next = new Set(prev);
-                if (next.has(layer.id)) next.delete(layer.id); else next.add(layer.id);
-                return next;
-              })}
-              onSelect={handleSelect}
-              onDragStart={(id) => setDragLayerId(id)}
-              onDragEnter={(id) => setDragOverLayerId(id)}
-              onDrop={() => {
-                if (!dragLayerId || !dragOverLayerId || dragLayerId === dragOverLayerId || !document) return;
-                // Top-level drag-reorder only (children are not draggable — see `draggable={depth === 0}`).
-                const topLevel = document.layers;
-                const fromIdx = topLevel.findIndex(l => l.id === dragLayerId);
-                const toIdx = topLevel.findIndex(l => l.id === dragOverLayerId);
-                if (fromIdx < 0 || toIdx < 0) return;
-                const newOrder = topLevel.map(l => l.id);
-                newOrder.splice(fromIdx, 1);
-                newOrder.splice(toIdx, 0, dragLayerId);
-                LayerManager.reorderLayers(newOrder);
-                setDragLayerId(null);
-                setDragOverLayerId(null);
-              }}
-            />
-          ))}
-        </div>
+                onPointerUp={() => {
+                  if (activeLayerId && opacityBeforeDragRef.current !== null) {
+                    LayerManager.commitLayerOpacity(activeLayerId, opacityBeforeDragRef.current);
+                    opacityBeforeDragRef.current = null;
+                  }
+                }}
+                onKeyDown={() => {
+                  if (opacityBeforeDragRef.current === null) {
+                    opacityBeforeDragRef.current = activeLayer?.opacity ?? 100;
+                  }
+                }}
+                onBlur={() => {
+                  if (activeLayerId && opacityBeforeDragRef.current !== null) {
+                    LayerManager.commitLayerOpacity(activeLayerId, opacityBeforeDragRef.current);
+                    opacityBeforeDragRef.current = null;
+                  }
+                }}
+              />
+              <span className="w-10 text-right">{activeLayerIsGroup ? '—' : `${activeLayer?.opacity ?? 100}%`}</span>
+            </label>
+          </div>
+          <div
+            className="flex-1 overflow-y-auto min-h-0"
+            onDragEnd={() => { setDragLayerId(null); setDragOverLayerId(null); }}
+          >
+            {rows.map(({ layer, depth }) => (
+              <LayerRow
+                key={layer.id}
+                layer={layer}
+                depth={depth}
+                active={layer.id === activeLayerId}
+                selected={selectedIds.has(layer.id)}
+                dropSide={dropSideFor(layer.id)}
+                isExpanded={expandedIds.has(layer.id)}
+                paintingMask={layer.id === activeLayerId && paintTarget === 'mask'}
+                onToggleExpand={() => setExpandedIds((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(layer.id)) next.delete(layer.id); else next.add(layer.id);
+                  return next;
+                })}
+                onSelect={handleSelect}
+                onDragStart={(id) => setDragLayerId(id)}
+                onDragEnter={(id) => setDragOverLayerId(id)}
+                onDrop={() => {
+                  if (!dragLayerId || !dragOverLayerId || dragLayerId === dragOverLayerId || !document) return;
+                  // Top-level drag-reorder only (children are not draggable — see `draggable={depth === 0}`).
+                  const topLevel = document.layers;
+                  const fromIdx = topLevel.findIndex(l => l.id === dragLayerId);
+                  const toIdx = topLevel.findIndex(l => l.id === dragOverLayerId);
+                  if (fromIdx < 0 || toIdx < 0) return;
+                  const newOrder = topLevel.map(l => l.id);
+                  newOrder.splice(fromIdx, 1);
+                  newOrder.splice(toIdx, 0, dragLayerId);
+                  LayerManager.reorderLayers(newOrder);
+                  setDragLayerId(null);
+                  setDragOverLayerId(null);
+                }}
+              />
+            ))}
+          </div>
 
-        <div className="flex-shrink-0 flex items-center gap-2 p-2 border-t border-base-content/5">
-          <button
-            type="button"
-            className="form-btn flex-1 h-8 px-2 text-xs tracking-wider whitespace-nowrap"
-            aria-label="Merge down"
-            title="Merge the active layer into the one beneath it"
-            disabled={!activeLayer || activeLayerIsGroup || !canMergeDown}
-            onClick={handleMergeDown}
-          >
-            Merge down
-          </button>
-          <button
-            type="button"
-            className="form-btn flex-1 h-8 px-2 text-xs tracking-wider whitespace-nowrap"
-            aria-label="Flatten image"
-            title="Flatten all layers into one background"
-            disabled={!document || layers.length < 2}
-            onClick={handleFlatten}
-          >
-            Flatten
-          </button>
-        </div>
-        <footer className="panel-footer h-10 p-1 gap-1 flex-shrink-0 flex flex-row items-stretch">
-          <button
-            type="button"
-            className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
-            aria-label="New blank layer"
-            title="New blank layer"
-            disabled={!document}
-            onClick={handleAddLayer}
-          >
-            <PlusIcon className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
-            aria-label="Place image as layer"
-            title="Place image as layer"
-            disabled={!document}
-            onClick={() => void handlePlaceImage()}
-          >
-            <PhotoIcon className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
-            aria-label="Duplicate layer"
-            title="Duplicate layer"
-            disabled={!activeLayer || activeLayerIsGroup}
-            onClick={handleDuplicateLayer}
-          >
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <rect x="9" y="9" width="11" height="11" rx="1" />
-              <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
-            aria-label="Add layer mask"
-            title={activeLayer?.type === 'image' && activeLayer.mask ? 'This layer already has a mask' : 'Add layer mask'}
-            disabled={activeLayer?.type !== 'image' || !!activeLayer.mask}
-            onClick={() => activeLayerId && void LayerManager.addMask(activeLayerId)}
-          >
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <rect x="3" y="4" width="18" height="16" rx="1" />
-              <circle cx="12" cy="12" r="4.5" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
-            aria-label="Group selected layers"
-            title="Group selected layers"
-            disabled={!canGroup}
-            onClick={handleGroup}
-          >
-            <FolderClosedIcon className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className="flex-1 flex items-center justify-center text-base-content/60 hover:text-error disabled:opacity-30"
-            aria-label="Delete layer"
-            title="Delete layer"
-            disabled={!activeLayerId}
-            onClick={handleDeleteLayer}
-          >
-            <DeleteIcon className="w-4 h-4" />
-          </button>
-        </footer>
+          <div className="flex-shrink-0 flex items-center gap-2 p-2 border-t border-base-content/5">
+            <button
+              type="button"
+              className="form-btn flex-1 h-8 px-2 text-xs tracking-wider whitespace-nowrap"
+              aria-label="Merge down"
+              title="Merge the active layer into the one beneath it"
+              disabled={!activeLayer || activeLayerIsGroup || !canMergeDown}
+              onClick={handleMergeDown}
+            >
+              Merge down
+            </button>
+            <button
+              type="button"
+              className="form-btn flex-1 h-8 px-2 text-xs tracking-wider whitespace-nowrap"
+              aria-label="Flatten image"
+              title="Flatten all layers into one background"
+              disabled={!document || layers.length < 2}
+              onClick={handleFlatten}
+            >
+              Flatten
+            </button>
+          </div>
+          <footer className="panel-footer h-10 p-1 gap-1 flex-shrink-0 flex flex-row items-stretch">
+            <button
+              type="button"
+              className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
+              aria-label="New blank layer"
+              title="New blank layer"
+              disabled={!document}
+              onClick={handleAddLayer}
+            >
+              <PlusIcon className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
+              aria-label="Place image as layer"
+              title="Place image as layer"
+              disabled={!document}
+              onClick={() => void handlePlaceImage()}
+            >
+              <PhotoIcon className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
+              aria-label="Duplicate layer"
+              title="Duplicate layer"
+              disabled={!activeLayer || activeLayerIsGroup}
+              onClick={handleDuplicateLayer}
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <rect x="9" y="9" width="11" height="11" rx="1" />
+                <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
+              aria-label="Add layer mask"
+              title={activeLayer?.type === 'image' && activeLayer.mask ? 'This layer already has a mask' : 'Add layer mask'}
+              disabled={activeLayer?.type !== 'image' || !!activeLayer.mask}
+              onClick={() => activeLayerId && void LayerManager.addMask(activeLayerId)}
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <rect x="3" y="4" width="18" height="16" rx="1" />
+                <circle cx="12" cy="12" r="4.5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
+              aria-label="Group selected layers"
+              title="Group selected layers"
+              disabled={!canGroup}
+              onClick={handleGroup}
+            >
+              <FolderClosedIcon className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              className="flex-1 flex items-center justify-center text-base-content/60 hover:text-error disabled:opacity-30"
+              aria-label="Delete layer"
+              title="Delete layer"
+              disabled={!activeLayerId}
+              onClick={handleDeleteLayer}
+            >
+              <DeleteIcon className="w-4 h-4" />
+            </button>
+          </footer>
+        </>
+        )}
       </div>
     </div>
   );

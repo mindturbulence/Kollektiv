@@ -6,7 +6,7 @@ import path from 'node:path';
 // preview and real export. jsdom unit tests can't reach any of this.
 // Fixtures: e2e/fixtures/video/{clipA,clipB}.mp4 + still.png (ffmpeg
 // lavfi testsrc2 / mandelbrot, 1.5 s, 320x180@30, AAC) — generated once,
-// see docs/plans/2026-09-26-video-editor-plan.md §6.
+// see docs/plans/2026-09-26-video-editor-plan.md §6 (git history, 3bc6f65).
 
 const FIXTURES = path.resolve('e2e/fixtures/video');
 const OUT = path.resolve('test-results/ve-export');

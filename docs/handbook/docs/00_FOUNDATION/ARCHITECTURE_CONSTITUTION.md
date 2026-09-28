@@ -184,7 +184,7 @@ A change is done when **all** of these hold:
 
 ### Filing work
 
-Track tasks in [ISSUES.md](../../../ISSUES.md) using the checkbox format. Give each issue an ID (`ISSUE-N`), severity, and acceptance criteria. This markdown file *is* the issue tracker — there is no external one.
+Open work lives in two markdown files — there is no external tracker. [plans/TASKS.md](../../../plans/TASKS.md) is the task backlog (checkbox format). [ISSUES.md](../../../ISSUES.md) holds open bugs and manual tests with an ID (`ISSUE-N`, next free id: 48), severity, and acceptance criteria or a test procedure, plus permanent decisions. Remove an issue from both files once it's resolved — git history is the changelog.
 
 ## Roadmap Direction
 
@@ -302,7 +302,7 @@ Twelve work packages (2026-08-05/06), originally tracked in `docs/plans/2026-08-
 
 ### Phase 8 — Whole-App Review and Revision (2026-09-24 → 26)
 
-Driven by a five-axis review (design system, motion, visual walk, tech stack, image editor) with Jev-scored priorities. The plan and its **verified remaining-work table** live in `docs/plans/2026-09-24-app-review-and-revision-plan.md`; per-axis findings in `docs/plans/review-2026-09-24/`. Durable outcomes:
+Driven by a five-axis review (design system, motion, visual walk, tech stack, image editor) with Jev-scored priorities. The plan (`docs/plans/2026-09-24-app-review-and-revision-plan.md`) and per-axis findings (`docs/plans/review-2026-09-24/`) were deleted once folded in here — read them in git history at commit `3bc6f65`; remaining work is in `docs/plans/TASKS.md`. Durable outcomes:
 
 - [x] **Security (Phase 0 of the plan):** CORS reflection on the CDP routes and `Access-Control-Allow-Origin: *` on the MCP server replaced by `sameOriginGuard`. Leaked Gemini key rotated and confirmed dead; GitHub Pages deploy removed.
 - [x] **Image editor correctness (M5 / E1–E9):** layer-transform-aware tools, undoable crop, lossless autosave, working selections, bounded history.
@@ -315,7 +315,7 @@ Driven by a five-axis review (design system, motion, visual walk, tech stack, im
 
 ### Phase 9 — Video Editor (2026-09-26 → 28)
 
-Research, Jev feature triage and phase status are in `docs/plans/2026-09-26-video-editor-plan.md`. The subsystem is described in [VIDEO_EDITOR.md](../07_VIDEO_EDITOR/VIDEO_EDITOR.md).
+Research, Jev feature triage and phase status were in `docs/plans/2026-09-26-video-editor-plan.md` (deleted once implemented; git history at commit `3bc6f65`). The subsystem is described in [VIDEO_EDITOR.md](../07_VIDEO_EDITOR/VIDEO_EDITOR.md).
 
 - [x] **Approach from measurement:** neither openreel nor FreeCut was adopted wholesale. Their minimal cores pulled in 81k and 159k lines, and both need `COEP: require-corp`. A thin editor core with a shared contract (`video-editor/core/types.ts`) instead takes small MIT leaf ports, each with a provenance header, listed in `video-editor/THIRD_PARTY.md`.
 - [x] **v1:** timeline, undoable actions (a property-tested inverse for every action), mediabunny decode, Canvas2D preview, WebCodecs export, lazy route, Assets Manager bridge, and IndexedDB autosave with Resume. Built by 10 parallel agents on disjoint paths.

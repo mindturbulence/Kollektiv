@@ -9,6 +9,7 @@ import { audioService } from '../services/audioService';
 import { BusyProvider } from '../contexts/BusyContext';
 import type { ActiveTab, ActiveSettingsTab } from '../types';
 import CommandPalette from './CommandPalette';
+import NoteViewer from './NoteViewer';
 
 // Layout & Global Components
 import Header from './Header';
@@ -44,13 +45,14 @@ import AssetsManagerPage from './AssetsManagerPage';
 import { VideoToFrames } from './VideoToFrames';
 import LoraEditorPage from './loraEditor/LoraEditorPage';
 import BatchRunnerPage from './BatchRunnerPage';
-import ImageEditorPage from '../image-editor/ui/ImageEditorPage';
 import type { EditorOpenPayload } from '../image-editor/core/types';
 import type { VideoEditorOpenPayload } from '../video-editor/core/types';
 import { subscribeVideoEditorOpen, takePendingVideoEditorPayload } from '../video-editor/bridge/openInVideoEditor';
 // Own chunk: video-editor pulls in its own media/render/export engines and
 // must not add to the ~4MB main entry (plan §7).
 const VideoEditorPage = React.lazy(() => import('../video-editor/ui/VideoEditorPage'));
+// Own chunk too: the image editor (renderer, WebGL2 compositor, tools) is only needed on its tab.
+const ImageEditorPage = React.lazy(() => import('../image-editor/ui/ImageEditorPage'));
 import LocalGenerationStudioPage from './LocalGenerationStudioPage';
 import { LLMChatPanel } from './LLMChatPanel';
 import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
@@ -452,7 +454,11 @@ const AppContent: React.FC = () => {
             case 'batch_runner': return <BatchRunnerPage key="batch_runner" />;
             case 'comfy_studio': return <LocalGenerationStudioPage key="comfy_studio" backendId="comfy" showGlobalFeedback={showGlobalFeedback} />;
             case 'a1111_studio': return <LocalGenerationStudioPage key="a1111_studio" backendId="a1111" showGlobalFeedback={showGlobalFeedback} />;
-            case 'image_editor': return <ImageEditorPage key="image_editor" openPayload={editorOpenPayload} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'image_editor': return (
+                <React.Suspense key="image_editor" fallback={<div className="flex items-center justify-center w-full h-full"><LoadingSpinner text="LOADING" /></div>}>
+                    <ImageEditorPage openPayload={editorOpenPayload} showGlobalFeedback={showGlobalFeedback} isExiting={false} />
+                </React.Suspense>
+            );
             case 'video_editor': return (
                 <React.Suspense key="video_editor" fallback={<div className="flex items-center justify-center w-full h-full"><LoadingSpinner text="LOADING" /></div>}>
                     <VideoEditorPage openPayload={videoEditorOpenPayload} showGlobalFeedback={showGlobalFeedback} isExiting={false} />
@@ -683,6 +689,7 @@ const AppContent: React.FC = () => {
                 isOpen={isCommandPaletteOpen}
                 onClose={() => setIsCommandPaletteOpen(false)}
             />
+            <NoteViewer />
 
             <AboutModal
                 isOpen={isAboutModalOpen}

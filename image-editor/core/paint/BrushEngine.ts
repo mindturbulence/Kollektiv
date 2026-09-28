@@ -5,11 +5,12 @@
 //
 // No React imports.
 
-import { getSnapshot, dispatch } from '../store';
+import { getSnapshot } from '../store';
 import { pushCommand } from '../history/HistoryManager';
 import { findLayerById } from '../layers/layerTree';
 import { selectionMaskInBitmapSpace, composeStroke } from '../geometry/selectionClip';
-import type { BrushPoint, HistoryCommand, ImageLayer } from '../types';
+import { makePatchCommand, dirtyRect } from '../history/patchCommand';
+import type { BrushPoint, ImageLayer } from '../types';
 
 // ─── Internal state ──────────────────────────────────────────────────────────
 
@@ -26,6 +27,8 @@ let _stroke:     OffscreenCanvas | null = null; // this stroke's dabs only (sour
 let _strokeCtx:  OffscreenCanvasRenderingContext2D | null = null;
 let _selMask:    OffscreenCanvas | null = null; // active selection, in bitmap space (E5)
 let _subtract    = false; // stroke removes alpha (eraser on color, brush on mask)
+/** Bitmap-space bounds of every dab this stroke (incl. radius) — the dirty rect. */
+let _bounds:     { minX: number; minY: number; maxX: number; maxY: number } | null = null;
 
 /** Frame pump: the active CanvasRenderer registers scheduleFrame so stroke
  *  stamps (which mutate an OffscreenCanvas, not the store) repaint live. */
@@ -68,6 +71,10 @@ function paintStamp(x: number, y: number, pressure: number, isEraser: boolean): 
   // buffer to the layer with destination-out when the stroke subtracts.
   _subtract = _target === 'mask' ? !isEraser : isEraser;
   const fillColor = _target === 'mask' ? '#000000' : (isEraser ? 'black' : colors.foreground);
+
+  _bounds = _bounds
+    ? { minX: Math.min(_bounds.minX, x - radius), minY: Math.min(_bounds.minY, y - radius), maxX: Math.max(_bounds.maxX, x + radius), maxY: Math.max(_bounds.maxY, y + radius) }
+    : { minX: x - radius, minY: y - radius, maxX: x + radius, maxY: y + radius };
 
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -158,6 +165,7 @@ export const BrushEngine = {
     _strokeCtx  = _stroke.getContext('2d');
     _points     = [];
     _lastStamp  = null;
+    _bounds     = null;
     // Rasterize the selection into bitmap space once per stroke (E5) — the
     // selection is doc-space; transform it through the layer matrix. Sized to
     // the bitmap being painted (the mask bitmap may differ from intrinsic).
@@ -193,6 +201,7 @@ export const BrushEngine = {
     const target     = _target;
     const prevBitmap = _prevBitmap;
     const canvas     = _canvas;
+    const b          = _bounds;
 
     // Reset stroke state before async createImageBitmap
     _layerId    = null;
@@ -204,20 +213,14 @@ export const BrushEngine = {
     _stroke     = null;
     _strokeCtx  = null;
     _selMask    = null;
+    _bounds     = null;
 
-    const actionType = target === 'mask' ? 'REPLACE_LAYER_MASK_BITMAP' : 'REPLACE_LAYER_BITMAP';
-    void createImageBitmap(canvas).then((newBitmap) => {
-      const cmd: HistoryCommand = {
-        id:        crypto.randomUUID(),
-        label:     target === 'mask' ? 'Mask stroke' : 'Brush stroke',
-        timestamp: Date.now(),
-        // H3: declare held bitmaps so the byte-cap can account and free them.
-        bitmapRefs: { 'new (do)': newBitmap, 'prev (undo)': prevBitmap },
-        do:   () => dispatch({ type: actionType, layerId, bitmap: newBitmap }),
-        undo: () => dispatch({ type: actionType, layerId, bitmap: prevBitmap }),
-      };
-      pushCommand(cmd);
-    });
+    // Dirty-rect history: only the stroked area is kept, before and after (+1px for AA).
+    const rect = b && dirtyRect(b.minX, b.minY, b.maxX, b.maxY, 1, canvas.width, canvas.height);
+    void makePatchCommand({
+      label: target === 'mask' ? 'Mask stroke' : 'Brush stroke',
+      layerId, target, rect, before: prevBitmap, after: canvas,
+    }).then(pushCommand);
   },
 
   /** Registers the renderer's frame pump so stamps repaint the live preview.
@@ -242,6 +245,7 @@ export const BrushEngine = {
     _stroke     = null;
     _strokeCtx  = null;
     _selMask    = null;
+    _bounds     = null;
     _docScale   = 1;
   },
 };

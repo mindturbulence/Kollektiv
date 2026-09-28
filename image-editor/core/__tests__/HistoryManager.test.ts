@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { pushCommand, undo, redo, canUndo, canRedo, clearHistory } from '../history/HistoryManager';
+import { pushCommand, undo, redo, canUndo, canRedo, clearHistory, jumpTo } from '../history/HistoryManager';
 import { getSnapshot, resetStore } from '../store';
 import type { HistoryCommand } from '../types';
 
@@ -108,5 +108,28 @@ describe('HistoryManager', () => {
     expect(snap.history.length).toBe(0);
     expect(snap.historyIndex).toBe(-1);
     expect(canUndo()).toBe(false);
+  });
+  it('jumpTo steps undo/redo in order to reach any point, clamped to the stack', () => {
+    const log: string[] = [];
+    const mk = (l: string): HistoryCommand => ({
+      id: l, label: l, timestamp: 0,
+      do: () => log.push(`do ${l}`), undo: () => log.push(`undo ${l}`),
+    });
+    pushCommand(mk('a')); pushCommand(mk('b')); pushCommand(mk('c'));
+    log.length = 0;
+
+    jumpTo(-1);
+    expect(getSnapshot().historyIndex).toBe(-1);
+    expect(log).toEqual(['undo c', 'undo b', 'undo a']);
+
+    log.length = 0;
+    jumpTo(1);
+    expect(getSnapshot().historyIndex).toBe(1);
+    expect(log).toEqual(['do a', 'do b']);
+
+    jumpTo(99);
+    expect(getSnapshot().historyIndex).toBe(2);
+    jumpTo(-5);
+    expect(getSnapshot().historyIndex).toBe(-1);
   });
 });

@@ -272,6 +272,8 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
           label="Select"
           items={[
             { label: 'Deselect', shortcut: 'Ctrl+D', disabled: !hasSelection, reason: noSelection, onSelect: () => SelectionEngine.deselect() },
+            // Menu-only: Ctrl+Shift+I is the browser's DevTools shortcut.
+            { label: 'Invert Selection', disabled: !hasSelection, reason: noSelection, onSelect: () => void SelectionEngine.invertSelection() },
             { label: 'Fill with Foreground', shortcut: 'Shift+F5', disabled: !hasSelection, reason: noSelection, onSelect: () => void fillSelection() },
             { label: 'Delete Contents', shortcut: 'Del', disabled: !hasSelection, reason: noSelection, onSelect: () => void deleteInSelection() },
           ]}

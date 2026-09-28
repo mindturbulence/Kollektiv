@@ -2,7 +2,7 @@
 // The ONLY module in video-editor/ permitted to import utils/eventBus.
 // Mirrors image-editor's 'openInEditor' bus event (hooks/useAppEventBus.ts),
 // but App.tsx's 'video_editor' payload wiring is owned by this agent (see
-// docs/plans/2026-09-26-video-editor-plan.md §7 ownership split), so the
+// video-editor plan §7 ownership split, git history 3bc6f65), so the
 // payload itself travels through this module's own subscriber list instead
 // of a new utils/eventBus.ts event key — App.tsx subscribes directly.
 

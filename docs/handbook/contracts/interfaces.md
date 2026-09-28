@@ -59,7 +59,7 @@ These contracts are consumed by:
 
 Primary definition: [utils/eventBus.ts](../../../utils/eventBus.ts)
 
-`AppEvents` maps every app-wide event name to its payload type (24 events as of 2026-09-26). `appEventBus.emit`, `on` and `off` are generic over it, so a wrong event name or payload is a compile error, and `void` events take no payload argument.
+`AppEvents` maps every app-wide event name to its payload type (25 events as of 2026-09-28). `appEventBus.emit`, `on` and `off` are generic over it, so a wrong event name or payload is a compile error, and `void` events take no payload argument.
 
 Main groups:
 
@@ -67,6 +67,7 @@ Main groups:
 - Editors: `openInEditor` (gallery item or blob), `openInConverter` (`{ files }`)
 - Assistant and live voice: `liveAssistantState`, `liveCaption`, `liveAssistantActivity`, `chatSpeaking`, `clipIdea`
 - Vault change notifications: `notesChanged`, `assistantFilesChanged`, `chatSessionsChanged`, `research:findingsAppended`
+- Vault note viewer: `openNote` (`{ path, title, content }`), emitted by `openNoteInPanel` (palette note results, the assistant's `obsidian_open_in_ui`) and shown by `components/NoteViewer.tsx`
 - Media and search: `playVideo`, `openMediaPanel`, `stopMedia`, `mediaAttachment`, `webSearchResults`/`webSearchError`/`webSearchLoading`
 
 App-shell listeners live in [hooks/useAppEventBus.ts](../../../hooks/useAppEventBus.ts); the Command Palette's commands ([constants/commandRegistry.ts](../../../constants/commandRegistry.ts)) are the largest emitter. To add an event, add its key and payload type to `AppEvents` first, and don't add an event with no listener.

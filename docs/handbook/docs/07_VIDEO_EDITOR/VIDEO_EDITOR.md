@@ -1,6 +1,6 @@
 # Video Editor
 
-The `video_editor` tab is a browser-only, multi-track editor for cutting short-form video (reels, shorts) from media generated or collected in Kollektiv. Source: `video-editor/`. Plan, research and status: `docs/plans/2026-09-26-video-editor-plan.md`.
+The `video_editor` tab is a browser-only, multi-track editor for cutting short-form video (reels, shorts) from media generated or collected in Kollektiv. Source: `video-editor/`. The original plan and research (`docs/plans/2026-09-26-video-editor-plan.md`) were deleted once implemented — read them in git history at commit `3bc6f65`; open items are in `docs/plans/TASKS.md`.
 
 ## Where it came from
 
@@ -65,9 +65,9 @@ WebCodecs decode and encode (Chromium). If the browser has no `VideoEncoder`, ex
 
 - Make WebGPU the preview renderer, after a check on a real GPU (deferred by the 2026-09-28 Jev triage, confidence 0.93).
 - Media GC runs only on project delete. There is no background sweep.
-- The `VideoPlayerOverlay` in the app shell resumes a queued YouTube video with sound on every boot. It isn't editor code, but the network audit surfaced it.
+- The network audit's `youtube-nocookie.com` request is the app shell's ambient music (the "Hidden Audio Engine" in `App.tsx`), which the e2e boot helper turns on by clicking CONTINUE rather than CONTINUE WITHOUT MUSIC. Intended behaviour, not editor code.
 
 ## Related
 
 - [ARCHITECTURE_CONSTITUTION.md § Web Worker pattern](../00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md#web-worker-pattern-established-by-the-converter-feature): the ffmpeg worker conventions the export fallback follows
-- `docs/plans/2026-09-26-video-editor-plan.md`: research, measured closures, Jev feature triage, phase status
+- `docs/plans/2026-09-26-video-editor-plan.md` (in git history at commit `3bc6f65`): research, measured closures, Jev feature triage, phase status

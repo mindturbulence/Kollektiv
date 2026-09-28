@@ -33,6 +33,8 @@ async function bootToAppShell(page: Page, initialTab: string) {
         if (sessionStorage.getItem('e2e-seeded')) return;
         sessionStorage.setItem('e2e-seeded', '1');
         localStorage.setItem('activeTab', JSON.stringify(tab));
+        // Idle standby (1 min) overlays the app and swallows pointer input mid-test.
+        localStorage.setItem('kollektivSettingsV4', JSON.stringify({ isIdleEnabled: false }));
         try { indexedDB.deleteDatabase('kollektiv-db'); } catch { /* noop */ }
     }, initialTab);
 
@@ -162,6 +164,16 @@ async function pixelAt(page: Page, docX: number, docY: number): Promise<number[]
     }, [p.x, p.y, EDITOR_CANVAS] as const);
 }
 
+/** Fit-to-viewport runs a frame after the document opens; coordinates computed
+ *  before it settles miss the canvas. Wait for the start dialog to leave and the zoom label to settle. */
+async function waitForFit(page: Page) {
+    // The Open-or-Create dialog animates out after the file loads and would eat the first drag.
+    await expect(page.getByRole('dialog', { name: /Open or Create/i })).toHaveCount(0, { timeout: 10_000 });
+    const zoom = () => page.evaluate(() => [...document.querySelectorAll('button')].find(b => /^\d+%$/.test(b.textContent!.trim()))?.textContent);
+    let prev = await zoom();
+    await expect.poll(async () => { const z = await zoom(); const same = z === prev; prev = z; return same; }, { intervals: [300] }).toBe(true);
+}
+
 test('magic wand selection clips the brush, even on a blank layer', async ({ page }) => {
     await bootToAppShell(page, 'image_editor');
     // 400×300: blue left half, red right half, green disc (r=60) centred at (300,150).
@@ -178,6 +190,7 @@ test('magic wand selection clips the brush, even on a blank layer', async ({ pag
     await (await chooser).setFiles({ name: 'disc.png', mimeType: 'image/png', buffer: png });
     await expect(page.getByText('400 × 300px')).toBeVisible({ timeout: 15_000 });
 
+    await waitForFit(page);
     // Paint on a fresh blank layer: the wand samples all layers, so it selects the disc.
     await page.getByRole('button', { name: 'New blank layer' }).click();
     await page.keyboard.press('w');
@@ -212,4 +225,101 @@ test('magic wand selection clips the brush, even on a blank layer', async ({ pag
     await expect(page.locator('[draggable]')).toHaveCount(2);
     await page.getByRole('button', { name: 'Flatten image' }).click();
     await expect(page.locator('[draggable]')).toHaveCount(1);
+});
+
+test('Invert Selection, History panel jumps, and Levels opening below the toolbar', async ({ page }) => {
+    await bootToAppShell(page, 'image_editor');
+    // 400×300 solid blue (docToClient assumes a 400×300 document).
+    const png = Buffer.from((await page.evaluate(() => {
+        const c = document.createElement('canvas'); c.width = 400; c.height = 300;
+        const x = c.getContext('2d')!;
+        x.fillStyle = '#2040c0'; x.fillRect(0, 0, 400, 300);
+        return c.toDataURL('image/png');
+    })).split(',')[1], 'base64');
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
+    await (await chooser).setFiles({ name: 'blue.png', mimeType: 'image/png', buffer: png });
+    await expect(page.getByText('400 × 300px')).toBeVisible({ timeout: 15_000 });
+
+    await waitForFit(page);
+    // Select the left half, then invert → the right half is selected.
+    await page.keyboard.press('m');
+    const a = await docToClient(page, 4, 4);
+    const b = await docToClient(page, 200, 296);
+    await page.mouse.move(a.x, a.y);
+    await page.mouse.down();
+    await page.mouse.move(b.x, b.y, { steps: 10 });
+    await page.mouse.up();
+    await page.getByRole('button', { name: 'Select', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Invert Selection' }).click();
+    await page.waitForTimeout(300);
+
+    await page.keyboard.press('b');
+    const s = await docToClient(page, 60, 150);
+    const e = await docToClient(page, 340, 150);
+    await page.mouse.move(s.x, s.y);
+    await page.mouse.down();
+    for (let i = 1; i <= 40; i++) await page.mouse.move(s.x + (e.x - s.x) * i / 40, s.y);
+    await page.mouse.up();
+
+    await expect.poll(async () => Math.max(...await pixelAt(page, 300, 150)), { timeout: 5_000 }).toBeLessThan(20);
+    expect((await pixelAt(page, 100, 150))[2]).toBeGreaterThan(150); // old selection stays blue
+
+    // History panel: jumping back to 'Open' undoes the stroke; the latest step redoes it.
+    await page.getByRole('tab', { name: 'History' }).click();
+    await expect(page.getByRole('button', { name: 'Brush stroke' })).toBeVisible();
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await expect.poll(async () => (await pixelAt(page, 300, 150))[2], { timeout: 5_000 }).toBeGreaterThan(150);
+    await page.getByRole('button', { name: 'Brush stroke' }).click();
+    await expect.poll(async () => Math.max(...await pixelAt(page, 300, 150)), { timeout: 5_000 }).toBeLessThan(20);
+    // Dirty-rect history: a second stroke elsewhere, then step back one — only the second goes.
+    const s2 = await docToClient(page, 220, 250);
+    const e2 = await docToClient(page, 380, 250);
+    await page.mouse.move(s2.x, s2.y);
+    await page.mouse.down();
+    for (let i = 1; i <= 30; i++) await page.mouse.move(s2.x + (e2.x - s2.x) * i / 30, s2.y);
+    await page.mouse.up();
+    await expect(page.getByRole('button', { name: 'Brush stroke' })).toHaveCount(2);
+    await expect.poll(async () => Math.max(...await pixelAt(page, 300, 250)), { timeout: 5_000 }).toBeLessThan(20);
+    await page.getByRole('button', { name: 'Brush stroke' }).first().click();
+    await expect.poll(async () => (await pixelAt(page, 300, 250))[2], { timeout: 5_000 }).toBeGreaterThan(150);
+    expect(Math.max(...await pixelAt(page, 300, 150))).toBeLessThan(20);
+    await page.getByRole('tab', { name: 'Layers' }).click();
+
+    // Floating adjustment panels open inside the canvas area, not over the toolbar menus.
+    await page.getByRole('button', { name: 'Adjust', exact: true }).click();
+    await page.getByRole('menuitem', { name: /Levels/ }).click();
+    const panel = page.locator('div.fixed.bg-base-300').filter({ hasText: 'Levels' });
+    await expect(panel).toBeVisible();
+    const panelTop = (await panel.boundingBox())!.y;
+    const viewportTop = (await page.locator('[data-editor-viewport]').boundingBox())!.y;
+    expect(panelTop).toBeGreaterThanOrEqual(viewportTop);
+});
+
+test('opens a layered PSD as a layered document', async ({ page }) => {
+    const { writePsdBuffer } = await import('ag-psd');
+    const solid = (w: number, h: number, rgba: [number, number, number, number]) => {
+        const data = new Uint8ClampedArray(w * h * 4);
+        for (let i = 0; i < data.length; i += 4) data.set(rgba, i);
+        return { width: w, height: h, data };
+    };
+    const psd = writePsdBuffer({
+        width: 300, height: 200,
+        children: [
+            { name: 'Base', top: 0, left: 0, bottom: 200, right: 300, imageData: solid(300, 200, [30, 60, 200, 255]) },
+            { name: 'Patch', top: 50, left: 100, bottom: 150, right: 200, opacity: 0.5, blendMode: 'multiply', imageData: solid(100, 100, [220, 40, 40, 255]) },
+        ],
+    }, { generateThumbnail: false });
+
+    await bootToAppShell(page, 'image_editor');
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
+    await (await chooser).setFiles({ name: 'layers.psd', mimeType: 'image/vnd.adobe.photoshop', buffer: psd });
+
+    await expect(page.getByText('300 × 200px')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('layers', { exact: true })).toBeVisible();
+    const rows = page.locator('[draggable]');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0)).toContainText('Patch'); // top of the stack
+    await expect(rows.nth(1)).toContainText('Base');
 });

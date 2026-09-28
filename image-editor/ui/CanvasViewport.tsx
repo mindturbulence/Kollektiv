@@ -434,7 +434,7 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
     : 'cursor-default';
 
   return (
-    <div className="flex-1 overflow-hidden relative bg-base-100">
+    <div className="flex-1 overflow-hidden relative bg-base-100" data-editor-viewport>
       <div
         ref={containerRef}
         className={`w-full h-full relative ${cursorClass}`}

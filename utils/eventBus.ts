@@ -47,6 +47,8 @@ export interface AppEvents {
   mediaAttachment: { data: string; mimeType: string; fileName: string };
   googleTokenRefreshRequested: void;
   'research:findingsAppended': { slug: string };
+  /** Show a vault note in the in-app viewer (NoteViewer). Shape inlined like notesChanged. */
+  openNote: { path: string; title: string; content: string };
 }
 
 type Listener<K extends keyof AppEvents> = (payload: AppEvents[K]) => void;

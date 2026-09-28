@@ -22,9 +22,9 @@ const KNOWN_SHELL_HOSTS = [
     'api.fontshare.com',
     'accounts.google.com',
     'apis.google.com',
-    // components/VideoPlayerOverlay.tsx: the app-wide "Media Player" overlay
-    // resumes a persisted YouTube embed on boot regardless of active tab —
-    // confirmed unrelated to the video editor by reading the component.
+    // App.tsx "Hidden Audio Engine": ambient music (useAmbientMusic), started
+    // because the boot helper clicks CONTINUE (not CONTINUE WITHOUT MUSIC).
+    // Deliberate app behaviour, unrelated to the video editor.
     'www.youtube-nocookie.com',
     // Home montage / stock fill (per project memory: intentional, keep it) —
     // a <video> pointed straight at Pexels from the main document.
