@@ -7,7 +7,7 @@ import RollingText from './RollingText';
 import TimedScrambledText from './TimedScrambledText';
 import ThemeSwitcher from './ThemeSwitcher';
 import ChromaticText from './ChromaticText';
-import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon, FilmIcon, TerminalIcon } from './icons';
+import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon, FilmIcon, TerminalIcon, SearchIcon, ArrowsMaximizeIcon } from './icons';
 import { HUDNavItem } from './HUDNavItem';
 import { NAV_GROUPS, toNavTab } from '../constants/navigation';
 import { LiveAssistantMicButton, LiveAssistantScreenButton, LiveAssistantControlButton, LiveAssistantCameraButton, LiveAssistantCameraPreview, LiveAssistantFault } from './LiveAssistantBar';
@@ -123,6 +123,7 @@ const Header: React.FC<HeaderProps> = ({
   const navRef = useRef<HTMLDivElement>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const containerRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const rowRef = useRef<HTMLDivElement>(null);
 
   const navGroups = NAV_GROUPS;
 
@@ -174,7 +175,15 @@ const Header: React.FC<HeaderProps> = ({
           opacity: 1,
           duration: 0.6,
           ease: "power2.out",
-          overwrite: true
+          overwrite: true,
+          // The row clips (overflow-hidden); on narrower screens a long group
+          // opens past its right edge, so slide the row to reveal the last item.
+          onComplete: () => {
+            const row = rowRef.current;
+            if (!row) return;
+            const clipped = container.getBoundingClientRect().right - row.getBoundingClientRect().right;
+            if (clipped > 0) gsap.to(row, { scrollLeft: row.scrollLeft + clipped, duration: 0.4, ease: "power2.out" });
+          }
         });
       } else {
         // Delay container slide until letters have started sliding down
@@ -188,9 +197,24 @@ const Header: React.FC<HeaderProps> = ({
         });
       }
     });
+    if (!activeMenu && rowRef.current) {
+      gsap.to(rowRef.current, { scrollLeft: 0, duration: 0.5, delay: 0.3, ease: "power2.inOut" });
+    }
   }, [activeMenu, navGroups]);
 
   const switchingRef = useRef(false);
+
+  // App-wide fullscreen. Tracks the real state so Esc-to-exit keeps the label right.
+  const [isFullscreen, setIsFullscreen] = useState(() => typeof document !== 'undefined' && !!document.fullscreenElement);
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void document.documentElement.requestFullscreen();
+  };
 
   // Below xl the icon cluster collapses into a "…" popover.
   const [iconsOpen, setIconsOpen] = useState(false);
@@ -255,7 +279,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Menu Items (Left Aligned) */}
-        <div className="flex items-center gap-0 h-full min-w-0 overflow-hidden">
+        <div ref={rowRef} className="flex items-center gap-0 h-full min-w-0 overflow-hidden">
           {navGroups.map((group, groupIdx) => {
             const isExpanded = activeMenu === group.id;
             const isCurrent = isGroupCurrent(group.id);
@@ -331,11 +355,21 @@ const Header: React.FC<HeaderProps> = ({
                   }}
                   title="Command palette (Ctrl+K)"
                 >
-                  <kbd className="font-rajdhani text-[10px] leading-none tracking-widest uppercase border border-primary/40 px-1 py-0.5">Ctrl K</kbd>
+                  <SearchIcon className="w-4 h-4" />
                 </HUDNavItem>
-                <div className="w-px h-2 bg-base-content/10 self-center" />
               </>
             )}
+            <HUDNavItem
+              onClick={(e) => {
+                e.stopPropagation();
+                audioService.playClick();
+                toggleFullscreen();
+              }}
+              title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            >
+              <ArrowsMaximizeIcon className="w-4 h-4" />
+            </HUDNavItem>
+            <div className="w-px h-2 bg-base-content/10 self-center" />
             <LiveAssistantScreenButton />
             <LiveAssistantCameraButton />
             <LiveAssistantControlButton />

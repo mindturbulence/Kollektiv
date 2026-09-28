@@ -17,14 +17,13 @@ export interface NavGroup {
 /** The header's navigation, shared with Home's "recently used tools" row. */
 export const NAV_GROUPS: NavGroup[] = [
   { id: 'home', label: 'Home', items: [], singleId: 'dashboard' },
-  { id: 'discovery', label: 'Discovery', items: [], singleId: 'discovery' },
   {
     id: 'workspaces', label: 'Workbench', items: [
+      { id: 'discovery', label: 'Discovery' },
       { id: 'crafter', label: 'Crafter' },
       { id: 'refiner', label: 'Refiner' },
       { id: 'prompt_analyzer', label: 'Analyzer' },
       { id: 'media_analyzer', label: 'Abstractor' },
-      { id: 'batch_runner', label: 'Batch' },
     ],
   },
   {
@@ -40,6 +39,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'resizer', label: 'Resizer' },
       { id: 'converter', label: 'Converter' },
       { id: 'video_to_frames', label: 'Video' },
+      { id: 'batch_runner', label: 'Batch' },
+      { id: 'lora_editor', label: 'LoRA Editor' },
     ],
   },
   {
@@ -48,7 +49,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'video_editor', label: 'Video Editor' },
       { id: 'composer', label: 'Composer' },
       { id: 'image_compare', label: 'Compare' },
-      { id: 'lora_editor', label: 'LoRA Editor' },
       { id: 'comfy_studio', label: 'ComfyUI' },
       { id: 'a1111_studio', label: 'A1111' },
     ],
