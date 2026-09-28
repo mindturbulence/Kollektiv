@@ -9,7 +9,6 @@ import { findLayerById } from '../core/layers/layerTree';
 import { TransformEngine } from '../core/transform/TransformEngine';
 import { SelectionEngine } from '../core/selection/SelectionEngine';
 import { TypeTool } from '../core/text/TypeTool';
-import { ShapeTool } from '../core/shape/ShapeTool';
 import { GradientTool } from '../core/gradient/GradientTool';
 import type { ToolId } from '../core/types';
 import type { CanvasViewportHandle } from './CanvasViewport';
@@ -25,7 +24,6 @@ const TOOL_HINTS: Partial<Record<ToolId, string>> = {
   'lasso-freehand': 'Lasso: drag to draw a freehand selection',
   'lasso-poly': 'Polygon Lasso: click to place points, double-click to close',
   'magic-wand': 'Magic Wand: click to select similar-colored pixels',
-  crop: 'Crop: drag handles, press Enter to apply',
   'clone-stamp': 'Clone Stamp: Alt+click to set source, then drag to paint',
   gradient: 'Gradient: drag to draw a linear gradient',
   'shape-rect': 'Shape: drag to draw a rectangle',
@@ -139,13 +137,34 @@ const TransformControls: React.FC = () => {
   );
 };
 
+/** Rect ↔ Ellipse segmented toggle for tools that share a rail slot. */
+const VariantToggle: React.FC<{ options: { tool: ToolId; label: string }[] }> = ({ options }) => {
+  const activeTool = useSyncExternalStore(subscribe, () => getSnapshot().activeTool);
+  return (
+    <div className="flex border border-base-content/20">
+      {options.map(({ tool, label }) => (
+        <button key={tool} type="button" aria-pressed={activeTool === tool}
+          className={`px-2 py-0.5 text-2xs font-mono uppercase ${activeTool === tool ? 'bg-primary/10 text-primary' : 'text-base-content/60 hover:text-primary'}`}
+          onClick={() => dispatch({ type: 'SET_ACTIVE_TOOL', tool })}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+};
+
 // ─── Selection controls ────────────────────────────────────────────────────
 
 const SelectionControls: React.FC = () => {
   const hasSelection = useSyncExternalStore(subscribe, () => getSnapshot().selection !== null);
+  const activeTool = useSyncExternalStore(subscribe, () => getSnapshot().activeTool);
+  const isMarquee = activeTool === 'marquee-rect' || activeTool === 'marquee-ellipse';
   return (
     <div className="flex items-center gap-3 px-3">
-      <span className="text-2xs font-mono text-base-content/60">Drag to select · Hold Shift to add</span>
+      {isMarquee && (
+        <VariantToggle options={[{ tool: 'marquee-rect', label: 'Rect' }, { tool: 'marquee-ellipse', label: 'Ellipse' }]} />
+      )}
+      <span className="text-2xs font-mono text-base-content/60">Drag to select</span>
       {hasSelection && (
         <button type="button" className="text-2xs font-mono text-base-content/60 hover:text-primary border border-base-content/15 hover:border-primary px-2 py-0.5" onClick={() => SelectionEngine.deselect()}>
           Deselect (Ctrl+D)
@@ -202,13 +221,11 @@ const TypeControls: React.FC = () => {
 
 const ShapeControls: React.FC = () => {
   const colors = useSyncExternalStore(subscribe, () => getSnapshot().colors);
-  const kind = ShapeTool.getKind();
 
   return (
     <div className="flex items-center gap-3 px-3">
-      <span className="text-2xs font-mono text-base-content/60">
-        {kind === 'rect' ? 'Rectangle' : 'Ellipse'} · Drag to draw
-      </span>
+      <VariantToggle options={[{ tool: 'shape-rect', label: 'Rect' }, { tool: 'shape-ellipse', label: 'Ellipse' }]} />
+      <span className="text-2xs font-mono text-base-content/60">Drag to draw</span>
       <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
         Fill
         <input type="color" className="w-7 h-5 border-none bg-transparent cursor-pointer"
@@ -269,6 +286,29 @@ const GradientControls: React.FC = () => {
   );
 };
 
+// ─── Crop controls ────────────────────────────────────────────────────────
+
+const CropControls: React.FC = () => {
+  const pending = useSyncExternalStore(subscribe, () => getSnapshot().pendingCrop);
+  if (!pending) {
+    return <span className="px-3 text-2xs font-mono text-base-content/60">Crop: drag a rectangle on the canvas</span>;
+  }
+  const btn = 'text-2xs font-mono px-2 py-0.5 border';
+  return (
+    <div className="flex items-center gap-3 px-3">
+      <span className="text-2xs font-mono text-base-content/60">
+        {Math.round(pending.width)} × {Math.round(pending.height)}px
+      </span>
+      <button type="button" className={`${btn} border-primary text-primary hover:bg-primary/10`} onClick={() => SelectionEngine.applyCrop()}>
+        Apply (Enter)
+      </button>
+      <button type="button" className={`${btn} border-base-content/15 text-base-content/60 hover:text-primary hover:border-primary`} onClick={() => SelectionEngine.cancelCrop()}>
+        Cancel (Esc)
+      </button>
+    </div>
+  );
+};
+
 // ─── ToolHeader ────────────────────────────────────────────────────────────
 
 const ToolHeader: React.FC<ToolHeaderProps> = ({ viewportRef }) => {
@@ -288,6 +328,8 @@ const ToolHeader: React.FC<ToolHeaderProps> = ({ viewportRef }) => {
         <ShapeControls />
       ) : activeTool === 'magic-wand' ? (
         <WandControls viewportRef={viewportRef} />
+      ) : activeTool === 'crop' ? (
+        <CropControls />
       ) : activeTool === 'gradient' ? (
         <GradientControls />
       ) : (

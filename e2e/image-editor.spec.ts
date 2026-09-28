@@ -77,6 +77,24 @@ test.describe('Image Editor entry', () => {
         await expect(page.getByText('red-banner', { exact: true })).toBeVisible();
     });
 
+    test('Ctrl+Shift+M exports the mask and toolbar menus open adjustments', async ({ page }) => {
+        await bootToAppShell(page, 'image_editor');
+        const png = await makePng(page);
+        const chooser = page.waitForEvent('filechooser');
+        await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
+        await (await chooser).setFiles({ name: 'red-banner.png', mimeType: 'image/png', buffer: png });
+        await expect(page.getByText('321 × 123px')).toBeVisible({ timeout: 15_000 });
+
+        // Ctrl+Shift+M used to fall into the Ctrl+M (Curves) case.
+        await page.keyboard.press('Control+Shift+M');
+        await expect(page.getByText(/has no mask/)).toBeVisible({ timeout: 5_000 });
+
+        // The Adjust menu must render above the tool header to be clickable.
+        await page.getByRole('button', { name: 'Adjust', exact: true }).click();
+        await page.getByRole('menuitem', { name: /Levels/ }).click();
+        await expect(page.locator('div.fixed.bg-base-300').getByText('Levels', { exact: false })).toBeVisible();
+    });
+
     test('upgrades a v1 autosave database left by an older build', async ({ page }) => {
         // A pre-2026-09-25 install has the 'documents' store at v1 with a JPEG-era record.
         await page.addInitScript(() => {

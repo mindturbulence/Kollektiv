@@ -389,6 +389,15 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
   );
 
 
+  const handleCropToSelection = useCallback(() => {
+    if (!cropToSelection()) {
+      showGlobalFeedback?.('Make a selection first.');
+      return;
+    }
+    // The pending crop only renders (and gets Apply/Cancel) under the Crop tool.
+    dispatch({ type: 'SET_ACTIVE_TOOL', tool: 'crop' });
+  }, [showGlobalFeedback]);
+
   useEditorShortcuts({
     onFitToViewport: handleFitToViewport,
     onZoomIn: handleZoomIn,
@@ -398,9 +407,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
     onPaste: () => void handlePaste(),
     onImageSize: () => setIsImageSizeOpen(true),
     onCanvasSize: () => setIsCanvasSizeOpen(true),
-    onCropToSelection: () => {
-      if (!cropToSelection()) showGlobalFeedback?.('Make a selection first.');
-    },
+    onCropToSelection: handleCropToSelection,
     onExportMask: () => void handleExportMask(),
   });
 
@@ -498,6 +505,8 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
         isSaving={isSaving}
         onImageSize={() => setIsImageSizeOpen(true)}
         onCanvasSize={() => setIsCanvasSizeOpen(true)}
+        onCropToSelection={handleCropToSelection}
+        onExportMask={() => void handleExportMask()}
       />
 
       <div

@@ -4,7 +4,8 @@
 // is fully navigable, but the underlying tool behaviors land in later
 // milestones.
 
-import React, { useSyncExternalStore } from 'react';
+import React, { useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { dispatch, getSnapshot, subscribe } from '../core/store';
 import type { ToolId } from '../core/types';
 import {
@@ -18,11 +19,25 @@ interface ToolDef {
   icon: React.FC<React.SVGProps<SVGSVGElement>>;
   label: string;
   shortcut: string;
+  /** Sub-modes sharing this slot; clicking the active slot cycles them. */
+  variants?: ToolId[];
+}
+
+/** Rail slots with sub-modes (frontend plan §3: Shift+M / Shift+U cycle). */
+export const TOOL_VARIANTS: ToolId[][] = [
+  ['marquee-rect', 'marquee-ellipse'],
+  ['shape-rect', 'shape-ellipse'],
+];
+
+/** Next variant in the active tool's slot, or null when the tool has none. */
+export function nextVariant(tool: ToolId): ToolId | null {
+  const group = TOOL_VARIANTS.find((g) => g.includes(tool));
+  return group ? group[(group.indexOf(tool) + 1) % group.length] : null;
 }
 
 const TOOLS: ToolDef[] = [
   { tool: 'move', icon: MoveIcon, label: 'Move', shortcut: 'V' },
-  { tool: 'marquee-rect', icon: SquareDashedIcon, label: 'Marquee', shortcut: 'M' },
+  { tool: 'marquee-rect', icon: SquareDashedIcon, label: 'Marquee', shortcut: 'M · Shift+M cycles', variants: TOOL_VARIANTS[0] },
   { tool: 'lasso-freehand', icon: LassoIcon, label: 'Lasso', shortcut: 'L' },
   { tool: 'lasso-poly', icon: LassoPolyIcon, label: 'Polygon Lasso', shortcut: 'Shift+L' },
   { tool: 'magic-wand', icon: WandIcon, label: 'Magic Wand', shortcut: 'W' },
@@ -31,27 +46,57 @@ const TOOLS: ToolDef[] = [
   { tool: 'eraser', icon: EraserIcon, label: 'Eraser', shortcut: 'E' },
   { tool: 'clone-stamp', icon: StampIcon, label: 'Clone Stamp', shortcut: 'S' },
   { tool: 'gradient', icon: GradientIcon, label: 'Gradient', shortcut: 'G' },
-  { tool: 'shape-rect', icon: ShapeToolIcon, label: 'Shape', shortcut: 'U' },
+  { tool: 'shape-rect', icon: ShapeToolIcon, label: 'Shape', shortcut: 'U · Shift+U cycles', variants: TOOL_VARIANTS[1] },
   { tool: 'type', icon: TypeToolIcon, label: 'Type', shortcut: 'T' },
   { tool: 'eyedropper', icon: EyedropperToolIcon, label: 'Eyedropper', shortcut: 'I' },
   { tool: 'hand', icon: HandToolIcon, label: 'Hand', shortcut: 'H' },
   { tool: 'zoom', icon: ZoomToolIcon, label: 'Zoom', shortcut: 'Z' },
 ];
 
-const ToolButton: React.FC<{ def: ToolDef; active: boolean }> = ({ def, active }) => {
+interface TipState { text: string; top: number; left: number }
+
+/** The rail scrolls (overflow clips a CSS tooltip), so the tooltip is
+ *  portalled to <body> and positioned beside the hovered button. */
+const RailTooltip: React.FC<{ tip: TipState | null }> = ({ tip }) =>
+  tip && typeof document !== 'undefined'
+    ? createPortal(
+        <div
+          role="tooltip"
+          className="fixed z-dropdown -translate-y-1/2 pointer-events-none whitespace-nowrap px-2 py-1 text-xs bg-neutral text-neutral-content shadow-lg"
+          style={{ top: tip.top, left: tip.left }}
+        >
+          {tip.text}
+        </div>,
+        document.body,
+      )
+    : null;
+
+const ToolButton: React.FC<{ def: ToolDef; activeTool: ToolId; onTip: (tip: TipState | null) => void }> = ({ def, activeTool, onTip }) => {
   const Icon = def.icon;
+  const active = def.variants ? def.variants.includes(activeTool) : activeTool === def.tool;
+  const showTip = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    onTip({ text: `${def.label} (${def.shortcut})`, top: r.top + r.height / 2, left: r.right + 6 });
+  };
   return (
     <button
       type="button"
-      className={`tooltip tooltip-right w-11 h-11 flex-shrink-0 flex items-center justify-center border-l-2 transition-colors ${
+      className={`w-11 h-11 flex-shrink-0 flex items-center justify-center border-l-2 transition-colors ${
         active
           ? 'bg-primary/10 text-primary border-primary'
           : 'border-transparent text-base-content/60 hover:text-base-content hover:bg-base-content/5'
       }`}
-      data-tip={`${def.label} (${def.shortcut})`}
+      onMouseEnter={(e) => showTip(e.currentTarget)}
+      onFocus={(e) => showTip(e.currentTarget)}
+      onMouseLeave={() => onTip(null)}
+      onBlur={() => onTip(null)}
       aria-label={def.label}
+      aria-keyshortcuts={def.shortcut.split(' ')[0]}
       aria-pressed={active}
-      onClick={() => dispatch({ type: 'SET_ACTIVE_TOOL', tool: def.tool })}
+      onClick={() => dispatch({
+        type: 'SET_ACTIVE_TOOL',
+        tool: active && def.variants ? (nextVariant(activeTool) ?? def.tool) : def.tool,
+      })}
     >
       <Icon className="w-5 h-5" />
     </button>
@@ -111,18 +156,20 @@ const FgBgSwatches: React.FC = () => {
 
 const ToolRail: React.FC = () => {
   const activeTool = useSyncExternalStore(subscribe, () => getSnapshot().activeTool);
+  const [tip, setTip] = useState<TipState | null>(null);
 
   return (
     <div className="w-11 flex-shrink-0 flex flex-col items-stretch bg-base-100/85 backdrop-blur-md border-r border-base-content/5 overflow-y-auto overflow-x-hidden">
       <div className="flex flex-col items-stretch">
         {TOOLS.map((def) => (
-          <ToolButton key={def.tool} def={def} active={activeTool === def.tool} />
+          <ToolButton key={def.tool} def={def} activeTool={activeTool} onTip={setTip} />
         ))}
       </div>
       <div className="flex-1" />
       <div className="sticky bottom-0 border-t border-base-content/5 bg-base-100/85 backdrop-blur-md">
         <FgBgSwatches />
       </div>
+      <RailTooltip tip={tip} />
     </div>
   );
 };

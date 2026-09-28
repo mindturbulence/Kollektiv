@@ -12,6 +12,7 @@ import { TransformEngine } from '../../core/transform/TransformEngine';
 import { GradientTool } from '../../core/gradient/GradientTool';
 import { fillSelection, deleteInSelection } from '../../core/layers/LayerManager';
 import type { ToolId } from '../../core/types';
+import { TOOL_VARIANTS, nextVariant } from '../ToolRail';
 
 const TOOL_KEYMAP: Record<string, ToolId> = {
   v: 'move',
@@ -67,6 +68,19 @@ export function useEditorShortcuts(options: UseEditorShortcutsOptions): void {
         const step = key === '[' ? -Math.max(1, Math.round(brush.size * 0.1)) : Math.max(1, Math.round(brush.size * 0.1));
         e.preventDefault();
         dispatch({ type: 'SET_BRUSH', brush: { size: Math.max(1, Math.min(500, brush.size + step)) } });
+        return;
+      }
+
+      // Ctrl+Shift+C crop-to-selection, Ctrl+Shift+M export mask. Checked
+      // before the Ctrl switch, whose 'm' (Curves) / default cases return first.
+      if (isMod && e.shiftKey && key === 'c') {
+        e.preventDefault();
+        options.onCropToSelection?.();
+        return;
+      }
+      if (isMod && e.shiftKey && key === 'm') {
+        e.preventDefault();
+        options.onExportMask?.();
         return;
       }
 
@@ -140,19 +154,6 @@ export function useEditorShortcuts(options: UseEditorShortcutsOptions): void {
         }
       }
 
-      // Enter/Esc crop handling lives above; here: Ctrl+Shift+C crop-to-
-      // selection, Ctrl+Shift+M export mask.
-      if (isMod && e.shiftKey && key === 'c') {
-        e.preventDefault();
-        options.onCropToSelection?.();
-        return;
-      }
-      if (isMod && e.shiftKey && key === 'm') {
-        e.preventDefault();
-        options.onExportMask?.();
-        return;
-      }
-
       // Enter: apply a pending crop (ToolHeader hint promises this).
       if (key === 'enter') {
         if (getSnapshot().pendingCrop) {
@@ -179,6 +180,16 @@ export function useEditorShortcuts(options: UseEditorShortcutsOptions): void {
         if (getSnapshot().activeTool !== 'lasso-poly') {
           dispatch({ type: 'SET_ACTIVE_TOOL', tool: 'lasso-poly' });
         }
+        return;
+      }
+
+      // Shift+M / Shift+U: cycle the marquee / shape sub-modes (rect ↔ ellipse).
+      if (e.shiftKey && (key === 'm' || key === 'u')) {
+        e.preventDefault();
+        const base = TOOL_KEYMAP[key];
+        const current = getSnapshot().activeTool;
+        const next = nextVariant(TOOL_VARIANTS.some((g) => g.includes(current) && g.includes(base)) ? current : base);
+        if (next) dispatch({ type: 'SET_ACTIVE_TOOL', tool: next });
         return;
       }
 
