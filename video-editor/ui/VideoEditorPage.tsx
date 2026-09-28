@@ -20,6 +20,7 @@ import MediaBin from './MediaBin';
 import Preview from './Preview';
 import Inspector from './Inspector';
 import ExportDialog from './ExportDialog';
+import ProjectList from './projects/ProjectList';
 import Timeline from './timeline/Timeline';
 
 export interface VideoEditorPageProps {
@@ -40,15 +41,16 @@ interface NewProjectPanelProps {
   onCreate: (name: string, width: number, height: number) => void;
   recent: ProjectSummary | null;
   onResume: (id: string) => void;
+  onError: (message: string) => void;
 }
 
-const NewProjectPanel: React.FC<NewProjectPanelProps> = ({ onCreate, recent, onResume }) => {
+const NewProjectPanel: React.FC<NewProjectPanelProps> = ({ onCreate, recent, onResume, onError }) => {
   const [name, setName] = useState('Untitled project');
   const [presetIndex, setPresetIndex] = useState(0);
   const preset = PROJECT_PRESETS[presetIndex];
 
   return (
-    <div className="flex-1 flex items-center justify-center p-6 bg-base-100">
+    <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-base-100 overflow-y-auto">
       <form
         className="w-full max-w-md bg-base-200/60 border border-base-content/10"
         aria-label="New project"
@@ -92,6 +94,11 @@ const NewProjectPanel: React.FC<NewProjectPanelProps> = ({ onCreate, recent, onR
           <button type="submit" className="form-btn form-btn-primary flex-1 rounded-none">Create project</button>
         </footer>
       </form>
+      {recent && (
+        <div className="w-full max-w-md">
+          <ProjectList onOpen={onResume} onError={onError} />
+        </div>
+      )}
     </div>
   );
 };
@@ -237,10 +244,10 @@ const VideoEditorPage: React.FC<VideoEditorPageProps> = ({ openPayload, showGlob
   return (
     <div className={`w-full h-full flex flex-col bg-base-100 overflow-hidden ${isExiting ? 'pointer-events-none opacity-0 transition-opacity duration-200' : ''}`}
       data-testid="ve-page">
-      <EditorToolbar onExport={() => setIsExportOpen(true)} />
+      <EditorToolbar onExport={() => setIsExportOpen(true)} onError={reportError} />
 
       {!hasProject ? (
-        <NewProjectPanel onCreate={createProject} recent={recent} onResume={(id) => void openSaved(id)} />
+        <NewProjectPanel onCreate={createProject} recent={recent} onResume={(id) => void openSaved(id)} onError={reportError} />
       ) : (
         <>
           <div className="flex-1 flex flex-row min-h-0">
@@ -249,7 +256,7 @@ const VideoEditorPage: React.FC<VideoEditorPageProps> = ({ openPayload, showGlob
               onError={reportError}
             />
             <Preview canvasRef={canvasRef} playback={playback} error={previewError} />
-            <Inspector onError={reportError} />
+            <Inspector onError={reportError} scopeSource={canvasRef} />
           </div>
           <div className="h-64 flex-shrink-0 border-t border-base-content/5 min-h-0">
             <Timeline />

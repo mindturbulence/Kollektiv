@@ -54,8 +54,14 @@ export function evaluateTransform(clip: Clip, localTime: number): Transform {
 }
 
 /** Base volume overridden by keyframes, then multiplied by fade-in/fade-out ramps. */
+/** Keyframed volume without fades — what the user edits in the Inspector. */
+export function evaluateVolumeLevel(clip: Clip, localTime: number): number {
+  return valueAt(forProperty(clip, 'volume'), localTime, clip.volume);
+}
+
+/** Audible gain: keyframed level times fade-in/out. */
 export function evaluateVolume(clip: Clip, localTime: number): number {
-  let v = valueAt(forProperty(clip, 'volume'), localTime, clip.volume);
+  let v = evaluateVolumeLevel(clip, localTime);
   if (clip.fadeIn > 0 && localTime < clip.fadeIn) {
     v *= Math.max(0, localTime / clip.fadeIn);
   }

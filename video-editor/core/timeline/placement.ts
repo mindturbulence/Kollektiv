@@ -1,6 +1,6 @@
 // OWNED BY: timeline agent. Pure placement/query helpers over a Project.
 
-import type { Clip, Project } from '../types';
+import type { Clip, MediaItem, Project } from '../types';
 
 export function clipAt(project: Project, trackId: string, time: number): Clip | null {
   return project.clips.find(c => c.trackId === trackId && time >= c.start && time < c.start + c.duration) ?? null;
@@ -33,4 +33,42 @@ export function findFreeSlot(project: Project, trackId: string, duration: number
     if (clipEnd > candidate) candidate = clipEnd;
   }
   return candidate;
+}
+
+export interface TrimBounds { min: number; max: number }
+
+/** Valid range for dragging one edge of `clip`, given its source media (undefined for text/image-without-limit). */
+export function trimBounds(clip: Clip, edge: 'start' | 'end', media: MediaItem | undefined): TrimBounds {
+  const minFrame = 1 / 60; // at least ~1 frame at 60fps; good enough floor without fps in scope here
+  if (edge === 'start') {
+    const earliest = media ? clip.start - clip.inPoint / clip.speed : -Infinity;
+    return { min: Math.max(0, earliest), max: clip.start + clip.duration - minFrame };
+  }
+  const latest = media ? clip.start + (media.duration - clip.inPoint) / clip.speed : Infinity;
+  return { min: clip.start + minFrame, max: latest };
+}
+
+export interface Cut { trackId: string; fromClipId: string; toClipId: string; time: number }
+
+/** Adjacent same-track clip pairs (cuts), sorted by track then time. */
+export function findCuts(clips: Clip[]): Cut[] {
+  const byTrack = new Map<string, Clip[]>();
+  for (const c of clips) {
+    const list = byTrack.get(c.trackId) ?? [];
+    list.push(c);
+    byTrack.set(c.trackId, list);
+  }
+  const cuts: Cut[] = [];
+  const EPS = 1e-3;
+  for (const [trackId, list] of byTrack) {
+    const sorted = [...list].sort((a, b) => a.start - b.start);
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const a = sorted[i];
+      const b = sorted[i + 1];
+      if (Math.abs(a.start + a.duration - b.start) <= EPS) {
+        cuts.push({ trackId, fromClipId: a.id, toClipId: b.id, time: b.start });
+      }
+    }
+  }
+  return cuts;
 }

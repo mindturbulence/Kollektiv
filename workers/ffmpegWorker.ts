@@ -151,12 +151,14 @@ async function runEncodeFrames(ff: FFmpeg, job: Job & { req: EncodeFramesRequest
     };
     ff.on('progress', progressHandler);
 
-    // libx264/libvpx-vp9 and libopus/aac are already proven-present in this
-    // core build — see constants/converterFormats.ts mp4/webm targets.
+    // WebM is VP8 + Vorbis: in @ffmpeg/core 0.12.10 libvpx-vp9 (any input)
+    // and stereo libopus abort with "memory access out of bounds" (see
+    // constants/converterFormats.ts). Realtime/cpu-used 8 is libvpx's
+    // counterpart to x264 ultrafast.
     const videoArgs = req.container === 'mp4'
       ? ['-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p']
-      : ['-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '34'];
-    const audioArgs = req.audio ? (req.container === 'mp4' ? ['-c:a', 'aac'] : ['-c:a', 'libopus']) : [];
+      : ['-c:v', 'libvpx', '-crf', '10', '-b:v', '4M', '-deadline', 'realtime', '-cpu-used', '8', '-pix_fmt', 'yuv420p'];
+    const audioArgs = req.audio ? (req.container === 'mp4' ? ['-c:a', 'aac'] : ['-c:a', 'libvorbis']) : [];
 
     if (job.cancelled) {
       post({ id: req.id, kind: 'result', ok: false, cancelled: true });

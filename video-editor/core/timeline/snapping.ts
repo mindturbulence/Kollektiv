@@ -9,10 +9,12 @@ export interface SnapPoint {
   source: SnapSource;
 }
 
-/** Every candidate snap target on the timeline: 0, the playhead, clip edges, markers. */
-export function collectSnapPoints(project: Project, playhead: number): SnapPoint[] {
+/** Every candidate snap target on the timeline: 0, the playhead, clip edges, markers.
+ *  `excludeClipIds` drops the clips being dragged so a clip doesn't snap to its own edge. */
+export function collectSnapPoints(project: Project, playhead: number, excludeClipIds?: Set<string>): SnapPoint[] {
   const points: SnapPoint[] = [{ time: 0, source: 'zero' }, { time: playhead, source: 'playhead' }];
   for (const clip of project.clips) {
+    if (excludeClipIds?.has(clip.id)) continue;
     points.push({ time: clip.start, source: 'clip-start' });
     points.push({ time: clip.start + clip.duration, source: 'clip-end' });
   }

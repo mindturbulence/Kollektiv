@@ -6,12 +6,14 @@ import { dispatch } from '../../core/store';
 import { useEditorSelector } from '../hooks/useEditorState';
 import type { Clip, Marker, MediaItem, Track, TrackKind } from '../../core/types';
 import { DEFAULT_TRANSFORM } from '../../core/types';
-import {
-  formatTimecode, frameSnap, snapTime, collectSnapPoints, trimBounds,
-  clipsInViewport, findCuts, canAcceptClip, clampZoom, freeStartOnTrack,
-} from './timelineMath';
+import { frameQuantize as frameSnap, findFreeSlot, trimBounds, findCuts } from '../../core/timeline/placement';
+import { collectSnapPoints, snap } from '../../core/timeline/snapping';
+import { computeSlip } from '../../core/timeline/slip-utils';
+import { computeSlide } from '../../core/timeline/slide-utils';
+import { applyEdit } from '../../core/actions/apply';
+import { formatTimecode, clipsInViewport, canAcceptClip, clampZoom, keyframeMarkerTimes } from './timelineMath';
 import { MEDIA_DRAG_MIME } from '../placement';
-import { EyeIcon, LockIcon, LockOpenIcon, PlusIcon, ScissorsIcon } from '../../../components/icons';
+import { EyeIcon, LockIcon, LockOpenIcon, PlusIcon } from '../../../components/icons';
 
 // Stable fallbacks so memo/callback deps don't change every render without a project.
 const NO_TRACKS: Track[] = [];
@@ -31,8 +33,19 @@ const SNAP_PX = 8;
 type DragPreview =
   | { kind: 'move'; pointerId: number; clipIds: string[]; primaryClipId: string; deltaStart: number; targetTrackId: string | null; startClientX: number; startClientY: number; tracksTop: number }
   | { kind: 'trim'; pointerId: number; clipId: string; edge: 'start' | 'end'; time: number; ripple: boolean }
+  | { kind: 'slip'; pointerId: number; clipId: string; startClientX: number; deltaSeconds: number }
+  | { kind: 'slide'; pointerId: number; clipId: string; leftId: string; rightId: string; startClientX: number; deltaSeconds: number }
   | { kind: 'marquee'; pointerId: number; originX: number; originY: number; x: number; y: number }
   | null;
+
+/** Left/right same-track neighbors touching `clip`'s edges, or null if there's a gap/track end. */
+function adjacentClips(clips: Clip[], clip: Clip): { left: Clip | null; right: Clip | null } {
+  const EPS = 1e-3;
+  const onTrack = clips.filter(c => c.trackId === clip.trackId);
+  const left = onTrack.find(c => Math.abs(c.start + c.duration - clip.start) <= EPS) ?? null;
+  const right = onTrack.find(c => Math.abs(clip.start + clip.duration - c.start) <= EPS) ?? null;
+  return { left, right };
+}
 
 function isTypingTarget(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
@@ -150,7 +163,13 @@ const Timeline: React.FC = () => {
       if (selectedClipIds.length === 0) return;
       e.preventDefault();
       dispatch({ type: 'removeClips', clipIds: selectedClipIds, ripple: e.shiftKey });
+      return;
     }
+    const toolKey = e.key.toLowerCase();
+    if (toolKey === 'v') { e.preventDefault(); dispatch({ type: 'setTool', tool: 'select' }); return; }
+    if (toolKey === 'c') { e.preventDefault(); dispatch({ type: 'setTool', tool: 'razor' }); return; }
+    if (toolKey === 'y') { e.preventDefault(); dispatch({ type: 'setTool', tool: 'slip' }); return; }
+    if (toolKey === 'u') { e.preventDefault(); dispatch({ type: 'setTool', tool: 'slide' }); }
   }, [project, clips, tracks, selectedClipIds, playhead]);
 
   // ─── ruler: click/drag to scrub ────────────────────────────────────────────
@@ -195,9 +214,29 @@ const Timeline: React.FC = () => {
     setDrag({ kind: 'trim', pointerId: e.pointerId, clipId: clip.id, edge, time: edge === 'start' ? clip.start : clip.start + clip.duration, ripple: e.altKey });
   };
 
+  // ─── clip drag: slip (own inPoint, fixed window) / slide (moves clip, trims neighbors) ──
+  const beginSlip = (e: React.PointerEvent, clip: Clip) => {
+    const track = tracks.find(t => t.id === clip.trackId);
+    const media = clip.mediaId ? mediaById.get(clip.mediaId) : undefined;
+    if (track?.locked || !media || media.kind === 'image') return; // no bounded source window to slip
+    (e.target as Element).setPointerCapture(e.pointerId);
+    setDrag({ kind: 'slip', pointerId: e.pointerId, clipId: clip.id, startClientX: e.clientX, deltaSeconds: 0 });
+  };
+
+  const beginSlide = (e: React.PointerEvent, clip: Clip) => {
+    const track = tracks.find(t => t.id === clip.trackId);
+    if (track?.locked) return;
+    const { left, right } = adjacentClips(clips, clip);
+    if (!left || !right) return; // no open-end slide; use trim instead
+    (e.target as Element).setPointerCapture(e.pointerId);
+    setDrag({ kind: 'slide', pointerId: e.pointerId, clipId: clip.id, leftId: left.id, rightId: right.id, startClientX: e.clientX, deltaSeconds: 0 });
+  };
+
   const onClipPointerDown = (e: React.PointerEvent, clip: Clip) => {
     e.stopPropagation();
     if (tool === 'razor') return; // handled on pointerup as a click, not a drag
+    if (tool === 'slip') { beginSlip(e, clip); return; }
+    if (tool === 'slide') { beginSlide(e, clip); return; }
     const el = e.currentTarget as HTMLElement;
     const rect = el.getBoundingClientRect();
     const localX = e.clientX - rect.left;
@@ -226,13 +265,13 @@ const Timeline: React.FC = () => {
         if (dragged.length > 0) {
           const minOrigStart = Math.min(...dragged.map(c => c.start));
           if (minOrigStart + deltaStart < 0) deltaStart = -minOrigStart;
-          if (snapping && drag.clipIds.length === 1) {
+          if (snapping && drag.clipIds.length === 1 && project) {
             const c = dragged[0];
             const excluded = new Set(drag.clipIds);
-            const points = collectSnapPoints(clips, excluded, playhead, markers.map(m => m.time));
+            const points = collectSnapPoints(project, playhead, excluded);
             const threshold = SNAP_PX / zoom;
-            const startSnap = snapTime(c.start + deltaStart, points, threshold);
-            const endSnap = snapTime(c.start + c.duration + deltaStart, points, threshold);
+            const startSnap = snap(c.start + deltaStart, points, threshold);
+            const endSnap = snap(c.start + c.duration + deltaStart, points, threshold);
             if (startSnap.snappedTo !== null) deltaStart = startSnap.time - c.start;
             else if (endSnap.snappedTo !== null) deltaStart = endSnap.time - c.start - c.duration;
           }
@@ -255,6 +294,8 @@ const Timeline: React.FC = () => {
         const raw = frameSnap(clipStartTimeAt(ev.clientX), fps);
         const time = Math.min(bounds.max, Math.max(bounds.min, raw));
         setDrag({ ...drag, time, ripple: ev.altKey });
+      } else if (drag.kind === 'slip' || drag.kind === 'slide') {
+        setDrag({ ...drag, deltaSeconds: (ev.clientX - drag.startClientX) / zoom });
       } else if (drag.kind === 'marquee') {
         const rect = tracksScrollRef.current?.getBoundingClientRect();
         setDrag({ ...drag, x: (ev.clientX - (rect?.left ?? 0)) + scrollLeft, y: ev.clientY - (rect?.top ?? 0) + (tracksScrollRef.current?.scrollTop ?? 0) });
@@ -276,6 +317,17 @@ const Timeline: React.FC = () => {
         }
       } else if (commit && drag.kind === 'trim') {
         dispatch({ type: 'trimClip', clipId: drag.clipId, edge: drag.edge, time: drag.time, ripple: drag.ripple });
+      } else if (commit && drag.kind === 'slip') {
+        const clip = clips.find(c => c.id === drag.clipId);
+        const media = clip?.mediaId ? mediaById.get(clip.mediaId) : undefined;
+        const actions = clip ? computeSlip(clip, media, drag.deltaSeconds) : [];
+        if (actions.length > 0) dispatch(actions[0]);
+      } else if (commit && drag.kind === 'slide') {
+        const clip = clips.find(c => c.id === drag.clipId);
+        const left = clips.find(c => c.id === drag.leftId) ?? null;
+        const right = clips.find(c => c.id === drag.rightId) ?? null;
+        const actions = clip && project ? computeSlide(project, clip, left, right, drag.deltaSeconds) : [];
+        if (actions.length > 0) dispatch({ type: 'batch', label: 'Slide clip', actions });
       } else if (commit && drag.kind === 'marquee') {
         const lo = { x: Math.min(drag.originX, drag.x), y: Math.min(drag.originY, drag.y) };
         const hi = { x: Math.max(drag.originX, drag.x), y: Math.max(drag.originY, drag.y) };
@@ -323,7 +375,7 @@ const Timeline: React.FC = () => {
     const requiredKind: TrackKind = item.kind === 'audio' ? 'audio' : 'video';
     if (track.kind !== requiredKind || track.locked) return;
     const dropTime = frameSnap(clipStartTimeAt(e.clientX), project.settings.fps);
-    const start = freeStartOnTrack(clips, track.id, dropTime, item.duration);
+    const start = findFreeSlot(project, track.id, item.duration, dropTime);
     dispatch({
       type: 'addClip',
       clip: {
@@ -340,6 +392,30 @@ const Timeline: React.FC = () => {
     return map;
   }, [tracks, clips]);
 
+  // Slip doesn't move the clip; preview its new inPoint instead of position.
+  const slipPreviewInPoint = useMemo(() => {
+    if (drag?.kind !== 'slip') return null;
+    const clip = clips.find(c => c.id === drag.clipId);
+    if (!clip) return null;
+    const media = clip.mediaId ? mediaById.get(clip.mediaId) : undefined;
+    const actions = computeSlip(clip, media, drag.deltaSeconds);
+    return actions.length > 0 && actions[0].type === 'updateClip' ? (actions[0].patch.inPoint as number) : clip.inPoint;
+  }, [drag, clips, mediaById]);
+
+  // Slide previews by actually applying the clamped batch to a scratch
+  // project — reuses applyEdit's exact clamp/overlap rules instead of
+  // re-deriving them, so the preview and the eventual commit can't disagree.
+  const slidePreviewClips = useMemo(() => {
+    if (!project || drag?.kind !== 'slide') return null;
+    const clip = clips.find(c => c.id === drag.clipId);
+    const left = clips.find(c => c.id === drag.leftId) ?? null;
+    const right = clips.find(c => c.id === drag.rightId) ?? null;
+    if (!clip || !left || !right) return null;
+    const actions = computeSlide(project, clip, left, right, drag.deltaSeconds);
+    if (actions.length === 0) return null;
+    return applyEdit(project, { type: 'batch', actions, label: 'preview' }).project.clips;
+  }, [project, drag, clips]);
+
   if (!project) {
     return <div className="h-full w-full flex items-center justify-center text-xs text-base-content/40" data-testid="ve-timeline">No project loaded</div>;
   }
@@ -354,37 +430,11 @@ const Timeline: React.FC = () => {
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      {/* Toolbar */}
+      {/* Status strip — tools and snapping live in the editor toolbar. */}
       <div className="h-7 flex-shrink-0 flex items-center gap-2 px-2 border-b border-base-content/10">
-        <button
-          type="button"
-          aria-label="Select tool"
-          aria-pressed={tool === 'select'}
-          className={`px-1.5 py-0.5 text-2xs font-mono uppercase border ${tool === 'select' ? 'border-primary text-primary' : 'border-base-content/15 text-base-content/60'} focus-visible:ring-1 focus-visible:ring-primary`}
-          onClick={() => dispatch({ type: 'setTool', tool: 'select' })}
-        >
-          Select
-        </button>
-        <button
-          type="button"
-          aria-label="Razor tool"
-          aria-pressed={tool === 'razor'}
-          className={`px-1.5 py-0.5 text-2xs font-mono uppercase border flex items-center gap-1 ${tool === 'razor' ? 'border-primary text-primary' : 'border-base-content/15 text-base-content/60'} focus-visible:ring-1 focus-visible:ring-primary`}
-          onClick={() => dispatch({ type: 'setTool', tool: 'razor' })}
-        >
-          <ScissorsIcon className="w-3 h-3" /> Razor
-        </button>
-        <button
-          type="button"
-          aria-label={snapping ? 'Disable snapping' : 'Enable snapping'}
-          aria-pressed={snapping}
-          className={`px-1.5 py-0.5 text-2xs font-mono uppercase border ${snapping ? 'border-primary text-primary' : 'border-base-content/15 text-base-content/60'}`}
-          onClick={() => dispatch({ type: 'setSnapping', snapping: !snapping })}
-        >
-          Snap
-        </button>
+        <span className="text-2xs font-mono uppercase text-base-content/60">{tool}</span>
         <div className="flex-1" />
-        <span className="text-2xs font-mono text-base-content/50">{formatTimecode(playhead, fps)}</span>
+        <span className="text-2xs font-mono text-base-content/60">{formatTimecode(playhead, fps)}</span>
       </div>
 
       {/* Ruler */}
@@ -424,11 +474,15 @@ const Timeline: React.FC = () => {
                 clips={clipsInViewport(clips.filter(c => c.trackId === track.id), zoom, scrollLeft, viewportWidth, 400)}
                 mediaById={mediaById}
                 zoom={zoom}
+                fps={fps}
                 selectedClipIds={selectedClipIds}
                 tool={tool}
                 drag={drag}
+                slipPreviewInPoint={slipPreviewInPoint}
+                slidePreviewClips={slidePreviewClips}
                 onClipPointerDown={onClipPointerDown}
                 onClipPointerUpRazor={onClipPointerUpRazor}
+                onKeyframeClick={(time) => dispatch({ type: 'setPlayhead', time })}
                 cuts={cutsByTrack.get(track.id) ?? []}
                 transitions={project.transitions}
                 onDropMedia={onDropMedia}
@@ -552,15 +606,19 @@ const TrackRow: React.FC<{
   clips: Clip[];
   mediaById: Map<string, MediaItem>;
   zoom: number;
+  fps: number;
   selectedClipIds: string[];
   tool: string;
   drag: DragPreview;
+  slipPreviewInPoint: number | null;
+  slidePreviewClips: Clip[] | null;
   onClipPointerDown: (e: React.PointerEvent, clip: Clip) => void;
   onClipPointerUpRazor: (e: React.PointerEvent, clip: Clip) => void;
+  onKeyframeClick: (time: number) => void;
   cuts: ReturnType<typeof findCuts>;
   transitions: { id: string; fromClipId: string; toClipId: string }[];
   onDropMedia: (e: React.DragEvent<HTMLDivElement>, track: Track) => void;
-}> = ({ top, track, clips, mediaById, zoom, selectedClipIds, tool, drag, onClipPointerDown, onClipPointerUpRazor, cuts, transitions, onDropMedia }) => (
+}> = ({ top, track, clips, mediaById, zoom, fps, selectedClipIds, tool, drag, slipPreviewInPoint, slidePreviewClips, onClipPointerDown, onClipPointerUpRazor, onKeyframeClick, cuts, transitions, onDropMedia }) => (
   <div
     className="absolute left-0 right-0 border-b border-base-content/5"
     style={{ top, height: ROW_H }}
@@ -573,10 +631,17 @@ const TrackRow: React.FC<{
       const isPrimaryCrossTrack = drag?.kind === 'move' && drag.primaryClipId === clip.id && drag.targetTrackId && drag.targetTrackId !== track.id;
       const displayStart = isDraggingThis && drag?.kind === 'move' ? clip.start + drag.deltaStart : clip.start;
       const isTrimmingThis = drag?.kind === 'trim' && drag.clipId === clip.id;
-      const start = isTrimmingThis && drag?.kind === 'trim' && drag.edge === 'start' ? drag.time : displayStart;
-      const duration = isTrimmingThis && drag?.kind === 'trim'
+      const slidePreview = slidePreviewClips?.find(c => c.id === clip.id);
+      let start = isTrimmingThis && drag?.kind === 'trim' && drag.edge === 'start' ? drag.time : displayStart;
+      let duration = isTrimmingThis && drag?.kind === 'trim'
         ? (drag.edge === 'start' ? clip.start + clip.duration - drag.time : drag.time - clip.start)
         : clip.duration;
+      if (slidePreview) {
+        start = slidePreview.start;
+        duration = slidePreview.duration;
+      }
+      const isSlipping = drag?.kind === 'slip' && drag.clipId === clip.id;
+      const slipLabel = isSlipping && slipPreviewInPoint !== null ? `In ${formatTimecode(slipPreviewInPoint, fps)}` : null;
       return (
         <ClipBlock
           key={clip.id}
@@ -585,12 +650,15 @@ const TrackRow: React.FC<{
           left={start * zoom}
           width={Math.max(2, duration * zoom)}
           zoom={zoom}
+          fps={fps}
           selected={selectedClipIds.includes(clip.id)}
           hidden={isPrimaryCrossTrack ? true : false}
           faded={isDraggingThis}
           razorMode={tool === 'razor'}
+          slipLabel={slipLabel}
           onPointerDown={onClipPointerDown}
           onPointerUpRazor={onClipPointerUpRazor}
+          onKeyframeClick={onKeyframeClick}
         />
       );
     })}
@@ -626,15 +694,19 @@ const ClipBlock: React.FC<{
   left: number;
   width: number;
   zoom: number;
+  fps: number;
   selected: boolean;
   hidden: boolean;
   faded: boolean;
   razorMode: boolean;
+  slipLabel: string | null;
   onPointerDown: (e: React.PointerEvent, clip: Clip) => void;
   onPointerUpRazor: (e: React.PointerEvent, clip: Clip) => void;
-}> = ({ clip, media, left, width, selected, hidden, faded, razorMode, onPointerDown, onPointerUpRazor }) => {
+  onKeyframeClick: (time: number) => void;
+}> = ({ clip, media, left, width, zoom, fps, selected, hidden, faded, razorMode, slipLabel, onPointerDown, onPointerUpRazor, onKeyframeClick }) => {
   if (hidden) return null;
   const label = clip.text?.content ?? media?.name ?? 'Clip';
+  const keyframeTimes = keyframeMarkerTimes(clip.keyframes, clip.duration, fps);
   return (
     <div
       role="button"
@@ -658,6 +730,26 @@ const ClipBlock: React.FC<{
         <div className="absolute inset-0 opacity-50" style={{ backgroundImage: `url(${media.thumbnail})`, backgroundSize: 'cover' }} />
       ) : null}
       <span className="absolute left-1 top-0.5 truncate max-w-[90%] text-base-content/80 bg-base-300/70 px-0.5">{label}</span>
+      {slipLabel && (
+        <span className="absolute right-1 top-0.5 text-info bg-base-300/70 px-0.5">{slipLabel}</span>
+      )}
+      {keyframeTimes.map(t => (
+        <div
+          key={t}
+          role="button"
+          tabIndex={-1}
+          aria-label={`Keyframe at ${formatTimecode(clip.start + t, fps)}`}
+          title={formatTimecode(clip.start + t, fps)}
+          className="absolute bottom-0.5 w-1.5 h-1.5 -translate-x-1/2 rotate-45 bg-info z-raised"
+          style={{ left: t * zoom }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onKeyframeClick(clip.start + t);
+          }}
+        />
+      ))}
     </div>
   );
 };

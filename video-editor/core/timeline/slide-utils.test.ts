@@ -75,4 +75,28 @@ describe('computeSlide', () => {
     const finalLeft = p.clips.find(c => c.id === 'left')!;
     expect(finalLeft.inPoint + finalLeft.duration * finalLeft.speed).toBeLessThanOrEqual(60 + 1e-6);
   });
+
+  it('converts source headroom to timeline seconds via speed on the extending neighbor', () => {
+    // left plays at 2x: 1 timeline second consumes 2 source seconds. It
+    // consumes source [46,56) of a 60s clip, i.e. 4s of source headroom but
+    // only 2 timeline seconds of real headroom — sliding by 3 must clamp to
+    // that, not to 4.
+    const media = makeMedia('m1', { duration: 60 });
+    const track = makeTrack('t1');
+    const left = makeClip('left', 't1', { start: 0, duration: 5, inPoint: 46, speed: 2, mediaId: 'm1' });
+    const mid = makeClip('mid', 't1', { start: 5, duration: 3, inPoint: 20, mediaId: 'm1' });
+    const right = makeClip('right', 't1', { start: 8, duration: 5, inPoint: 30, mediaId: 'm1' });
+    const project = makeProject({ media: [media], tracks: [track], clips: [left, mid, right] });
+
+    const actions = computeSlide(project, mid, left, right, 3);
+    let p = project;
+    for (const a of actions) {
+      const result = applyEdit(p, a);
+      expect(result.project).not.toBe(p); // every step must apply — a rejected step would half-apply the slide
+      p = result.project;
+    }
+    const finalLeft = p.clips.find(c => c.id === 'left')!;
+    expect(finalLeft.inPoint + finalLeft.duration * finalLeft.speed).toBeLessThanOrEqual(60 + 1e-6);
+    expect(finalLeft.duration).toBeCloseTo(7); // clamped to 2 timeline seconds, not 3
+  });
 });

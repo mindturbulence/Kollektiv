@@ -38,9 +38,14 @@ export function computeSlide(
 
   const media = mediaFor(project, extending);
   if (media && media.kind !== 'image') {
-    const headroom = delta > 0
+    // headroom is in source seconds (media duration minus what's already
+    // consumed); delta is in timeline seconds, so convert via speed before
+    // comparing — otherwise a speed != 1 neighbor's extend clamps too early
+    // or too late and the batch below rejects a step mid-flight.
+    const headroomSource = delta > 0
       ? media.duration - (extending.inPoint + extending.duration * extending.speed)
       : extending.inPoint;
+    const headroom = headroomSource / extending.speed;
     if (Math.abs(delta) > headroom) delta = Math.sign(delta) * Math.max(0, headroom);
   }
 
