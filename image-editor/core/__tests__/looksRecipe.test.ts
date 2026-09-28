@@ -69,3 +69,43 @@ describe('parseRecipe', () => {
     expect(parseRecipe('nope')).toBeNull();
   });
 });
+
+describe('procedural LUTs and the built-in catalog', () => {
+  it('samples every procedural look into an in-range 33³ table', async () => {
+    const { PROC_LUTS, buildProcLut } = await import('../looks/procLuts');
+    for (const name of Object.keys(PROC_LUTS)) {
+      const lut = buildProcLut(name)!;
+      expect(lut.size).toBe(33);
+      expect(lut.data.length).toBe(33 ** 3 * 4);
+      expect(lut.data.every(v => v >= 0 && v <= 1)).toBe(true);
+    }
+    expect(buildProcLut('nope')).toBeUndefined();
+  });
+
+  it('mono looks output grey for a saturated input', async () => {
+    const { buildProcLut } = await import('../looks/procLuts');
+    for (const name of ['soft-mono', 'hard-mono']) {
+      const lut = buildProcLut(name, 2)!;
+      const red = [...lut.data.slice(4, 7)];          // entry r=1,g=0,b=0
+      expect(Math.max(...red) - Math.min(...red)).toBeLessThan(1e-6);
+    }
+  });
+
+  it('every built-in look builds a valid recipe that survives parseRecipe', async () => {
+    const { BUILTIN_LOOKS } = await import('../looks/builtins');
+    for (const look of BUILTIN_LOOKS) {
+      const r = look.build();
+      expect(parseRecipe(JSON.parse(JSON.stringify(r)))).toEqual(r);
+    }
+    expect(new Set(BUILTIN_LOOKS.map(l => l.key)).size).toBe(BUILTIN_LOOKS.length);
+  });
+
+  it('resolves proc: LUTs synchronously and file: LUTs never synchronously', async () => {
+    const { getLut } = await import('../looks/lutRegistry');
+    expect(getLut('proc:sepia')?.size).toBe(33);
+    const orig = globalThis.fetch;
+    globalThis.fetch = (() => new Promise(() => {})) as typeof fetch; // never resolves
+    expect(getLut('file:cold-vs-warm')).toBeUndefined();
+    globalThis.fetch = orig;
+  });
+});

@@ -160,7 +160,7 @@ export class LayerPainter {
       return;
     }
 
-    if (layer.type !== 'adjustment' && (MANUAL_BLEND_MODES as readonly string[]).includes(layer.blendMode)) {
+    if ((MANUAL_BLEND_MODES as readonly string[]).includes(layer.blendMode)) {
       this.drawWithManualBlend(ctx, layer);
       return;
     }
@@ -169,7 +169,7 @@ export class LayerPainter {
     if      (layer.type === 'image') this.drawImageLayer(ctx, layer);
     else if (layer.type === 'text')  this.drawTextLayer(ctx, layer);
     else if (layer.type === 'shape') this.drawShapeLayer(ctx, layer);
-    // adjustment / group handled above
+    // group and look handled above
   }
 
   /** Renders a single image/text/shape layer through the WebGL2 manual-blend

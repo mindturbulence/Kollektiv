@@ -6,6 +6,7 @@
 import { getSnapshot } from '../store';
 import { findLayerById } from '../layers/layerTree';
 import { rasterizeLayersToCanvas } from '../renderer/LayerPainter';
+import { preloadLuts } from '../looks/lutRegistry';
 import type { Selection } from '../types';
 
 export interface FloodFillResult {
@@ -129,6 +130,7 @@ export async function magicWandSelect(docX: number, docY: number): Promise<Selec
     if (!active) return null;
     layers = [active];
   }
+  await preloadLuts(layers);
   const oc = rasterizeLayersToCanvas(layers, doc.width, doc.height);
   const ctx = oc?.getContext('2d', { willReadFrequently: true });
   if (!oc || !ctx) return null;

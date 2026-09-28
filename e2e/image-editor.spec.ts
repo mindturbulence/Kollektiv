@@ -391,3 +391,35 @@ test('a look layer grades what is below it, not what is above; strength and undo
     await page.getByRole('button', { name: 'Open', exact: true }).click();
     await expect.poll(async () => (await pixelAt(page, 300, 150))[0], { timeout: 5_000 }).toBeGreaterThan(150);
 });
+
+test('LUT looks: a procedural LUT grades at once; a bundled .cube LUT loads lazily and repaints', async ({ page }) => {
+    await bootToAppShell(page, 'image_editor');
+    const png = Buffer.from((await page.evaluate(() => {
+        const c = document.createElement('canvas'); c.width = 400; c.height = 300;
+        const x = c.getContext('2d')!;
+        x.fillStyle = '#2040c0'; x.fillRect(0, 0, 200, 300);
+        x.fillStyle = '#c03030'; x.fillRect(200, 0, 200, 300);
+        return c.toDataURL('image/png');
+    })).split(',')[1], 'base64');
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
+    await (await chooser).setFiles({ name: 'lut.png', mimeType: 'image/png', buffer: png });
+    await expect(page.getByText('400 × 300px')).toBeVisible({ timeout: 15_000 });
+    await waitForFit(page);
+    const spread = (p: number[]) => Math.max(...p) - Math.min(...p);
+    const original = await pixelAt(page, 300, 150);
+
+    // proc:hard-mono → grey.
+    await page.getByRole('button', { name: 'Adjust', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Look: Hard Mono' }).click();
+    await expect.poll(async () => spread(await pixelAt(page, 300, 150)), { timeout: 5_000 }).toBeLessThan(40);
+
+    // Swap for file:cold-vs-warm (fetched from /looks/): hide Hard Mono, add Cold vs Warm.
+    const lutRequest = page.waitForRequest(r => r.url().endsWith('/looks/cold-vs-warm.cube'));
+    await page.getByRole('button', { name: /^Hide layer/ }).first().click();
+    await page.getByRole('button', { name: 'Adjust', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Look: Cold vs Warm' }).click();
+    await lutRequest;
+    // Graded (−67% saturation) but not grey, and different from the original red.
+    await expect.poll(async () => spread(await pixelAt(page, 300, 150)), { timeout: 8_000 }).toBeLessThan(spread(original) - 40);
+});

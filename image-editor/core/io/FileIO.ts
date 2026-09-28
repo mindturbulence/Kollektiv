@@ -5,6 +5,7 @@
 
 import type { EditorDocument, EditorOpenPayload, ImageLayer } from '../types';
 import { LayerPainter } from '../renderer/LayerPainter';
+import { preloadLuts } from '../looks/lutRegistry';
 import { getSnapshot } from '../store';
 
 /** Maximum dimension for any bitmap the editor will hold (review H13). 8192 is
@@ -169,6 +170,7 @@ export async function exportToBlob(
   format: 'png' | 'jpeg',
   quality?: number,
 ): Promise<Blob> {
+  await preloadLuts(document.layers); // a one-shot render can't wait for a lazy LUT
   const oc = new OffscreenCanvas(document.width, document.height);
   const ctx = oc.getContext('2d');
   if (!ctx) throw new Error('Failed to acquire 2D context for export');

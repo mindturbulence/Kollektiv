@@ -11,7 +11,7 @@ A framework-free core plus a React UI — the pattern the video editor later cop
 ```
 image-editor/
   core/
-    types.ts            Layer union (image | text | shape | group | adjustment*), EditorState, EditorAction
+    types.ts            Layer union (image | text | shape | group | look), EditorState, EditorAction
     store.ts            module-scoped store (getSnapshot/subscribe/dispatch), read via useSyncExternalStore
     history/            HistoryCommand {do, undo, bitmapRefs}; 50-command AND 512 MB decoded-byte cap, oldest-first eviction, .close() on evicted bitmaps;
                         jumpTo(index) for the History panel; patchCommand (dirty-rect stroke history)
@@ -31,10 +31,11 @@ image-editor/
   ui/                   ImageEditorPage, EditorToolbar (Image/Select/Adjust menus), ToolRail, ToolHeader, CanvasViewport,
                         LayersPanel (Layers | History tabs), HistoryPanel, adjustments/*Panel, dialogs, GalleryBridge, hooks/useEditorShortcuts
 ```
-(*) `AdjustmentLayer` exists in the type system and autosave but is **not rendered** by `LayerPainter.drawLayer` — nothing creates one. The Looks plan wires it.
+Non-destructive grading is the **look layer**; the old dormant `AdjustmentLayer` type (never created, never rendered) was removed on 2026-09-29 (Jev triage: remove, 0.97). The Levels/Curves/Hue-Sat/Exposure dialogs stay destructive.
 
 Key rules:
 
+- **Look LUTs** resolve by asset id in `looks/lutRegistry.ts`: `proc:<name>` are in-house looks generated in code (`procLuts.ts`, 33³, no files); `file:<name>` are vetted third-party `.cube` files in `public/looks/` (each listed in `public/looks/LICENSES.md`), fetched lazily — the viewport repaints when one arrives, and export/flatten/merge/wand `preloadLuts` first. The catalog is `looks/builtins.ts` (16 looks in 4 categories).
 - **Look layers** (`type: 'look'`) shade the composite beneath them: `LayerPainter.drawLookLayer` reads `ctx.canvas`, runs `LookRenderer` (one fused pass; grain/vignette in document space via the inverse canvas transform) and copies the result back; opacity is the look's strength. `drawLayers` caches the composite up to the topmost look for the on-screen painter, keyed on the identity of every layer below (+ transform, canvas size, LUT registry version); a live brush/clone stroke or adjustment preview below disables/refreshes it. Looks are top-level only, can't be merged into, merge-down/flatten bake them. No WebGL2 → the look is skipped, never faked.
 - **One compositor.** `LayerPainter` draws every layer kind (image/text/shape, groups, masks, 16 native + 9 WebGL2 manual blend modes). The viewport, export, merge down, flatten and the magic wand (`rasterizeLayersToCanvas`) all go through it, so none can diverge from what the user sees. Don't write another.
 - **Doc space vs bitmap space.** Pointer input is document space; pixel tools stamp into a layer's bitmap, which is drawn through its transform. Always map with `geometry/docToLayer` / `docToBitmapMatrix` — painting doc coordinates directly lands in the wrong place on moved/scaled/rotated/flipped/cropped layers.
@@ -61,6 +62,6 @@ Gallery → EDIT resolves the vault path to a Blob in `ui/GalleryBridge.loadGall
 
 ## Known open items
 
-The remaining editor work is the Looks plan (`docs/plans/2026-09-28-image-editor-looks.md`), which also covers adjustment layers. PSD export is not built (`ag-psd` can write PSDs if it's wanted).
+The remaining editor work is the Looks plan (`docs/plans/2026-09-28-image-editor-looks.md`). PSD export is not built (`ag-psd` can write PSDs if it's wanted).
 
 Notes: Select → Invert Selection is menu-only (Ctrl+Shift+I is the browser's DevTools shortcut). Floating adjustment panels open inside the canvas area (`[data-editor-viewport]`) so they never cover the toolbar menus. E2E that drags right after opening a file must wait for the Open-or-Create dialog to finish animating out (`waitForFit` in the spec).

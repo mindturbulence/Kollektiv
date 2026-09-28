@@ -15,6 +15,7 @@ import { getSnapshot, subscribe, dispatch } from '../store';
 import { ZOOM_STOPS } from '../types';
 import * as ThumbnailCache from '../thumbnails/ThumbnailCache';
 import { SelectionEngine } from '../selection/SelectionEngine';
+import { onLutsChanged } from '../looks/lutRegistry';
 import { getGizmoHandles, docToCanvas } from '../transform/TransformEngine';
 import { findLayerById } from '../layers/layerTree';
 import { LayerPainter } from './LayerPainter';
@@ -34,6 +35,7 @@ export class CanvasRenderer {
   private readonly overlayCtx: CanvasRenderingContext2D;
 
   private unsubscribe: (() => void) | null = null;
+  private offLuts: (() => void) | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private rafId: number | null = null;
   private lastState: EditorState | null = null;
@@ -64,6 +66,8 @@ export class CanvasRenderer {
     // notifies. Register this renderer as the frame pump for stroke updates.
     BrushEngine.setRequestFrame(this.scheduleStrokeFrame);
     CloneStampTool.setRequestFrame(this.scheduleStrokeFrame);
+    // A lazily fetched LUT arrives without a store change — repaint for it.
+    this.offLuts = onLutsChanged(this.scheduleStrokeFrame);
     this.syncSize();
 
     const container = this.canvas.parentElement;
@@ -88,6 +92,8 @@ export class CanvasRenderer {
     }
     if (this.unsubscribe) {
       this.unsubscribe();
+      this.offLuts?.();
+      this.offLuts = null;
       this.unsubscribe = null;
     }
     BrushEngine.setRequestFrame(null);

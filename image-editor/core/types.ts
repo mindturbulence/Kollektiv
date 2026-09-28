@@ -61,7 +61,7 @@ export interface LayerMask {
 
 // ─── Layers ─────────────────────────────────────────────────────────────────
 
-export type LayerType = 'image' | 'group' | 'adjustment' | 'shape' | 'text' | 'look';
+export type LayerType = 'image' | 'group' | 'shape' | 'text' | 'look';
 
 interface LayerBase {
   id: string;
@@ -88,11 +88,6 @@ export interface GroupLayer extends LayerBase {
   children: Layer[];
 }
 
-export interface AdjustmentLayer extends LayerBase {
-  type: 'adjustment';
-  adjustment: AdjustmentDef;
-}
-
 export interface ShapeLayer extends LayerBase {
   type: 'shape';
   shape: 'rect' | 'ellipse';
@@ -115,7 +110,7 @@ export interface LookLayer extends LayerBase {
   recipe: LookRecipe;
 }
 
-export type Layer = ImageLayer | GroupLayer | AdjustmentLayer | ShapeLayer | TextLayer | LookLayer;
+export type Layer = ImageLayer | GroupLayer | ShapeLayer | TextLayer | LookLayer;
 
 // ─── Adjustments ────────────────────────────────────────────────────────────
 

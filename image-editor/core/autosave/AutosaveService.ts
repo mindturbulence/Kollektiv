@@ -8,12 +8,10 @@
 
 import { openDB, type IDBPDatabase } from 'idb';
 import type {
-  AdjustmentDef,
   BlendMode,
   EditorDocument,
   ImageLayer,
   GroupLayer,
-  AdjustmentLayer,
   ShapeLayer,
   TextLayer,
   LookLayer,
@@ -69,11 +67,6 @@ interface SerializedGroupLayer extends SerializedLayerBase {
   children: SerializedLayer[];
 }
 
-interface SerializedAdjustmentLayer extends SerializedLayerBase {
-  type: 'adjustment';
-  adjustment: AdjustmentDef;
-}
-
 interface SerializedShapeLayer extends SerializedLayerBase {
   type: 'shape';
   shape: 'rect' | 'ellipse';
@@ -98,7 +91,6 @@ interface SerializedTextLayer extends SerializedLayerBase {
 type SerializedLayer =
   | SerializedImageLayer
   | SerializedGroupLayer
-  | SerializedAdjustmentLayer
   | SerializedShapeLayer
   | SerializedTextLayer
   | SerializedLookLayer;
@@ -174,8 +166,6 @@ async function serializeLayer(layer: Layer, blobs: Record<string, ArrayBuffer>):
     }
     case 'group':
       return { ...base, type: 'group', children: await Promise.all(layer.children.map((child) => serializeLayer(child, blobs))) };
-    case 'adjustment':
-      return { ...base, type: 'adjustment', adjustment: layer.adjustment };
     case 'shape':
       return {
         ...base,
@@ -227,10 +217,6 @@ async function deserializeLayer(meta: SerializedLayer, blobs: Record<string, Arr
         type: 'group',
         children: await Promise.all(meta.children.map((child) => deserializeLayer(child, blobs))),
       };
-      return layer;
-    }
-    case 'adjustment': {
-      const layer: AdjustmentLayer = { ...base, type: 'adjustment', adjustment: meta.adjustment };
       return layer;
     }
     case 'shape': {

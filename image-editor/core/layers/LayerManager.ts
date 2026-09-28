@@ -10,6 +10,7 @@ import { pushCommand } from '../history/HistoryManager';
 import { findLayerById, findLayerLocation } from './layerTree';
 import type { BlendMode, HistoryCommand, ImageLayer, Layer, LayerMask, LookLayer, TextLayer, ShapeLayer, Rect } from '../types';
 import type { LookRecipe } from '../looks/recipe';
+import { preloadLuts } from '../looks/lutRegistry';
 import { rasterizeLayersToCanvas } from '../renderer/LayerPainter';
 import { resampleBitmap } from '../io/FileIO';
 import { selectionClipInBitmapSpace } from '../geometry/selectionClip';
@@ -279,6 +280,7 @@ export function duplicateLayer(layerId: string): string {
 async function rasterizeLayers(layers: Layer[]): Promise<ImageBitmap | null> {
   const { document: doc } = getSnapshot();
   if (!doc) return null;
+  await preloadLuts(layers);
   const oc = rasterizeLayersToCanvas(layers, doc.width, doc.height);
   return oc ? createImageBitmap(oc) : null;
 }
