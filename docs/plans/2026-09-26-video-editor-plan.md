@@ -16,12 +16,14 @@ Phase 0 exit criteria (all **met**):
 3. The ffmpeg fallback works when `VideoEncoder` is missing. `e2e/video-editor-fallback.spec.ts` produces a 3.000 s H.264/AAC MP4.
 4. The editor makes zero third-party requests (`e2e/video-editor-network.spec.ts`). The requests that remain come from the app shell: fonts and Google scripts in `index.html`, the Footer's model ticker, the Pexels home montage, and `VideoPlayerOverlay` resuming a queued YouTube video on boot.
 
-Open items:
-- The preview still uses the Canvas2D renderer. `createPreferredRenderer` (WebGPU) is ready, but no GPU-only effect is exposed in the UI yet, and it hasn't been run against a real GPU.
-- Transitions in the WebGPU renderer ignore layer transforms.
-- The WebM fallback has not been verified.
-- Curve points can't be edited from the keyboard.
-- The Timeline's own mini tool buttons duplicate the toolbar's.
+Open item (2026-09-28 triage):
+- The preview still uses the Canvas2D renderer. `createPreferredRenderer` (WebGPU) is ready, but no GPU-only effect is exposed in the UI yet, and it hasn't been run against a real GPU. Jev said "defer" at 0.93 confidence.
+
+Resolved in the same triage:
+- WebGPU transitions now draw each side with its transform (`drawTransformedLayer`).
+- Curve points can be edited from the keyboard.
+- The duplicate timeline tool buttons are gone.
+- The WebM fallback now works. Verifying it exposed a real bug: in `@ffmpeg/core` 0.12.10, `libvpx-vp9` (with any input) and stereo `libopus` crash with "memory access out of bounds". The fallback and the Converter's video-to-WebM target were therefore broken. Both now use VP8 + Vorbis.
 
 Note: every Playwright run wipes `test-results/`, so the research clones listed below are gone. Re-clone at the pinned SHAs if needed.
 Date: 2026-09-26.

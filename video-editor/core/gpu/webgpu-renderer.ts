@@ -93,6 +93,23 @@ function rasterizeText(text: string, style: TextStyle, width: number, height: nu
 
 type LayerSource = ImageBitmap | OffscreenCanvas;
 
+type Ctx2D = OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D;
+
+/** Draws a processed layer source with its transform, matching Canvas2D:
+ *  opacity clamped, source fitted per transform.fit, then offset/rotate/scale
+ *  about the canvas centre. */
+export function drawTransformedLayer(ctx: Ctx2D, layer: RenderLayer, source: LayerSource, canvasW: number, canvasH: number): void {
+  const t = layer.transform;
+  const { width, height } = resolveFitDimensions(t.fit, source.width, source.height, canvasW, canvasH);
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, t.opacity));
+  ctx.translate(canvasW / 2 + t.x, canvasH / 2 + t.y);
+  ctx.rotate((t.rotation * Math.PI) / 180);
+  ctx.scale(t.scale, t.scale);
+  ctx.drawImage(source, -width / 2, -height / 2, width, height);
+  ctx.restore();
+}
+
 function sourceDims(source: RenderLayer['source'], fallbackW: number, fallbackH: number): { w: number; h: number } {
   if ('text' in source) return { w: fallbackW, h: fallbackH };
   return { w: source.width, h: source.height };
@@ -137,19 +154,17 @@ class WebGpuRenderer implements Renderer {
   }
 
   private drawLayer(layer: RenderLayer, source: LayerSource): void {
-    const ctx = this.ctx2d;
-    const t = layer.transform;
-    // Match Canvas2D: clamp opacity and fit the source into the canvas box
-    // per transform.fit instead of drawing at native source dimensions —
-    // native-size drawing put every non-canvas-sized clip at the wrong scale.
-    const { width, height } = resolveFitDimensions(t.fit, source.width, source.height, this.canvas.width, this.canvas.height);
-    ctx.save();
-    ctx.globalAlpha = Math.max(0, Math.min(1, t.opacity));
-    ctx.translate(this.canvas.width / 2 + t.x, this.canvas.height / 2 + t.y);
-    ctx.rotate((t.rotation * Math.PI) / 180);
-    ctx.scale(t.scale, t.scale);
-    ctx.drawImage(source, -width / 2, -height / 2, width, height);
-    ctx.restore();
+    drawTransformedLayer(this.ctx2d, layer, source, this.canvas.width, this.canvas.height);
+  }
+
+  /** One transition side drawn with its own transform into a canvas-sized
+   *  buffer, so the GPU blend sees what Canvas2D would draw for that side. */
+  private layerToCanvas(layer: RenderLayer, source: LayerSource): OffscreenCanvas | null {
+    const out = new OffscreenCanvas(this.canvas.width, this.canvas.height);
+    const ctx = out.getContext('2d');
+    if (!ctx) return null;
+    drawTransformedLayer(ctx, layer, source, out.width, out.height);
+    return out;
   }
 
   drawFrame(frame: ComposedFrame): void {
@@ -173,8 +188,9 @@ class WebGpuRenderer implements Renderer {
       if (!fromSource || !toSource) continue;
       const w = this.canvas.width;
       const h = this.canvas.height;
-      const fromCanvas = fromSource instanceof OffscreenCanvas ? fromSource : bitmapToCanvas(fromSource, w, h);
-      const toCanvas = toSource instanceof OffscreenCanvas ? toSource : bitmapToCanvas(toSource, w, h);
+      const fromCanvas = this.layerToCanvas(transition.from, fromSource);
+      const toCanvas = this.layerToCanvas(transition.to, toSource);
+      if (!fromCanvas || !toCanvas) continue;
       const blended = this.transitions.render(
         resolved.def.id,
         fromCanvas,

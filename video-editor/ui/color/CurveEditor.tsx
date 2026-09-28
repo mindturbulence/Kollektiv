@@ -92,19 +92,58 @@ const CurveEditor: React.FC<CurveEditorProps> = ({ points, onChange }) => {
     onChange(sorted.filter((_, i) => i !== index));
   };
 
+  // Keyboard path: arrows move (Shift = coarse), Delete removes a middle
+  // point, +/Insert adds a midpoint toward the next point. One commit per key.
+  const onPointKeyDown = (index: number) => (e: React.KeyboardEvent) => {
+    const step = e.shiftKey ? 0.1 : 0.01;
+    const p = sorted[index];
+    const isEndpoint = index === 0 || index === sorted.length - 1;
+    let moved: CurvePoint;
+    switch (e.key) {
+      case 'ArrowUp': moved = { x: p.x, y: clamp01(p.y + step) }; break;
+      case 'ArrowDown': moved = { x: p.x, y: clamp01(p.y - step) }; break;
+      case 'ArrowLeft':
+      case 'ArrowRight':
+        if (isEndpoint) return;
+        moved = { x: clampX(sorted, index, p.x + (e.key === 'ArrowRight' ? step : -step)), y: p.y };
+        break;
+      case 'Delete':
+      case 'Backspace':
+        if (isEndpoint) return;
+        e.preventDefault();
+        onChange(sorted.filter((_, i) => i !== index));
+        return;
+      case '+':
+      case 'Insert': {
+        const q = sorted[index + 1];
+        if (!q) return;
+        e.preventDefault();
+        onChange(sortPoints([...sorted, { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }]));
+        return;
+      }
+      default:
+        return;
+    }
+    e.preventDefault();
+    onChange(sorted.map((pt, i) => (i === index ? moved : pt)));
+  };
+
   const path = sorted.map(toSvg).map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 
   return (
     <svg ref={svgRef} width={SIZE} height={SIZE} className="bg-base-100 border border-base-content/10 touch-none cursor-crosshair"
-      role="img" aria-label="Curve editor"
+      role="group" aria-label="Curve editor"
       onPointerDown={addPoint} onPointerMove={onPointerMove} onPointerUp={commitDrag}>
       <path d={`M0,${SIZE} L${SIZE},0`} className="text-base-content/10" stroke="currentColor" strokeDasharray="2,2" />
       <path d={path} className="text-primary" stroke="currentColor" fill="none" strokeWidth={1.5} />
       {sorted.map((p, i) => {
         const c = toSvg(p);
         return (
-          <circle key={i} cx={c.x} cy={c.y} r={4} className="fill-primary cursor-pointer"
-            onPointerDown={startDrag(i)} onDoubleClick={removePoint(i)} />
+          <circle key={i} cx={c.x} cy={c.y} r={4} tabIndex={0} role="button"
+            className="fill-primary cursor-pointer outline-none focus-visible:stroke-base-content focus-visible:[stroke-width:2]"
+            aria-label={`Curve point ${i + 1}: in ${Math.round(p.x * 100)}%, out ${Math.round(p.y * 100)}%`}
+            aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Delete Insert"
+            onPointerDown={startDrag(i)} onDoubleClick={removePoint(i)} onKeyDown={onPointKeyDown(i)} />
         );
       })}
     </svg>

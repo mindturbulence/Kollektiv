@@ -77,7 +77,8 @@ async function passBootGates(page: Page) {
         if (await header.isVisible()) return;
         for (const name of ['SELECT_VAULT_FOLDER', 'RECONNECT_VAULT', 'CONTINUE']) {
             const btn = page.getByRole('button', { name, exact: true });
-            if (await btn.isVisible()) { await btn.click(); break; }
+            // Short timeout: gate screens swap mid-click; a stuck click must not block the retry loop.
+            if (await btn.isVisible()) { await btn.click({ timeout: 5_000 }).catch(() => undefined); break; }
         }
         throw new Error('app shell not up yet');
     }).toPass({ timeout: 120_000, intervals: [1_000] });

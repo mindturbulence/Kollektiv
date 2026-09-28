@@ -13,7 +13,7 @@ import { computeSlide } from '../../core/timeline/slide-utils';
 import { applyEdit } from '../../core/actions/apply';
 import { formatTimecode, clipsInViewport, canAcceptClip, clampZoom, keyframeMarkerTimes } from './timelineMath';
 import { MEDIA_DRAG_MIME } from '../placement';
-import { EyeIcon, LockIcon, LockOpenIcon, PlusIcon, ScissorsIcon } from '../../../components/icons';
+import { EyeIcon, LockIcon, LockOpenIcon, PlusIcon } from '../../../components/icons';
 
 // Stable fallbacks so memo/callback deps don't change every render without a project.
 const NO_TRACKS: Track[] = [];
@@ -430,37 +430,11 @@ const Timeline: React.FC = () => {
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      {/* Toolbar */}
+      {/* Status strip — tools and snapping live in the editor toolbar. */}
       <div className="h-7 flex-shrink-0 flex items-center gap-2 px-2 border-b border-base-content/10">
-        <button
-          type="button"
-          aria-label="Select tool"
-          aria-pressed={tool === 'select'}
-          className={`px-1.5 py-0.5 text-2xs font-mono uppercase border ${tool === 'select' ? 'border-primary text-primary' : 'border-base-content/15 text-base-content/60'} focus-visible:ring-1 focus-visible:ring-primary`}
-          onClick={() => dispatch({ type: 'setTool', tool: 'select' })}
-        >
-          Select
-        </button>
-        <button
-          type="button"
-          aria-label="Razor tool"
-          aria-pressed={tool === 'razor'}
-          className={`px-1.5 py-0.5 text-2xs font-mono uppercase border flex items-center gap-1 ${tool === 'razor' ? 'border-primary text-primary' : 'border-base-content/15 text-base-content/60'} focus-visible:ring-1 focus-visible:ring-primary`}
-          onClick={() => dispatch({ type: 'setTool', tool: 'razor' })}
-        >
-          <ScissorsIcon className="w-3 h-3" /> Razor
-        </button>
-        <button
-          type="button"
-          aria-label={snapping ? 'Disable snapping' : 'Enable snapping'}
-          aria-pressed={snapping}
-          className={`px-1.5 py-0.5 text-2xs font-mono uppercase border ${snapping ? 'border-primary text-primary' : 'border-base-content/15 text-base-content/60'}`}
-          onClick={() => dispatch({ type: 'setSnapping', snapping: !snapping })}
-        >
-          Snap
-        </button>
+        <span className="text-2xs font-mono uppercase text-base-content/60">{tool}</span>
         <div className="flex-1" />
-        <span className="text-2xs font-mono text-base-content/50">{formatTimecode(playhead, fps)}</span>
+        <span className="text-2xs font-mono text-base-content/60">{formatTimecode(playhead, fps)}</span>
       </div>
 
       {/* Ruler */}

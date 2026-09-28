@@ -44,16 +44,23 @@ async function passBootGates(page: Page) {
         if (await header.isVisible()) return;
         for (const name of ['SELECT_VAULT_FOLDER', 'RECONNECT_VAULT', 'CONTINUE']) {
             const btn = page.getByRole('button', { name, exact: true });
-            if (await btn.isVisible()) { await btn.click(); break; }
+            // Short timeout: gate screens swap mid-click; a stuck click must not block the retry loop.
+            if (await btn.isVisible()) { await btn.click({ timeout: 5_000 }).catch(() => undefined); break; }
         }
         throw new Error('app shell not up yet');
     }).toPass({ timeout: 120_000, intervals: [1_000] });
 }
 
-test('exports via the ffmpeg fallback when WebCodecs encoders are absent', async ({ page }) => {
+// workers/ffmpegWorker.ts encodeFrames: mp4 → libx264 + aac, webm → libvpx (VP8) + libvorbis.
+const CASES = [
+    { container: 'mp4', video: 'h264', audio: 'aac', timeout: 300_000 },
+    { container: 'webm', video: 'vp8', audio: 'vorbis', timeout: 300_000 },
+] as const;
+
+for (const { container, video, audio, timeout } of CASES) test(`exports ${container} via the ffmpeg fallback when WebCodecs encoders are absent`, async ({ page }) => {
     // Cold ffmpeg.wasm core fetch (~32MB, single-thread) + JPEG-frame mux is
     // much slower than the WebCodecs path the other e2e spec exercises.
-    test.setTimeout(300_000);
+    test.setTimeout(timeout);
     const consoleErrors: string[] = [];
     page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
     page.on('pageerror', e => consoleErrors.push(String(e)));
@@ -81,7 +88,7 @@ test('exports via the ffmpeg fallback when WebCodecs encoders are absent', async
     await expect(page.getByLabel('Timecode')).toBeVisible();
 
     await page.getByRole('button', { name: 'Export', exact: true }).click();
-    await page.getByRole('button', { name: 'mp4', exact: true }).click();
+    await page.getByRole('button', { name: container, exact: true }).click();
     await page.getByRole('button', { name: 'Start export' }).click();
 
     // ExportDialog maps ExportProgress.phase 'fallback-ffmpeg' to this label
@@ -89,8 +96,11 @@ test('exports via the ffmpeg fallback when WebCodecs encoders are absent', async
     // not just that a file happened to come out the other end.
     await expect(page.getByText('Encoding (compatibility mode)')).toBeVisible({ timeout: 60_000 });
 
+    // Fail fast with the app's own message instead of waiting out the timeout.
     const link = page.getByRole('link', { name: 'Download' });
-    await expect(link).toBeVisible({ timeout: 240_000 });
+    const failure = page.getByText(/Export failed:/);
+    await expect(link.or(failure)).toBeVisible({ timeout: timeout - 60_000 });
+    if (await failure.isVisible()) throw new Error(await failure.first().innerText());
     const base64 = await link.evaluate(async (a) => {
         const blob = await (await fetch((a as HTMLAnchorElement).href)).blob();
         const bytes = new Uint8Array(await blob.arrayBuffer());
@@ -99,13 +109,11 @@ test('exports via the ffmpeg fallback when WebCodecs encoders are absent', async
         return btoa(bin);
     });
     mkdirSync(OUT, { recursive: true });
-    const file = path.join(OUT, 'export-fallback.mp4');
+    const file = path.join(OUT, `export-fallback.${container}`);
     writeFileSync(file, Buffer.from(base64, 'base64'));
 
     expect(consoleErrors.filter(e => /video-editor|mediabunny|VideoEncoder|VideoSample|export/i.test(e))).toEqual([]);
 
-    // ffprobe: the fallback muxes H.264 + AAC via the system ffmpeg.wasm core
-    // (workers/ffmpegWorker.ts encodeFrames, '-c:v libx264 ... -c:a aac').
     const probeJson = execFileSync(FFPROBE, [
         '-v', 'error',
         '-print_format', 'json',
@@ -113,13 +121,13 @@ test('exports via the ffmpeg fallback when WebCodecs encoders are absent', async
         file,
     ], { encoding: 'utf8' });
     const probe = JSON.parse(probeJson);
-    writeFileSync(path.join(OUT, 'ffprobe.json'), probeJson);
+    writeFileSync(path.join(OUT, `ffprobe-${container}.json`), probeJson);
 
     const videoStream = probe.streams.find((s: any) => s.codec_type === 'video');
     const audioStream = probe.streams.find((s: any) => s.codec_type === 'audio');
-    expect(videoStream?.codec_name).toBe('h264');
+    expect(videoStream?.codec_name).toBe(video);
     expect(audioStream).toBeDefined();
-    expect(audioStream?.codec_name).toBe('aac');
+    expect(audioStream?.codec_name).toBe(audio);
 
     const duration = Number(probe.format.duration);
     expect(duration).toBeGreaterThan(2.5);

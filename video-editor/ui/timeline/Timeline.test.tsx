@@ -75,7 +75,7 @@ describe('Timeline', () => {
 
   it('razor tool click dispatches splitClip with a generated id', () => {
     render(<Timeline />);
-    fireEvent.click(screen.getByLabelText('Razor tool'));
+    act(() => realDispatch({ type: 'setTool', tool: 'razor' }));
     const c1 = screen.getByTestId('ve-clip-c1');
     // clipStartTimeAt reads the tracks-scroll container's rect, not the clip's.
     const tracksScroll = screen.getByTestId('ve-track-row-v1').parentElement!;

@@ -53,7 +53,9 @@ export const AUDIO_TARGET_FORMATS: ConverterFormatDef[] = [
 
 export const VIDEO_TARGET_FORMATS: ConverterFormatDef[] = [
   { id: 'mp4', ext: 'mp4', label: 'MP4 (H.264)', category: 'video', mime: 'video/mp4', ffmpegArgs: ['-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac'] },
-  { id: 'webm', ext: 'webm', label: 'WebM (VP9)', category: 'video', mime: 'video/webm', ffmpegArgs: ['-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '34', '-c:a', 'libopus'] },
+  // VP8 + Vorbis, not VP9 + Opus: in @ffmpeg/core 0.12.10 libvpx-vp9 (any
+  // input) and stereo libopus abort with "memory access out of bounds".
+  { id: 'webm', ext: 'webm', label: 'WebM (VP8)', category: 'video', mime: 'video/webm', ffmpegArgs: ['-c:v', 'libvpx', '-crf', '10', '-b:v', '4M', '-deadline', 'realtime', '-cpu-used', '8', '-pix_fmt', 'yuv420p', '-c:a', 'libvorbis'] },
   { id: 'gif', ext: 'gif', label: 'GIF', category: 'video', mime: 'image/gif', ffmpegArgs: ['-vf', 'fps=12,scale=480:-1:flags=lanczos', '-loop', '0'] },
 ];
 
