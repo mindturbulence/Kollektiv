@@ -1,6 +1,6 @@
 # Image Editor — Looks (Textures // Overlays // Filters), Quick-Edit mode, RAW import
 
-Status: **Plan — approved direction, not started.** Date: 2026-09-28.
+Status: **Phase 0 in progress** — measurement page built (`#looks-lab`, `image-editor/looks/lab/`); waiting for results from the owner's real GPU and a RAW file. Date: 2026-09-28.
 Inputs: 4 research reports (product, pipeline, frontend UX, React), a 3-way design debate
 (architecture reviewer, product skeptic, graphics engineer), a RAW/DNG research pass, and the
 owner's decisions below. Brainstorm artefacts were not committed; this file is the record.
@@ -229,6 +229,21 @@ Estimates are solo-developer weeks, assuming familiarity with the editor interna
 | **v2** | Gallery batch-apply (headless recipe replay), full float document pipeline, 16-bit PNG/TIFF export, optional high-quality grain on export, skin-tone isolation | — |
 
 **Total v1 ≈ 11.5–14 weeks.** Phases 1–2 alone are a shippable "core looks" release.
+
+## 8b. Phase 0 — how to run and what decides what
+
+Open `http://localhost:<dev port>/#looks-lab` in the normal browser (no app shell). *Run GPU tests*, then *Pick a RAW file…*, then *Copy results*. Headless/CI numbers come from a software GPU (SwiftShader) and don't count.
+
+| Result | Decision |
+|---|---|
+| WebGL2 / `EXT_color_buffer_float` / RGBA16F target missing | Looks disabled with a message on that machine (no CPU twin) |
+| 3D LUT error ≥ 0.5 / 255 | Fall back to the 2D-atlas LUT |
+| Fused pass 2048² ≥ 16 ms | Drag preview uses a smaller proxy (≤ 1280 px) |
+| Uncached repaint at 4K ≥ 16 ms | Render cache (§3.4) is mandatory before any look ships — expected |
+| `MAX_TEXTURE_SIZE` < 8192 | Tiled export is Phase 1, not Phase 5 |
+| RAW decode ≥ 10 s or fails for the owner's camera | Open the embedded preview first, decode in the background |
+
+Decoder: `libraw-wasm-nothread` 1.6.0 (LibRaw 0.22.1, LGPL-2.1/CDDL, unmodified; ISC wrapper) — 1.4 MB WASM + worker, lazy.
 
 ## 9. Testing
 

@@ -71,6 +71,9 @@ importers:
       jszip:
         specifier: ^3.10.1
         version: 3.10.1
+      libraw-wasm-nothread:
+        specifier: 1.6.0-nothread.1
+        version: 1.6.0-nothread.1
       mammoth:
         specifier: ^1.12.0
         version: 1.12.0
@@ -2346,6 +2349,9 @@ packages:
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
+
+  libraw-wasm-nothread@1.6.0-nothread.1:
+    resolution: {integrity: sha512-yiT0J6a0PZQmRNGviCtEUl8Fq0+UxNZkSVklIDkCtq8SPxhQVZFDUDO7rSEafr+bItfzIUVmYB5ttYnvY9nucQ==}
 
   lie@3.3.0:
     resolution: {integrity: sha512-UaiMJzeWRlEujzAuw5LokY1L5ecNQYZKfmyZ9L7wDHb/p5etKaxXhohBcrw0EYby+G/NA52vRSN4N39dxHAIwQ==}
@@ -5684,6 +5690,8 @@ snapshots:
     dependencies:
       prelude-ls: 1.2.1
       type-check: 0.4.0
+
+  libraw-wasm-nothread@1.6.0-nothread.1: {}
 
   lie@3.3.0:
     dependencies:

@@ -13,6 +13,8 @@ import { AuthProvider } from './contexts/AuthContext';
 // Must run before the main app mounts so the shell never flashes in the frame.
 const EMBED_ROUTES: Record<string, React.ComponentType> = {
   'avatar-panel': React.lazy(() => import('./components/AssistantAvatarPanelEmbed')),
+  // Image-editor Looks Phase 0 diagnostics (GPU caps, LUT accuracy, pass timings, RAW decode).
+  'looks-lab': React.lazy(() => import('./image-editor/looks/lab/LooksLab')),
 };
 
 const embedRoute = typeof window !== 'undefined' ? window.location.hash.replace(/^#\/?/, '') : '';

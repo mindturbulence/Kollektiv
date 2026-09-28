@@ -44,6 +44,7 @@
     "idb": "^8.0.0",
     "jsdom": "^29.1.1",
     "jszip": "^3.10.1",
+    "libraw-wasm-nothread": "1.6.0-nothread.1",
     "mammoth": "^1.12.0",
     "mediabunny": "1.60.0",
     "motion": "^12.38.0",
