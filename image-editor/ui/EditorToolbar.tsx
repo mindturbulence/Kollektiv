@@ -1,6 +1,6 @@
 // ─── Kollektiv Image Editor — Editor Toolbar ───────────────────────────────
 // 44px top bar: New / document title (inline-rename) · undo/redo (M1: inert)
-// · zoom control · fullscreen · export · Save to Gallery.
+// · zoom control · export · Save to Gallery. (Fullscreen lives in the app Header.)
 // Export/Save handlers are owned by ImageEditorPage (shared with Ctrl+S/keyboard
 // shortcuts) and passed down so there is exactly one save/export code path.
 
@@ -10,7 +10,7 @@ import * as HistoryManager from '../core/history/HistoryManager';
 import { ZOOM_STOPS } from '../core/types';
 import {
   DocumentIcon, UndoIcon, RedoIcon, ChevronDownIcon,
-  ArrowsMaximizeIcon, DownloadIcon, UploadIcon,
+  DownloadIcon, UploadIcon,
 } from '../../components/icons';
 
 interface EditorToolbarProps {
@@ -159,19 +159,6 @@ const UndoRedoGroup: React.FC = () => {
 const EditorToolbar: React.FC<EditorToolbarProps> = ({
   onNewDocument, onFitToViewport, onExport, onSaveToGallery, isSaving,
 }) => {
-  const [isFullscreen, setIsFullscreen] = useState(
-    typeof window !== 'undefined' && !!window.document.fullscreenElement,
-  );
-
-  const toggleFullscreen = () => {
-    if (window.document.fullscreenElement) {
-      window.document.exitFullscreen();
-      setIsFullscreen(false);
-    } else {
-      window.document.documentElement.requestFullscreen();
-      setIsFullscreen(true);
-    }
-  };
   return (
     <div className="h-11 flex-shrink-0 flex items-center gap-3 px-3 bg-base-100/85 backdrop-blur-md border-b border-base-content/5">
       <button
@@ -193,16 +180,6 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
       <div className="flex-1" />
 
       <ZoomControl onFitToViewport={onFitToViewport} />
-
-      <button
-        type="button"
-        className="tooltip tooltip-bottom p-1.5 text-base-content/60 hover:text-base-content"
-        data-tip={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-        aria-label="Toggle Fullscreen"
-        onClick={toggleFullscreen}
-      >
-        <ArrowsMaximizeIcon className="w-4 h-4" />
-      </button>
 
       <button
         type="button"
