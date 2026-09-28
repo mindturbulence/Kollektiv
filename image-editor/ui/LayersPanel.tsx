@@ -97,7 +97,8 @@ const LayerRow: React.FC<{
   depth: number;
   active: boolean;
   selected: boolean;
-  isDragOver: boolean;
+  /** Where the dragged layer will land relative to this row, or null. */
+  dropSide: 'above' | 'below' | null;
   isExpanded: boolean;
   paintingMask: boolean;
   onToggleExpand: () => void;
@@ -105,7 +106,7 @@ const LayerRow: React.FC<{
   onDragStart: (id: string) => void;
   onDragEnter: (id: string) => void;
   onDrop: () => void;
-}> = ({ layer, depth, active, selected, isDragOver, isExpanded, paintingMask, onToggleExpand, onSelect, onDragStart, onDragEnter, onDrop }) => {
+}> = ({ layer, depth, active, selected, dropSide, isExpanded, paintingMask, onToggleExpand, onSelect, onDragStart, onDragEnter, onDrop }) => {
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftName, setDraftName] = useState(layer.name);
   const isGroup = layer.type === 'group';
@@ -125,7 +126,11 @@ const LayerRow: React.FC<{
       draggable={depth === 0}
       className={`h-7 flex-shrink-0 flex items-center gap-1.5 px-1.5 border-b cursor-default select-none ${
         active ? 'bg-primary/10' : selected ? 'bg-primary/5' : 'hover:bg-base-content/5'
-      } ${isDragOver ? 'border-t-2 border-t-primary border-base-content/5' : 'border-base-content/5'}`}
+      } ${
+        dropSide === 'above' ? 'border-t-2 border-t-primary border-base-content/5'
+        : dropSide === 'below' ? 'border-b-2 border-b-primary border-base-content/5'
+        : 'border-base-content/5'
+      }`}
       style={{ paddingLeft: 6 + depth * 14 }}
       onClick={(e) => onSelect(layer.id, { shift: e.shiftKey, ctrlOrMeta: e.ctrlKey || e.metaKey })}
       onDragStart={() => onDragStart(layer.id)}
@@ -133,30 +138,26 @@ const LayerRow: React.FC<{
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => { e.preventDefault(); onDrop(); }}
     >
-      {isGroup ? (
-        <button
-          type="button"
-          className="flex-shrink-0 p-0.5 text-base-content/60 hover:text-base-content"
-          aria-label={isExpanded ? 'Collapse group' : 'Expand group'}
-          onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
-        >
-          {isExpanded ? <ChevronDownIcon className="w-3 h-3" /> : <ChevronRightIcon className="w-3 h-3" />}
-        </button>
-      ) : (
-        <button
-          type="button"
-          className="flex-shrink-0 p-0.5 text-base-content/60 hover:text-base-content"
-          aria-label={layer.visible ? 'Hide layer' : 'Show layer'}
-          onClick={(e) => { e.stopPropagation(); LayerManager.setLayerVisibility(layer.id, !layer.visible); }}
-        >
-          <EyeIcon className={`w-3.5 h-3.5 ${layer.visible ? '' : 'opacity-30'}`} />
-        </button>
-      )}
+      <button
+        type="button"
+        className="flex-shrink-0 p-0.5 text-base-content/60 hover:text-base-content"
+        aria-label={layer.visible ? `Hide ${isGroup ? 'group' : 'layer'}` : `Show ${isGroup ? 'group' : 'layer'}`}
+        onClick={(e) => { e.stopPropagation(); LayerManager.setLayerVisibility(layer.id, !layer.visible); }}
+      >
+        <EyeIcon className={`w-3.5 h-3.5 ${layer.visible ? '' : 'opacity-30'}`} />
+      </button>
 
       {isGroup ? (
-        <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center text-base-content/60">
-          {isExpanded ? <FolderOpenIcon className="w-3.5 h-3.5" /> : <FolderClosedIcon className="w-3.5 h-3.5" />}
-        </div>
+        <button
+          type="button"
+          className="w-6 h-6 flex-shrink-0 flex items-center justify-center gap-px text-base-content/60 hover:text-base-content"
+          aria-label={isExpanded ? 'Collapse group' : 'Expand group'}
+          aria-expanded={isExpanded}
+          onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
+        >
+          {isExpanded ? <ChevronDownIcon className="w-2.5 h-2.5" /> : <ChevronRightIcon className="w-2.5 h-2.5" />}
+          {isExpanded ? <FolderOpenIcon className="w-3 h-3" /> : <FolderClosedIcon className="w-3 h-3" />}
+        </button>
       ) : (
         <LayerThumbnail layer={layer} />
       )}
@@ -371,6 +372,16 @@ const LayersPanel: React.FC = () => {
     activeTopLevelIndex < layers.length - 1 &&
     layers[activeTopLevelIndex + 1].type !== 'group';
 
+  // The drop splices the dragged layer into the target's index, so dragging
+  // down lands BELOW the target and dragging up lands ABOVE it.
+  const dropSideFor = (id: string): 'above' | 'below' | null => {
+    if (id !== dragOverLayerId || !dragLayerId || dragLayerId === id) return null;
+    const fromIdx = layers.findIndex((l) => l.id === dragLayerId);
+    const toIdx = layers.findIndex((l) => l.id === id);
+    if (fromIdx < 0 || toIdx < 0) return null;
+    return fromIdx < toIdx ? 'below' : 'above';
+  };
+
   return (
     <div className="relative flex-shrink-0 flex bg-base-200" style={{ width }}>
       <div
@@ -461,7 +472,7 @@ const LayersPanel: React.FC = () => {
               depth={depth}
               active={layer.id === activeLayerId}
               selected={selectedIds.has(layer.id)}
-              isDragOver={layer.id === dragOverLayerId && dragLayerId !== layer.id}
+              dropSide={dropSideFor(layer.id)}
               isExpanded={expandedIds.has(layer.id)}
               paintingMask={layer.id === activeLayerId && paintTarget === 'mask'}
               onToggleExpand={() => setExpandedIds((prev) => {
