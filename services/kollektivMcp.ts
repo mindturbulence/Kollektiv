@@ -486,7 +486,7 @@ class SubServerClient {
         reject(new Error(`Request timed out: ${method}`));
       }, 15000);
       this.pending.set(id, { resolve, reject, timer });
-      this.transport.send({ jsonrpc: "2.0", id, method, params });
+      void this.transport.send({ jsonrpc: "2.0", id, method, params });
     });
   }
 
@@ -664,7 +664,7 @@ export async function startKollektivMcp(
   const sessions = new Map<string, Session>();
 
   const httpServer = createHttpServer(
-    async (req: IncomingMessage, res: ServerResponse) => {
+    (req: IncomingMessage, res: ServerResponse) => { void (async () => {
       // Callers are the app server's /api/mcp/proxy and native MCP clients — none
       // are browsers, so any request carrying an Origin is a website trying to
       // drive vault/browser tools (a cross-site text/plain POST would otherwise
@@ -741,7 +741,7 @@ export async function startKollektivMcp(
       if (newSessionId) {
         sessions.set(newSessionId, { transport, server });
       }
-    },
+    })(); },
   );
 
   return new Promise((resolvePromise, reject) => {
@@ -762,7 +762,7 @@ export async function startKollektivMcp(
           sessions.clear();
           httpServer.close();
           for (const sub of subServers) {
-            sub.transport.close();
+            void sub.transport.close();
           }
         },
       });

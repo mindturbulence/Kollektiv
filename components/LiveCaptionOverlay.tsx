@@ -37,7 +37,7 @@ const LiveCaptionOverlay: React.FC<{ hidden?: boolean }> = ({ hidden = false }) 
     if (hidden) return null;
 
     return (
-        <div className="fixed bottom-[88px] inset-x-0 z-[720] flex justify-center pointer-events-none px-8">
+        <div className="fixed bottom-[88px] inset-x-0 z-overlay flex justify-center pointer-events-none px-8">
             <AnimatePresence>
                 {caption && (
                     <motion.div
@@ -49,7 +49,7 @@ const LiveCaptionOverlay: React.FC<{ hidden?: boolean }> = ({ hidden = false }) 
                         className="max-w-[70vw]"
                     >
                         <p className="text-center text-lg md:text-xl font-medium text-base-content bg-base-100/80 backdrop-blur-md px-5 py-3 border border-base-content/10 leading-relaxed">
-                            <span className="uppercase text-[9px] tracking-[0.3em] text-primary/70 block mb-1">
+                            <span className="uppercase text-2xs tracking-[0.3em] text-primary/70 block mb-1">
                                 {caption.who === 'user' ? 'You' : assistantName}
                             </span>
                             {caption.text}

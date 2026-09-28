@@ -48,7 +48,7 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
         if (!preset) return;
         const { servers: next, entry: updated } = upsertMcpPresetEntry(servers, preset, { enabled });
         updateServers(next);
-        if (enabled && updated.url) testConnection(updated);
+        if (enabled && updated.url) void testConnection(updated);
     };
 
     if (!preset) return null;
@@ -56,7 +56,7 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-6 py-4">
             {/* ── Left column: Kollektiv MCP info card ── */}
-            <div className="border border-base-content/10 bg-base-100/20 transition-all self-start">
+            <div className="border border-base-content/10 bg-base-100/20 self-start">
                 <div className="flex items-center justify-between px-5 py-4 gap-4">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${st?.checking ? 'bg-warning animate-pulse' : st?.connected ? 'bg-success' : st?.connected === false ? 'bg-error' : 'bg-base-content/20'}`} />
@@ -64,12 +64,12 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
                             <div className="flex items-center gap-2">
                                 <span className="text-sm font-black uppercase tracking-wider">{preset.name}</span>
                                 {st?.toolCount !== undefined && (
-                                    <span className="text-[9px] font-mono text-base-content/40 border border-base-content/10 px-1.5 py-0.5">
+                                    <span className="text-2xs font-mono text-base-content/60 border border-base-content/10 px-1.5 py-0.5">
                                         {st.toolCount} tools
                                     </span>
                                 )}
                             </div>
-                            <p className="text-[10px] font-medium text-base-content/40 mt-0.5">{preset.description}</p>
+                            <p className="text-2xs font-medium text-base-content/60 mt-0.5">{preset.description}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
@@ -77,10 +77,10 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
                             <button
                                 onClick={() => {
                                     audioService.playClick();
-                                    testConnection({ ...(entry || { id: '' }), url: effectiveUrl } as McpServerConfig);
+                                    void testConnection({ ...(entry || { id: '' }), url: effectiveUrl } as McpServerConfig);
                                 }}
                                 disabled={st?.checking}
-                                className="form-btn px-3 py-1.5 text-[10px] font-black uppercase tracking-widest disabled:opacity-30"
+                                className="form-btn px-3 py-1.5 text-2xs font-black uppercase tracking-widest disabled:opacity-30"
                             >
                                 {st?.checking ? '...' : 'Ping'}
                             </button>
@@ -95,17 +95,17 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
                 </div>
 
                 <div className="border-t border-base-content/10 px-5 py-4 flex flex-col gap-4">
-                    <div className="flex items-center gap-2 text-[10px] font-mono text-base-content/50">
-                        <span className="uppercase font-black tracking-wider text-[9px] text-base-content/30">URL</span>
+                    <div className="flex items-center gap-2 text-2xs font-mono text-base-content/60">
+                        <span className="uppercase font-black tracking-wider text-2xs text-base-content/60">URL</span>
                         <code className="text-primary/80 select-all">{preset.defaultUrl}</code>
                     </div>
 
                     {preset.launchNotes && (
-                        <p className="text-[10px] font-mono text-base-content/40 leading-relaxed">{preset.launchNotes}</p>
+                        <p className="text-2xs font-mono text-base-content/60 leading-relaxed">{preset.launchNotes}</p>
                     )}
 
                     {st && (
-                        <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-2 border ${st.connected ? 'bg-success/5 border-success/30 text-success' : st.connected === false ? 'bg-error/5 border-error/30 text-error' : ''}`}>
+                        <div className={`flex items-center gap-2 text-2xs font-black uppercase tracking-widest px-3 py-2 border ${st.connected ? 'bg-success/5 border-success/30 text-success' : st.connected === false ? 'bg-error/5 border-error/30 text-error' : ''}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${st.checking ? 'bg-warning animate-pulse' : st.connected ? 'bg-success' : 'bg-error'}`} />
                             {st.checking ? 'Checking connection...' : st.connected ? `Connected — ${st.toolCount} tools available` : 'Unreachable — check the server is running'}
                         </div>
@@ -114,13 +114,13 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
             </div>
 
             {/* ── Right column: Available tools list ── */}
-            <div className="border border-base-content/10 bg-base-100/20 transition-all self-start">
+            <div className="border border-base-content/10 bg-base-100/20 self-start">
                 <div className="px-5 py-3 border-b border-base-content/10">
-                    <h4 className="text-[9px] font-black uppercase tracking-[0.3em] text-base-content/30 flex items-center gap-2">
+                    <h4 className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/60 flex items-center gap-2">
                         <CpuChipIcon className="w-3.5 h-3.5" />
                         Available Tools
                         {st?.toolCount !== undefined && (
-                            <span className="text-[9px] font-mono text-base-content/40 border border-base-content/10 px-1.5 py-0.5">{st.toolCount}</span>
+                            <span className="text-2xs font-mono text-base-content/60 border border-base-content/10 px-1.5 py-0.5">{st.toolCount}</span>
                         )}
                     </h4>
                 </div>
@@ -129,12 +129,12 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
                         st.tools.map((tool, i) => (
                             <div key={i} className="px-5 py-2.5 hover:bg-base-100/30 transition-colors">
                                 <div className="flex items-center gap-2">
-                                    <code className="text-[11px] font-mono font-bold text-primary">
+                                    <code className="text-2xs font-mono font-bold text-primary">
                                         {tool.name}
                                     </code>
                                 </div>
                                 {tool.description && (
-                                    <p className="text-[10px] font-medium text-base-content/40 mt-0.5 leading-relaxed line-clamp-2">
+                                    <p className="text-2xs font-medium text-base-content/60 mt-0.5 leading-relaxed line-clamp-2">
                                         {tool.description}
                                     </p>
                                 )}
@@ -142,8 +142,8 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
                         ))
                     ) : (
                         <div className="flex flex-col items-center justify-center py-12 gap-3">
-                            <CpuChipIcon className="w-8 h-8 text-base-content/10" />
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-base-content/30 text-center px-4">
+                            <CpuChipIcon className="w-8 h-8 text-base-content/60" />
+                            <p className="text-2xs font-bold uppercase tracking-widest text-base-content/60 text-center px-4">
                                 {st?.checking
                                     ? 'Loading tools...'
                                     : st?.connected === false

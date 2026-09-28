@@ -1,8 +1,8 @@
 
 import { LLMSettings } from '../types';
 import { clearAllHandles } from './db';
-import { fileSystemManager } from './fileUtils';
 import { DEFAULT_ANTHROPIC_MODEL } from '../constants/llmDefaults';
+import { THEMES } from '../constants/themes';
 
 const SETTINGS_KEY = 'kollektivSettingsV4';
 const SETTINGS_SHADOW_KEY = 'kollektivSettingsV4_shadow';
@@ -232,6 +232,11 @@ function mergeSettings(parsed: Record<string, unknown>): LLMSettings {
       merged.darkTheme = 'arwes';
   }
 
+  // legacy: light-named dark clones pruned from THEMES 2026-09 (V7)
+  if (!THEMES.includes(merged.darkTheme)) {
+      merged.darkTheme = defaultLLMSettings.darkTheme;
+  }
+
   // legacy: Hermes provider removed 2026-07
   if (merged.activeLLM === ('hermes' as any)) {
       merged.activeLLM = 'gemini';
@@ -333,6 +338,7 @@ export const loadLLMSettings = (): LLMSettings => {
 
 export const resetAllSettings = async () => {
     // First, clear all files from the managed directory
+    const { fileSystemManager } = await import('./fileUtils');
     await fileSystemManager.reset();
     // Then, remove settings from local storage
     if (typeof window !== 'undefined') {

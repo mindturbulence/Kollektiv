@@ -68,7 +68,7 @@ const PickerItem: React.FC<{
         
         // Add minimal delay to prevent overwhelming OPFS
         const timer = setTimeout(() => {
-            load();
+            void load();
         }, 10 + Math.random() * 50);
 
         return () => { 
@@ -82,7 +82,7 @@ const PickerItem: React.FC<{
         <div 
             ref={containerRef}
             onClick={onToggle}
-            className={`relative aspect-square bg-transparent cursor-pointer overflow-hidden group border-2 transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-primary/50'}`}
+            className={`relative aspect-square bg-transparent cursor-pointer overflow-hidden group border-2 transition-[border-color,box-shadow] ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-primary/50'}`}
         >
             {thumbUrl ? (
                 <div className="w-full h-full relative">
@@ -113,7 +113,7 @@ const PickerItem: React.FC<{
             )}
             
             <div className="absolute bottom-0 left-0 right-0 p-2 bg-transparent translate-y-full group-hover:translate-y-0 transition-transform z-10">
-                <p className="text-[9px] font-black uppercase text-white truncate">{item.title}</p>
+                <p className="text-2xs font-black uppercase text-white truncate">{item.title}</p>
             </div>
         </div>
     );
@@ -134,7 +134,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
     useEffect(() => {
         if (isOpen) {
             setIsLoading(true);
-            Promise.all([loadGalleryItems(), loadCategories()]).then(([loadedItems, loadedCats]) => {
+            void Promise.all([loadGalleryItems(), loadCategories()]).then(([loadedItems, loadedCats]) => {
                 setItems(loadedItems);
                 setCategories(loadedCats);
                 setIsLoading(false);
@@ -248,7 +248,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
     if (!isOpen) return null;
 
     const modalContent = (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[100] flex items-center justify-center p-4 lg:p-12 animate-fade-in" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-modal flex items-center justify-center p-4 lg:p-12 animate-fade-in" onClick={onClose}>
         <div className="w-full max-w-6xl h-[90vh] flex flex-col relative p-[3px] corner-frame overflow-visible shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full h-full flex flex-col overflow-hidden relative z-10">
                 <header className="px-8 py-4 panel-header bg-transparent relative flex-shrink-0 flex items-center justify-between">
@@ -256,9 +256,9 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                         <h3 className="text-xl font-black tracking-tighter text-base-content leading-none uppercase">
                             LIBRARY<span className="text-primary">.</span>
                         </h3>
-                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">{title}</p>
+                        <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/60 mt-1.5">{title}</p>
                     </div>
-                    <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
+                    <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-[color,transform] hover:scale-110">
                         <CloseIcon className="w-6 h-6" />
                     </button>
                 </header>
@@ -284,7 +284,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                                 </div>
                             </div>
                             <div className="flex-grow overflow-y-auto p-4">
-                                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30 mb-6 px-3">Library Folders</h2>
+                                <h2 className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/60 mb-6 px-3">Library Folders</h2>
                                 <TreeView 
                                     items={treeItems} 
                                     selectedId={selectedCategoryId} 
@@ -314,7 +314,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                                     )}
                                 </div>
                                 <div className="flex items-center h-full gap-3 bg-transparent px-6">
-                                    <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">NSFW</span>
+                                    <span className="text-2xs font-black uppercase text-base-content/60 tracking-widest">NSFW</span>
                                     <input 
                                         type="checkbox" 
                                         checked={showNsfw} 
@@ -342,7 +342,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-12">
+                                    <div className="h-full flex flex-col items-center justify-center text-center opacity-60 py-12">
                                         <PhotoIcon className="w-16 h-16 mb-4" />
                                         <p className="text-xl font-black uppercase tracking-widest">No matching files found</p>
                                     </div>
@@ -354,7 +354,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
 
                 <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 flex-shrink-0 panel-footer">
                     <div className="flex items-center px-6 border-r border-base-content/5">
-                        <span className="text-[10px] font-mono font-bold text-base-content/30 uppercase tracking-widest leading-none">
+                        <span className="text-2xs font-mono font-bold text-base-content/60 uppercase tracking-widest leading-none">
                             {selectedIds.size} SELECTED
                         </span>
                     </div>

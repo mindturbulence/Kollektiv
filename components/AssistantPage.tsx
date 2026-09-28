@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { appEventBus } from '../utils/eventBus';
 import { useAssistantSignals } from '../utils/useAssistantSignals';
+import { getPreviousTab } from '../utils/tabHistory';
 import { useSettings } from '../contexts/SettingsContext';
 import { resolveLangKey } from '../utils/languageKey';
 import AssistantBackdrop from './AssistantBackdrop';
@@ -450,11 +451,23 @@ const AssistantPage: React.FC = () => {
         return () => window.clearInterval(t);
     }, [idleShown, idleVariations.length]);
 
-    // Session over — return home. Also bounces straight out if someone lands
-    // here without an active session. Errors linger long enough to read.
+    // Session over — return to whichever tab the user was on before, not always
+    // Home. Also bounces straight out if someone lands here without an active
+    // session. Errors linger long enough to read. `navigatedRef` guards against
+    // firing twice: LiveAssistantContext also clears its own 'error' status
+    // after 4000ms, which would otherwise re-trigger this effect's 800ms leg.
+    const navigatedRef = useRef(false);
+    useEffect(() => {
+        if (status === 'connecting' || status === 'live') navigatedRef.current = false;
+    }, [status]);
     useEffect(() => {
         if (status !== 'idle' && status !== 'error') return;
-        const t = setTimeout(() => appEventBus.emit('navigate', 'dashboard'), status === 'error' ? 4000 : 800);
+        if (navigatedRef.current) return;
+        const t = setTimeout(() => {
+            navigatedRef.current = true;
+            const target = getPreviousTab('assistant');
+            if (target) appEventBus.emit('navigate', target);
+        }, status === 'error' ? 4000 : 800);
         return () => clearTimeout(t);
     }, [status]);
 
@@ -463,13 +476,13 @@ const AssistantPage: React.FC = () => {
             <AssistantBackdrop mode={displayMode} />
 
             {/* Status readouts, centered top and bottom */}
-            <div className="absolute top-4 inset-x-0 flex justify-center font-mono text-[9px] tracking-[0.4em] uppercase text-base-content/30 pointer-events-none">
-                {status === 'live' ? 'UPLINK ACTIVE' : status.toUpperCase()}
+            <div className="absolute top-4 inset-x-0 flex justify-center font-mono text-2xs tracking-[0.2em] text-base-content/60 pointer-events-none">
+                {{ live: 'Connected', connecting: 'Connecting...', error: 'Error', idle: 'Idle' }[status]}
             </div>
             <div className="absolute bottom-4 inset-x-0 flex flex-col items-center gap-1 pointer-events-none">
                 {isPipSupported() && (
                     <button
-                        className="font-mono text-[9px] tracking-[0.4em] uppercase text-base-content/30 hover:text-primary cursor-pointer pointer-events-auto transition-colors"
+                        className="font-mono text-2xs tracking-[0.4em] uppercase text-base-content/60 hover:text-primary cursor-pointer pointer-events-auto transition-colors"
                         onClick={async () => {
                             audioService.playClick();
                             try { await openAssistantPip(); }
@@ -480,15 +493,15 @@ const AssistantPage: React.FC = () => {
                         POP OUT
                     </button>
                 )}
-                <span className="font-mono text-[9px] tracking-[0.4em] uppercase text-base-content/30">
+                <span className="font-mono text-2xs tracking-[0.4em] uppercase text-base-content/60">
                     CTRL+SPACE TO END
                 </span>
             </div>
 
             {status === 'error' ? (
                 <div className="relative z-10 flex flex-col items-center gap-6 max-w-3xl px-8 text-center">
-                    <p className="font-mono text-xl md:text-3xl tracking-[0.4em] uppercase text-error">SYSTEM FAULT</p>
-                    <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-base-content/50 leading-relaxed">{error}</p>
+                    <p className="font-mono text-xl md:text-3xl tracking-[0.4em] uppercase text-error">Error</p>
+                    <p className="font-mono text-2xs tracking-[0.2em] uppercase text-base-content/60 leading-relaxed">{error}</p>
                 </div>
             ) : (
                 <AnimatePresence mode="popLayout">
@@ -505,7 +518,7 @@ const AssistantPage: React.FC = () => {
                             not a given mode uses this row. */}
                         <div className="h-5 flex items-center justify-center">
                             {displayMode === 'listening' && (
-                                <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-primary/70">RECEIVING</p>
+                                <p className="font-mono text-2xs tracking-[0.5em] uppercase text-primary/70">RECEIVING</p>
                             )}
                         </div>
 
@@ -513,7 +526,7 @@ const AssistantPage: React.FC = () => {
                             its position never shifts with the text's presence or
                             length. */}
                         {displayMode === 'connecting' && (
-                            <Stage text="ESTABLISHING UPLINK..." wordTime={450} />
+                            <Stage text="CONNECTING..." wordTime={450} />
                         )}
 
                         {displayMode === 'command' && (
@@ -571,7 +584,7 @@ const AssistantPage: React.FC = () => {
                                     </div>
                                     <div className="flex flex-col gap-1 min-h-[64px] items-center">
                                         {activity.map((line, i) => (
-                                            <p key={`${i}-${line}`} className="font-mono text-[10px] tracking-[0.2em] uppercase text-primary/70 truncate max-w-[60vw]">
+                                            <p key={`${i}-${line}`} className="font-mono text-2xs tracking-[0.2em] uppercase text-primary/70 truncate max-w-[60vw]">
                                                 {line}
                                             </p>
                                         ))}

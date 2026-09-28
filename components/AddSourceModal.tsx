@@ -74,7 +74,7 @@ export const AddSourceModal: React.FC<AddSourceModalProps> = ({ open, onClose })
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/50">
       <div className="bg-base-200 border border-white/10 rounded-lg shadow-2xl w-full max-w-md mx-4">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
@@ -114,7 +114,7 @@ export const AddSourceModal: React.FC<AddSourceModalProps> = ({ open, onClose })
                 onChange={e => setUrl(e.target.value)}
                 placeholder="https://example.com/article"
                 className="w-full bg-base-300/50 border border-white/10 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-primary/50"
-                onKeyDown={e => { if (e.key === 'Enter') handleAddUrl(); }}
+                onKeyDown={e => { if (e.key === 'Enter') void handleAddUrl(); }}
               />
               {error && <p className="text-xs text-error">{error}</p>}
               <button
@@ -132,7 +132,7 @@ export const AddSourceModal: React.FC<AddSourceModalProps> = ({ open, onClose })
               <p className="text-xs font-mono opacity-50">
                 Browse files from your vault to add as sources.
               </p>
-              <div className="flex items-center gap-2 text-[11px] font-mono opacity-60">
+              <div className="flex items-center gap-2 text-2xs font-mono opacity-60">
                 <span className="truncate">/{vaultPath}</span>
                 {vaultPath && (
                   <button
@@ -160,7 +160,7 @@ export const AddSourceModal: React.FC<AddSourceModalProps> = ({ open, onClose })
                       disabled={isAddingSource}
                       className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-mono text-left hover:bg-base-300/40 border-b border-white/5 last:border-b-0"
                     >
-                      {entry.kind === 'directory' ? '📁' : <BookOpenIcon className="w-3.5 h-3.5 text-primary/40 shrink-0" />}
+                      {entry.kind === 'directory' ? '📁' : <BookOpenIcon className="w-3.5 h-3.5 text-primary/60 shrink-0" />}
                       <span className="truncate">{entry.name}</span>
                     </button>
                   ))

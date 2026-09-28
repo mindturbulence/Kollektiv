@@ -56,11 +56,11 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
     }, [progress]);
 
     return (
-        <div className="fixed inset-0 bg-base-100 z-[500] flex flex-col items-center justify-center overflow-hidden select-none">
+        <div className="fixed inset-0 bg-base-100 z-modal flex flex-col items-center justify-center overflow-hidden select-none">
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
                 <span
-                    className={`text-[25vw] font-black opacity-[0.03] leading-none select-none transition-all duration-500 ease-out ${settings.darkTheme === 'pipboy' ? 'font-monofonto' : 'font-logo'}`}
+                    className={`text-[25vw] font-black opacity-[0.03] leading-none select-none transition-transform duration-500 ease-out ${settings.darkTheme === 'pipboy' ? 'font-monofonto' : 'font-logo'}`}
                     style={{ transform: `translateY(${(100 - progress) * 0.2}px)` }}
                 >
                     {Math.round(progress).toString().padStart(2, '0')}
@@ -69,11 +69,11 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
             <div className="relative z-10 flex flex-col items-center">
                 <div className="overflow-hidden mb-6 px-4">
                     <h1 ref={textWrapperRef} className={`grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-black tracking-tighter uppercase select-none items-center ${settings.darkTheme === 'pipboy' ? 'font-monofonto' : 'font-sf-mono'}`}>
-                        <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
-                            Kollektiv<span className="text-primary/10 italic">.</span>
+                        <span className="text-base-content/60 block leading-none py-2 row-start-1 col-start-1">
+                            Kollektiv<span className="text-primary/60 italic">.</span>
                         </span>
                         <div
-                            className="row-start-1 col-start-1 h-full overflow-hidden transition-all duration-700 ease-out border-r border-base-content/20"
+                            className="row-start-1 col-start-1 h-full overflow-hidden transition-[width] duration-700 ease-out border-r border-base-content/20"
                             style={{ width: `${progress}%` }}
                         >
                             <span className="text-base-content block whitespace-nowrap leading-none py-2 drop-shadow-[0_0_20px_rgba(var(--bc),0.15)]">
@@ -82,13 +82,13 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
                         </div>
                     </h1>
                 </div>
-                <div className={`flex flex-col items-center gap-4 transition-all duration-500 ${progress >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+                <div className={`flex flex-col items-center gap-4 transition-[opacity,transform] duration-500 ${progress >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
                     <div className="flex flex-col items-center gap-2">
-                        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">{message || 'DIAGNOSTIC_ACTIVE'}</p>
+                        <p className="text-2xs font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/60">{message || 'DIAGNOSTIC_ACTIVE'}</p>
                         <div className="w-32 h-[1px] bg-base-content/10 relative overflow-hidden">
-                            <div className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
+                            <div className="absolute inset-y-0 left-0 bg-primary transition-[width] duration-500 ease-out" style={{ width: `${progress}%` }} />
                         </div>
-                        <span className="text-[10px] font-mono font-bold text-primary/60">{Math.round(progress)}%</span>
+                        <span className="text-2xs font-mono font-bold text-primary/60">{Math.round(progress)}%</span>
                     </div>
                 </div>
             </div>
@@ -221,7 +221,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     callback: (response: any) => {
                         if (authTimeoutRef.current) { window.clearTimeout(authTimeoutRef.current); authTimeoutRef.current = null; }
                         if (response.error) { setIsWorking(false); setMaintenanceMsg(""); setMaintenanceProgress(0); if (response.error !== 'popup_closed') showGlobalFeedback(`Authentication failed: ${response.error}`, true); return; }
-                        if (response.access_token) handleAuthResponse(response.access_token, authModeRef.current, response.expires_in);
+                        if (response.access_token) void handleAuthResponse(response.access_token, authModeRef.current, response.expires_in);
                         else { setIsWorking(false); setMaintenanceMsg(""); }
                     },
                 });
@@ -285,7 +285,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         const clientId = settings.spotify?.customClientId || process.env.SPOTIFY_CLIENT_ID || '';
         if (!clientId || clientId.includes('PLACEHOLDER')) { spotifyPkceRef.current = null; return; }
         const verifier = generateCodeVerifier();
-        generateCodeChallenge(verifier).then(challenge => {
+        void generateCodeChallenge(verifier).then(challenge => {
             spotifyPkceRef.current = { verifier, challenge };
         });
     }, [settings.spotify?.customClientId, generateCodeVerifier, generateCodeChallenge]);
@@ -427,7 +427,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     useEffect(() => {
         const subTabs = subMenuConfig[activeSettingsTab] || [];
         if (!subTabs.some(st => st.id === activeSubTab)) setActiveSubTab(subTabs[0]?.id || '');
-        if (activeSettingsTab === 'prompt') loadPromptCategories().then(setPromptCategories);
+        if (activeSettingsTab === 'prompt') void loadPromptCategories().then(setPromptCategories);
     }, [activeSettingsTab, activeSubTab, setActiveSubTab]);
 
     const handleSettingsChange = useCallback((field: keyof LLMSettings, value: any) => {
@@ -460,7 +460,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             const url = isCloud ? settings.ollamaCloudBaseUrl : settings.ollamaBaseUrl;
             const result = await testOllamaConnection(url);
             setOllamaTestResult(result);
-            if (result.success) refreshOllamaModels();
+            if (result.success) void refreshOllamaModels();
         } catch (e) { setOllamaTestResult({ success: false, message: "CRITICAL PING FAILURE" }); }
         setIsTestingOllama(false);
     };
@@ -472,7 +472,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             const apiKey = settings.llamacppApiKey;
             const result = await testLlamaCppConnection(url, apiKey);
             setLlamaCppTestResult(result);
-            if (result.success) { refreshOllamaModels(); showGlobalFeedback("Llama.cpp connection established (200 OK)", false); }
+            if (result.success) { void refreshOllamaModels(); showGlobalFeedback("Llama.cpp connection established (200 OK)", false); }
             else { showGlobalFeedback(`Llama.cpp connection failed: ${result.message}`, true); }
         } catch (e: any) { setLlamaCppTestResult({ success: false, message: "CRITICAL PING FAILURE" }); showGlobalFeedback(`Llama.cpp ping error: ${e.message || e}`, true); }
         setIsTestingLlamaCpp(false);
@@ -664,7 +664,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         <>
             <motion.section
                 variants={panelVariants}
-                initial="hidden"
+                initial={false}
                 animate={isExiting ? "exit" : "visible"}
                 custom={0.4}
                 className="w-full h-full"
@@ -673,7 +673,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     {/* Left Sidebar - System Hub */}
                     <aside className="hidden lg:flex flex-col bg-base-100/30 border-r border-white/5 overflow-hidden">
                         <div className="h-16 flex items-center px-6 border-b border-white/5 flex-shrink-0">
-                            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30">SYSTEM HUB</h2>
+                            <h2 className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/60">SYSTEM HUB</h2>
                         </div>
                         <div ref={navScrollRef} className="flex-grow overflow-y-auto custom-scrollbar px-4 py-4">
                             <ul className="space-y-1">
@@ -701,7 +701,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                 <button
                                     key={cat.id}
                                     onClick={() => handleMainTabClick(cat.id)}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors border ${activeSettingsTab === cat.id ? 'bg-primary/10 text-primary border-primary/30' : 'text-base-content/40 border-transparent hover:text-base-content/70'}`}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-2xs font-black uppercase tracking-widest whitespace-nowrap transition-colors border ${activeSettingsTab === cat.id ? 'bg-primary/10 text-primary border-primary/30' : 'text-base-content/60 border-transparent hover:text-base-content/70'}`}
                                 >
                                     {cat.icon}
                                     {cat.label}
@@ -714,7 +714,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     <button
                                         key={sub.id}
                                         onClick={() => { audioService.playClick(); setActiveSubTab(sub.id); }}
-                                        className={`flex items-center gap-2 py-4 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${activeSubTab === sub.id ? 'border-primary text-primary' : 'border-transparent text-base-content/30 hover:text-base-content/60'}`}
+                                        className={`flex items-center gap-2 py-4 text-2xs font-black uppercase tracking-widest border-b-2 transition-colors whitespace-nowrap ${activeSubTab === sub.id ? 'border-primary text-primary' : 'border-transparent text-base-content/60 hover:text-base-content/60'}`}
                                     >
                                         {sub.icon}
                                         {sub.label}
@@ -725,10 +725,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
 
                         {renderActiveTabContent()}
 
-                        <footer className="flex flex-row h-14 items-stretch p-1.5 gap-1.5 flex-shrink-0 panel-footer">
-                            <button onClick={() => { audioService.playClick(); handleCancel(); }} className="form-btn flex-1">Abort</button>
-                            <button onClick={() => { audioService.playClick(); saveSettings(); }} className="form-btn form-btn-primary flex-1 shadow-lg">Confirm</button>
-                        </footer>
+                        {JSON.stringify(settings) !== JSON.stringify(globalSettings) && (
+                          <footer className="flex flex-row h-14 items-stretch p-1.5 gap-1.5 flex-shrink-0 panel-footer">
+                              <button onClick={() => { audioService.playClick(); handleCancel(); }} className="form-btn flex-1">Discard</button>
+                              <button onClick={() => { audioService.playClick(); saveSettings(); }} className="form-btn form-btn-primary flex-1 shadow-lg">Save changes</button>
+                          </footer>
+                        )}
                     </main>
                 </div>
             </motion.section>

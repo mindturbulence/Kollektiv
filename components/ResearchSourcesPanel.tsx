@@ -48,18 +48,18 @@ export const ResearchSourcesPanel: React.FC = () => {
           sources.map(s => (
             <div
               key={s.path}
-              className="group flex items-center justify-between px-2.5 py-2 rounded cursor-pointer hover:bg-base-300/40 text-sm border border-transparent hover:border-white/5 transition-all"
+              className="group flex items-center justify-between px-2.5 py-2 rounded cursor-pointer hover:bg-base-300/40 text-sm border border-transparent hover:border-white/5 transition-colors"
             >
               <button
                 onClick={() => openPreview(s.path)}
                 className="flex items-center gap-2.5 truncate text-base-content/70 hover:text-base-content min-w-0"
               >
-                <BookOpenIcon className="w-3.5 h-3.5 shrink-0 text-primary/40" />
+                <BookOpenIcon className="w-3.5 h-3.5 shrink-0 text-primary/60" />
                 <span className="truncate">{s.title}</span>
               </button>
               <button
                 onClick={() => removeSource(s.path.replace('sources/', ''))}
-                className="opacity-0 group-hover:opacity-100 p-0.5 text-error/40 hover:text-error transition-all shrink-0"
+                className="opacity-0 group-hover:opacity-100 p-0.5 text-error/40 hover:text-error transition-[opacity,color] shrink-0"
                 aria-label="Remove source"
               >
                 <CloseIcon className="w-3 h-3" />
@@ -79,7 +79,7 @@ export const ResearchSourcesPanel: React.FC = () => {
       <AddSourceModal open={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
       {previewFile && (
         <div
-          className="fixed inset-0 z-[300] flex items-center justify-center bg-base-300/50 backdrop-blur-sm p-8"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-base-300/50 backdrop-blur-sm p-8"
           onClick={() => setPreviewFile(null)}
         >
           <div

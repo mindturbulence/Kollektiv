@@ -65,7 +65,7 @@ const AppSection: React.FC<AppSectionProps> = ({
                 console.warn("Error checking cached handle:", e);
             }
         };
-        checkCached();
+        void checkCached();
     }, []);
 
     useEffect(() => {
@@ -184,7 +184,7 @@ const AppSection: React.FC<AppSectionProps> = ({
                 <SettingRow label="Google Drive Sync" desc={settings.googleIdentity?.isConnected ? `Connected as: ${settings.googleIdentity.email}` : "Credentials required to sync with cloud folders."}>
                     {settings.googleIdentity?.isConnected ? (
                         <div className="flex items-center space-x-2">
-                            <div className="text-[10px] font-black tracking-widest text-primary font-mono bg-primary/10 px-3 py-1.5 uppercase">
+                            <div className="text-2xs font-black tracking-widest text-primary font-mono bg-primary/10 px-3 py-1.5 uppercase">
                                 ACTIVE_SYNC
                             </div>
                             <button
@@ -258,7 +258,7 @@ const AppSection: React.FC<AppSectionProps> = ({
             <SettingsGroup title="Data Management">
             <SettingRow label="Sync & Reorganize" desc="Verify manifests and move files to correct category folders.">
                 <button
-                    onClick={() => { audioService.playClick(); handleIntegrityCheck(); }}
+                    onClick={() => { audioService.playClick(); void handleIntegrityCheck(); }}
                     disabled={isSyncing}
                     className="form-btn px-6"
                 >
@@ -267,7 +267,7 @@ const AppSection: React.FC<AppSectionProps> = ({
             </SettingRow>
             <SettingRow label="Full Archival Export" desc="Generate a complete ZIP archive of all local data and files.">
                 <button
-                    onClick={() => { audioService.playClick(); createZipAndDownload([], 'kollektiv_backup.zip'); }}
+                    onClick={() => { audioService.playClick(); void createZipAndDownload([], 'kollektiv_backup.zip'); }}
                     disabled={isWorking}
                     className="form-btn form-btn-primary px-6"
                 >

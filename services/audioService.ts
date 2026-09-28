@@ -20,8 +20,8 @@ class AudioService {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      this.initContext().then(() => {
-        this.preloadSounds();
+      void this.initContext().then(() => {
+        void this.preloadSounds();
       });
     }
   }
@@ -150,7 +150,7 @@ class AudioService {
 
   public resume(): void {
     if (!this.ctx) {
-      this.initContext();
+      void this.initContext();
       return;
     }
     if (this.ctx.state === 'suspended') {
@@ -161,7 +161,7 @@ class AudioService {
   enable(): void {
     if (this.isEnabled) return;
     this.isEnabled = true;
-    this.initContext().then(() => this.resume());
+    void this.initContext().then(() => this.resume());
   }
 
   disable(): void {

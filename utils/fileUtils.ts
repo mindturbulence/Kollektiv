@@ -3,7 +3,6 @@ import JSZip from 'jszip';
 import { getHandle, setHandle } from './db';
 import type { AuthContextType } from '../contexts/AuthContext';
 import type { LLMSettings } from '../types';
-import { loadLLMSettings } from './settingsStorage';
 import { convertToJpgWithMetadata } from './imageFormatTools';
 
 // --- Interfaces and Types ---
@@ -925,6 +924,7 @@ class LocalFileSystemManager implements IFileSystemManager {
             const galleryItems = manifest.galleryItems;
             const totalGItems = galleryItems.length;
 
+            const { loadLLMSettings } = await import('./settingsStorage');
             const settings = loadLLMSettings();
 
             // Create a deep copy of the manifest to modify for Google Drive only

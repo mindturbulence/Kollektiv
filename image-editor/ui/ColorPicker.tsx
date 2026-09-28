@@ -73,7 +73,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ target, onClose }) => {
           </div>
         </label>
 
-        <label className="flex items-center gap-2 text-[10px] font-mono text-base-content/60">
+        <label className="flex items-center gap-2 text-2xs font-mono text-base-content/60">
           <span className="w-8">HEX</span>
           <input
             type="text"
@@ -86,7 +86,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ target, onClose }) => {
           />
         </label>
 
-        <div className="grid grid-cols-3 gap-2 text-[10px] font-mono text-base-content/60">
+        <div className="grid grid-cols-3 gap-2 text-2xs font-mono text-base-content/60">
           <span>R {rgb.r}</span>
           <span>G {rgb.g}</span>
           <span>B {rgb.b}</span>

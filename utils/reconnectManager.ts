@@ -136,22 +136,24 @@ export class ReconnectManager {
 
     this.onAttempt?.(this.attempt, actualDelay);
 
-    this.timer = setTimeout(async () => {
-      this.timer = null;
-      if (this.cancelled) return;
-      this.connecting = true;
+    this.timer = setTimeout(() => {
+      void (async () => {
+        this.timer = null;
+        if (this.cancelled) return;
+        this.connecting = true;
 
-      try {
-        await connectFn();
-        if (!this.cancelled) {
-          this.reportSuccess();
-          this.onSuccess?.();
+        try {
+          await connectFn();
+          if (!this.cancelled) {
+            this.reportSuccess();
+            this.onSuccess?.();
+          }
+        } catch {
+          // Connection failed — schedule next retry
+          this.connecting = false;
+          this.scheduleNext(connectFn);
         }
-      } catch {
-        // Connection failed — schedule next retry
-        this.connecting = false;
-        this.scheduleNext(connectFn);
-      }
+      })();
     }, actualDelay);
   }
 }

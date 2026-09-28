@@ -133,7 +133,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
   const dropdownMenu = isDropdownOpen ? (
     <div 
       ref={dropdownRef}
-      className={`fixed z-[12000] flex ${dropdownPos.isUpward ? 'flex-col-reverse' : 'flex-col'} overflow-hidden animate-fade-in bg-base-100 border border-base-300 shadow-2xl rounded-none ${dropdownPos.isUpward ? 'mb-1' : 'mt-1'}`}
+      className={`fixed z-system flex ${dropdownPos.isUpward ? 'flex-col-reverse' : 'flex-col'} overflow-hidden animate-fade-in bg-base-100 border border-base-300 shadow-2xl rounded-none ${dropdownPos.isUpward ? 'mb-1' : 'mt-1'}`}
       style={{ 
         top: dropdownPos.top !== 'auto' ? `${dropdownPos.top}px` : 'auto', 
         bottom: dropdownPos.bottom !== 'auto' ? `${dropdownPos.bottom}px` : 'auto', 
@@ -163,7 +163,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
               className="w-full text-left px-3 py-2 text-xs font-bold font-rajdhani transition-colors flex flex-col gap-0.5 text-accent"
             >
               <span>ADD &ldquo;{searchQuery}&rdquo;</span>
-              <span className="text-[11px] opacity-60 tracking-normal">Add as custom option</span>
+              <span className="text-2xs opacity-60 tracking-normal">Add as custom option</span>
             </button>
           </li>
         )}
@@ -178,7 +178,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
               >
                 <span>{option.label}</span>
                 {option.description && (
-                  <span className={`text-[11px] opacity-60 ${fontClass} tracking-normal leading-tight ${value === option.value ? 'opacity-90' : ''}`}>
+                  <span className={`text-2xs opacity-60 ${fontClass} tracking-normal leading-tight ${value === option.value ? 'opacity-90' : ''}`}>
                     {option.description}
                   </span>
                 )}
@@ -186,7 +186,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
             </li>
           ))
         ) : (
-          <li className="px-4 py-4 uppercase tracking-widest text-base-content/30 text-center">
+          <li className="px-4 py-4 uppercase tracking-widest text-base-content/60 text-center">
             No matches found
           </li>
         )}
@@ -195,26 +195,26 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
   ) : null;
 
   return (
-    <div className={`relative w-full ${isDropdownOpen ? 'z-[9999]' : 'z-10'} ${className}`} ref={wrapperRef}>
+    <div className={`relative w-full ${isDropdownOpen ? 'z-dropdown' : 'z-10'} ${className}`} ref={wrapperRef}>
       <div 
         onClick={handleToggle}
         onMouseEnter={() => audioService.playHover()}
         className={`form-select flex items-center justify-between cursor-pointer hover:border-primary ${fontClass}`}
       >
-        <span className={`truncate ${!selectedOption ? 'text-base-content/30' : 'text-base-content'}`}>
+        <span className={`truncate ${!selectedOption ? 'text-base-content/60' : 'text-base-content'}`}>
           {selectedOption ? selectedOption.label : placeholder || 'Select option...'}
         </span>
         <div className="flex items-center gap-1.5 ml-2">
             {value && (
                 <button 
                     onClick={handleClear}
-                    className="form-btn autocomplete-clear-btn p-1 -mr-1 hover:text-error opacity-20 hover:opacity-100 transition-all border-none bg-transparent h-auto w-auto min-h-0"
+                    className="form-btn autocomplete-clear-btn p-1 -mr-1 hover:text-error opacity-20 hover:opacity-100 transition-[color,opacity] border-none bg-transparent h-auto w-auto min-h-0"
                     title="Clear Selection"
                 >
                     <CloseIcon className="w-3.5 h-3.5" />
                 </button>
             )}
-            <ChevronDownIcon className={`w-4 h-4 text-base-content/40 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+            <ChevronDownIcon className={`w-4 h-4 text-base-content/60 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
         </div>
       </div>
 

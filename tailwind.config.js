@@ -5,6 +5,7 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
     "./components/**/*.{js,ts,jsx,tsx}",
     "./image-editor/**/*.{js,ts,jsx,tsx}",
+    "./video-editor/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
@@ -13,7 +14,32 @@ export default {
         display: ["Nunito", "Inter", "Plus Jakarta Sans", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
       },
+      fontSize: {
+        '2xs': ['11px', { lineHeight: '1.4' }],
+        'xs': ['12px', { lineHeight: '1.5' }],
+      },
+      transitionDuration: {
+        press: 'var(--duration-press)',
+        quick: 'var(--duration-quick)',
+        fast: 'var(--duration-fast)',
+        medium: 'var(--duration-medium)',
+        slow: 'var(--duration-slow)',
+      },
+      transitionTimingFunction: {
+        'smooth-out': 'var(--ease-smooth-out)',
+        'sharp-in': 'var(--ease-sharp-in)',
+        'in-out-strong': 'var(--ease-in-out)',
+      },
       colors: {},
+      zIndex: {
+        'base': '1',
+        'raised': '10',
+        'dropdown': '100',
+        'overlay': '200',
+        'modal': '300',
+        'toast': '400',
+        'system': '500',
+      },
     },
   },
   plugins: [require("daisyui"), require("@tailwindcss/typography")],

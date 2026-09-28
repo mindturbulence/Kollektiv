@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useLayoutEffect, lazy, Suspense } from 'react';
 import { gsap } from 'gsap';
 import ChromaticText from './ChromaticText';
+import { prefersReducedMotion } from './transitions/routeFx';
 
 // Lazy: own chunk — keeps the storm off the critical boot path AND avoids
 // perturbing index-chunk module evaluation order (static import here triggered
@@ -79,6 +80,12 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
 
     useLayoutEffect(() => {
         if (!textWrapperRef.current) return;
+        if (prefersReducedMotion()) {
+            gsap.set(textWrapperRef.current, { yPercent: 0, autoAlpha: 1 });
+            if (logoFillRef.current) gsap.set(logoFillRef.current, { width: '100%' });
+            if (systemTextRef.current) gsap.set(systemTextRef.current, { y: 0, autoAlpha: 1 });
+            return;
+        }
         gsap.fromTo(textWrapperRef.current,
             { yPercent: 100, autoAlpha: 0 },
             { yPercent: 0, autoAlpha: 1, duration: 1.5, ease: "expo.out" }
@@ -127,7 +134,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
     };
 
     return (
-        <div id="initial-loader" className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none font-sans" style={{ background: 'oklch(var(--b1))', opacity: 1 }}>
+        <div id="initial-loader" className="fixed inset-0 z-modal flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none font-sans" style={{ background: 'oklch(var(--b1))', opacity: 1 }}>
             <StormBoundary>
                 <Suspense fallback={null}>
                     <StormBackground />
@@ -140,8 +147,8 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                 <div className="mb-6 px-4 flex flex-col items-center">
                     <h1 ref={textWrapperRef} className="flex flex-col items-center text-2xl md:text-4xl font-normal tracking-widest uppercase select-none leading-none translate-y-[2px]">
                         <div className="grid grid-cols-1 grid-rows-1 font-monoton">
-                            <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
-                                <ChromaticText enabled={false}>Kollektiv</ChromaticText><span className="text-primary/10 italic">.</span>
+                            <span className="text-base-content/60 block leading-none py-2 row-start-1 col-start-1">
+                                <ChromaticText enabled={false}>Kollektiv</ChromaticText><span className="text-primary/60 italic">.</span>
                             </span>
 
                             <div
@@ -164,19 +171,19 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                 </div>
 
                 <div className="relative h-28 w-80">
-                    <div ref={progressStatusRef} className={`absolute inset-0 flex flex-col items-center gap-4 transition-all duration-1000 origin-center ${isComplete ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
+                    <div ref={progressStatusRef} className={`absolute inset-0 flex flex-col items-center gap-4 transition-[opacity,transform] duration-1000 origin-center ${isComplete ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
                         <div className="flex flex-col items-center gap-2 w-full">
                             <div className="flex flex-col items-center gap-1 mb-2">
                                 <div className="w-48 h-[2px] bg-base-content/10 relative overflow-hidden rounded-full">
                                     <div
-                                        className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out"
+                                        className="absolute inset-y-0 left-0 bg-primary transition-[width] duration-500 ease-out"
                                         style={{ width: `${smoothPercentage}%` }}
                                     />
                                 </div>
-                                <span className="text-[9px] font-mono font-bold text-primary/60 tracking-widest">{smoothPercentage}%</span>
+                                <span className="text-2xs font-mono font-bold text-primary/60 tracking-widest">{smoothPercentage}%</span>
                             </div>
 
-                            <div className="flex flex-col items-start justify-end min-h-[48px] max-h-[48px] overflow-hidden leading-snug w-full px-6 text-[10px] font-mono font-bold uppercase tracking-widest text-left text-base-content/40">
+                            <div className="flex flex-col items-start justify-end min-h-[48px] max-h-[48px] overflow-hidden leading-snug w-full px-6 text-2xs font-mono font-bold uppercase tracking-widest text-left text-base-content/60">
                                 {history.slice(-2).map((h, idx) => (
                                     <div key={idx} className="opacity-40 w-full truncate">{h}</div>
                                 ))}
@@ -187,13 +194,13 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
 
                     <div ref={actionButtonsRef} className={`absolute inset-0 flex flex-col items-center justify-center gap-4 transition-opacity duration-1000 ${isComplete ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                         <button
-                            className="form-btn form-btn-primary w-48 h-10 text-[10px]"
+                            className="form-btn form-btn-primary w-48 h-10 text-2xs"
                             onClick={() => handleContinue(true)}
                         >
                             CONTINUE
                         </button>
                         <button
-                            className="text-xs font-rajdhani uppercase tracking-widest font-normal text-base-content/30 hover:text-base-content px-4 py-2 transition-colors bg-transparent hover:bg-transparent"
+                            className="text-xs font-rajdhani uppercase tracking-widest font-normal text-base-content/60 hover:text-base-content px-4 py-2 transition-colors bg-transparent hover:bg-transparent"
                             onClick={() => handleContinue(false)}
                         >
                             CONTINUE WITHOUT MUSIC
@@ -202,8 +209,8 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                 </div>
             </div>
 
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono uppercase tracking-widest text-base-content/40 opacity-70 flex flex-col items-center gap-0.5">
-                <span className="font-bold text-base-content/30 text-[8px]">Built by</span>
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-2xs font-mono uppercase tracking-widest text-base-content/60 opacity-70 flex flex-col items-center gap-0.5">
+                <span className="font-bold text-base-content/60 text-[8px]">Built by</span>
                 <span className="text-primary font-bold">MindTurbulence</span>
             </div>
         </div>

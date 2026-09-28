@@ -26,7 +26,7 @@ const TagFilterControls: React.FC<TagFilterControlsProps> = ({ values, onChange 
     const set = <K extends keyof TagFilterValues>(key: K, value: TagFilterValues[K]) => onChange({ ...values, [key]: value });
 
     return (
-        <div className="flex flex-wrap gap-3 items-end p-3 bg-base-200/20 text-[10px]">
+        <div className="flex flex-wrap gap-3 items-end p-3 bg-base-200/20 text-2xs">
             <label className="flex flex-col gap-1">
                 <span className="uppercase opacity-40">Top N</span>
                 <input type="number" value={values.count} onChange={(e) => set('count', Number(e.target.value))} className="form-input w-20 h-7" />

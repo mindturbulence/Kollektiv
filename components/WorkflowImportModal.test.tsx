@@ -28,8 +28,8 @@ vi.mock('./icons', () => ({
 }));
 
 // Mock createPortal to render inline
-vi.mock('react-dom', () => {
-  const actual = vi.importActual('react-dom');
+vi.mock('react-dom', async () => {
+  const actual = await vi.importActual('react-dom');
   return {
     ...actual,
     createPortal: (content: React.ReactNode) => content,

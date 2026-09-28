@@ -3,7 +3,7 @@ import { assistantAvatarStore, type AssistantAvatarSnapshot } from '../utils/ass
 import type { AssistantMode } from '../utils/assistantMode';
 
 const MODE_LABEL: Record<AssistantMode, string> = {
-    connecting: 'UPLINK…',
+    connecting: 'Connecting...',
     command: 'STANDBY',
     listening: 'RECEIVING',
     processing: 'ANALYZING',
@@ -12,7 +12,7 @@ const MODE_LABEL: Record<AssistantMode, string> = {
 
 /** Idle mode label — standby is the only mode ever visible when idle. */
 const statusLabel = (mode: AssistantMode, status: string): string =>
-    status === 'error' ? 'FAULT' : MODE_LABEL[mode];
+    status === 'error' ? 'Error' : MODE_LABEL[mode];
 
 /**
  * The Samaritan sigil (triangle from AssistantPage) wrapped in rings that

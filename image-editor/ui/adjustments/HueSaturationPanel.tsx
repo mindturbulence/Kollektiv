@@ -31,7 +31,7 @@ const HueSaturationPanel: React.FC<HueSaturationPanelProps> = ({ layerId, onClos
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
       if (!sourceRef.current) return;
-      AdjustmentEngine.updatePreview(layerId, sourceRef.current, {
+      void AdjustmentEngine.updatePreview(layerId, sourceRef.current, {
         kind: 'hue-saturation', hue, saturation, lightness, colorize,
       });
     });
@@ -84,9 +84,9 @@ const HueSaturationPanel: React.FC<HueSaturationPanelProps> = ({ layerId, onClos
       <div className="space-y-4 pt-1">
         {sliders.map(({ label, value, set, min, max, step, gradient }) => (
           <div key={label}>
-            <label className="flex items-center gap-2 text-[10px] font-mono text-base-content/60 mb-1">
+            <label className="flex items-center gap-2 text-2xs font-mono text-base-content/60 mb-1">
               <span className="w-20 flex-shrink-0">{label}</span>
-              <input type="number" className="w-14 bg-transparent border border-base-content/20 px-1 text-right text-[10px]"
+              <input type="number" className="w-14 bg-transparent border border-base-content/20 px-1 text-right text-2xs"
                 min={min} max={max} step={step} value={value}
                 onChange={e => set(Math.max(min, Math.min(max, Number(e.target.value))))} />
             </label>
@@ -102,7 +102,7 @@ const HueSaturationPanel: React.FC<HueSaturationPanelProps> = ({ layerId, onClos
         ))}
 
         {/* Colorize toggle */}
-        <label className="flex items-center gap-3 text-[10px] font-mono text-base-content/60">
+        <label className="flex items-center gap-3 text-2xs font-mono text-base-content/60">
           <span>Colorize</span>
           <input type="checkbox" className="toggle toggle-xs toggle-primary"
             checked={colorize} onChange={e => setColorize(e.target.checked)} />

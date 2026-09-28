@@ -55,7 +55,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
           </p>
 
           {suggestion && (
-            <p className="text-xs text-base-content/50 mt-2 italic">
+            <p className="text-xs text-base-content/60 mt-2 italic">
               {suggestion}
             </p>
           )}
@@ -84,7 +84,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
 
         {/* Error code badge */}
         <span
-          className="text-[10px] font-mono font-bold uppercase tracking-widest text-error/40 px-2 py-0.5 border border-error/10 shrink-0"
+          className="text-2xs font-mono font-bold uppercase tracking-widest text-error/40 px-2 py-0.5 border border-error/10 shrink-0"
           aria-label={`Error code: ${code}`}
         >
           {code}

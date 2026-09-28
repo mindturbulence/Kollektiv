@@ -7,7 +7,6 @@
  */
 
 import { getHandle, setHandle } from './db';
-import { appEventBus } from './eventBus';
 import { getSearchIndex, VaultNote } from './vaultSearch';
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -636,9 +635,9 @@ export async function manageTags(
 
 // ── UI panel ───────────────────────────────────────────────────────────
 
-export function openNoteInPanel(note: ObsidianNote): void {
-  appEventBus.emit('openObsidianNote', note);
-}
+// ponytail: no note panel listener is wired up yet — this is a no-op stub
+// kept for its callers (CommandPalette, obsidianTools) until that panel exists.
+export function openNoteInPanel(_note: ObsidianNote): void {}
 
 // ── Helpers ────────────────────────────────────────────────────────────
 

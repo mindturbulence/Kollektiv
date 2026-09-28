@@ -13,15 +13,15 @@ import { appEventBus } from '../utils/eventBus';
 import type { AssistantMode } from '../utils/assistantMode';
 import { isGoogleAuthValid } from '../utils/googleAuth';
 
-const MetadataItem: React.FC<{ label: string; value: string }> = ({ label, value }) => {
+const MetadataItem: React.FC<{ label: string; value: string; title?: string }> = ({ label, value, title }) => {
     const { settings } = useSettings();
     const isPipboyTheme = settings.darkTheme === 'pipboy';
-    const fontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
+    const fontClass = isPipboyTheme ? 'font-fixedsys text-2xs' : 'font-rajdhani text-xs font-normal';
 
     return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" title={title}>
             <span className={`arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block ${fontClass}`}>{label}</span>
-            <span className={`uppercase tracking-widest text-base-content/40 leading-none inline-block ${fontClass}`}>{value}</span>
+            <span className={`uppercase tracking-widest text-base-content/60 leading-none inline-block ${fontClass}`}>{value}</span>
         </div>
     );
 };
@@ -30,7 +30,7 @@ const BatteryStatus: React.FC = () => {
     const [battery, setBattery] = useState<{ level: number, charging: boolean } | null>(null);
     const { settings } = useSettings();
     const isPipboyTheme = settings.darkTheme === 'pipboy';
-    const fontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
+    const fontClass = isPipboyTheme ? 'font-fixedsys text-2xs' : 'font-rajdhani text-xs font-normal';
 
     useEffect(() => {
         // Battery API is not available in all browsers
@@ -57,9 +57,9 @@ const BatteryStatus: React.FC = () => {
     if (!battery) return null;
 
     return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" title={`Battery ${battery.level}%${battery.charging ? ', charging' : ''}`}>
             <span className={`arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block ${fontClass}`}>PWR</span>
-            <span className={`uppercase tracking-widest text-base-content/40 leading-none inline-block ${fontClass}`}>
+            <span className={`uppercase tracking-widest text-base-content/60 leading-none inline-block ${fontClass}`}>
                 {battery.level}%
             </span>
         </div>
@@ -68,14 +68,15 @@ const BatteryStatus: React.FC = () => {
 
 const IntegrationItem: React.FC<{
     label: string,
-    active: boolean
-}> = ({ label, active }) => {
+    active: boolean,
+    title: string
+}> = ({ label, active, title }) => {
     const { settings } = useSettings();
     const isPipboyTheme = settings.darkTheme === 'pipboy';
-    const fontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
+    const fontClass = isPipboyTheme ? 'font-fixedsys text-2xs' : 'font-rajdhani text-xs font-normal';
 
     return (
-        <span className={`uppercase tracking-widest transition-colors duration-500 leading-none inline-block ${fontClass} ${active ? 'text-base-content/40' : 'text-base-content/20'}`}>
+        <span title={`${title}: ${active ? 'connected' : 'not connected'}`} className={`uppercase tracking-widest transition-colors duration-500 leading-none inline-block ${fontClass} ${active ? 'text-base-content/60' : 'text-base-content/60'}`}>
             {label}
         </span>
     );
@@ -207,9 +208,9 @@ const Footer: React.FC<FooterProps> = ({
     const [time, setTime] = useState(new Date().toLocaleTimeString());
     const { mode: liveMode, status: liveStatus } = useAssistantSignals();
     const { controlEnabled } = useLiveAssistantContext();
-    const liveLabel = liveStatus === 'error' ? 'FAULT' : ASSISTANT_LABEL[liveMode];
+    const liveLabel = liveStatus === 'error' ? 'Error' : ASSISTANT_LABEL[liveMode];
     const isPipboyTheme = settings.darkTheme === 'pipboy';
-    const mainFontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
+    const mainFontClass = isPipboyTheme ? 'font-fixedsys text-2xs' : 'font-rajdhani text-xs font-normal';
 
     useEffect(() => {
         const fetch = async () => {
@@ -218,7 +219,7 @@ const Footer: React.FC<FooterProps> = ({
                 setVaultCount(items.filter(i => !i.isNsfw).length);
             } catch (e) { console.error(e); }
         };
-        fetch();
+        void fetch();
         const timer = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000);
         return () => clearInterval(timer);
     }, []);
@@ -226,35 +227,35 @@ const Footer: React.FC<FooterProps> = ({
 
 
     return (
-        <footer className="flex-shrink-0 px-8 py-4 bg-base-200/20 backdrop-blur-md z-[700] flex flex-row items-center justify-between select-none whitespace-nowrap relative pointer-events-auto border-t border-base-content/10 mt-auto">
+        <footer className="flex-shrink-0 px-8 py-4 bg-base-200/20 backdrop-blur-md z-overlay flex flex-row items-center justify-between select-none whitespace-nowrap relative pointer-events-auto border-t border-base-content/10 mt-auto">
             {/* Background Technical Noise */}
             <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
 
-            <div className="flex items-center h-full gap-4 bg-transparent relative z-[710] pointer-events-auto">
+            <div className="flex items-center h-full gap-4 bg-transparent relative z-raised pointer-events-auto">
                 <div className="flex gap-3 items-center">
-                    <span className={`arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block ${mainFontClass}`}>ENG</span>
+                    <span className={`arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block ${mainFontClass}`} title="Active AI engine">ENG</span>
                     <div className="min-w-[120px] flex items-center">
                         <LlmStatusSwitcher onClick={onToggleLlmPanel} isOpen={isLlmPanelOpen} />
                     </div>
                 </div>
 
                 <div className={`flex gap-4 ${mainFontClass} items-center pl-4 ps-6 border-l border-base-content/10`}>
-                    <span className="arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block">INT</span>
-                    <IntegrationItem label="VLT" active={fileSystemManager.isDirectorySelected()} />
-                    <IntegrationItem label="OLM" active={!!(settings.geminiApiKey || process.env.GEMINI_API_KEY) || settings.activeLLM?.includes('ollama')} />
+                    <span className="arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block" title="Integrations">INT</span>
+                    <IntegrationItem label="VLT" title="Vault folder" active={fileSystemManager.isDirectorySelected()} />
+                    <IntegrationItem label="OLM" title="AI provider (Gemini key or Ollama)" active={!!(settings.geminiApiKey || process.env.GEMINI_API_KEY) || settings.activeLLM?.includes('ollama')} />
                     {/* OpenRouter provider indicator */}
-                    <IntegrationItem label="ORT" active={!!settings.openrouterModel} />
+                    <IntegrationItem label="ORT" title="OpenRouter" active={!!settings.openrouterModel} />
                     {/* Llama.cpp provider indicator */}
-                    <IntegrationItem label="LCP" active={!!settings.llamacppModel} />
-                    <IntegrationItem label="GLG" active={isGoogleAuthValid(settings.googleIdentity)} />
-                    <IntegrationItem label="SPO" active={!!settings.spotify?.isConnected} />
-                    <IntegrationItem label="TRT" active={!!settings.tensorartApiKey} />
-                    <IntegrationItem label={`MCP: ${(settings.mcpServers || []).filter(s => s.enabled).length}`} active={(settings.mcpServers || []).filter(s => s.enabled).length > 0} />
+                    <IntegrationItem label="LCP" title="Llama.cpp" active={!!settings.llamacppModel} />
+                    <IntegrationItem label="GLG" title="Google account" active={isGoogleAuthValid(settings.googleIdentity)} />
+                    <IntegrationItem label="SPO" title="Spotify" active={!!settings.spotify?.isConnected} />
+                    <IntegrationItem label="TRT" title="Tensor.Art" active={!!settings.tensorartApiKey} />
+                    <IntegrationItem label={`MCP: ${(settings.mcpServers || []).filter(s => s.enabled).length}`} title="Enabled MCP servers" active={(settings.mcpServers || []).filter(s => s.enabled).length > 0} />
                     <DemoModeIndicator />
                 </div>
             </div>
 
-            <div className="flex-1 flex items-center justify-center h-full relative z-[705] pointer-events-none">
+            <div className="flex-1 flex items-center justify-center h-full relative z-base pointer-events-none">
                 <AnimatePresence mode="wait">
                     {liveStatus !== 'idle' && (
                         <motion.button
@@ -276,18 +277,18 @@ const Footer: React.FC<FooterProps> = ({
                 </AnimatePresence>
             </div>
 
-            <div className="flex flex-row items-center h-full gap-6 relative z-[710] pointer-events-auto">
+            <div className="flex flex-row items-center h-full gap-6 relative z-raised pointer-events-auto">
                 <div className="flex items-center gap-6">
                     <div className="hidden md:flex items-center gap-6">
                         {liveStatus === 'live' && (
                             <>
-                                <MetadataItem label="AUT" value={controlEnabled ? 'ON' : 'OFF'} />
+                                <MetadataItem label="AUT" value={controlEnabled ? 'ON' : 'OFF'} title={`Assistant screen control: ${controlEnabled ? 'on' : 'off'}`} />
                                 <div className="w-[1px] h-3 bg-base-content/10" />
                             </>
                         )}
-                        <MetadataItem label="VLT" value={`${vaultCount} UNITS`} />
+                        <MetadataItem label="VLT" value={`${vaultCount} UNITS`} title={`${vaultCount} items in your vault`} />
                         <div className="w-[1px] h-3 bg-base-content/10" />
-                        <MetadataItem label="SEQ" value={time} />
+                        <MetadataItem label="SEQ" value={time} title="Local time" />
                     </div>
 
                     <div className="w-[1px] h-3 bg-base-content/10 invisible md:visible" />
@@ -299,10 +300,11 @@ const Footer: React.FC<FooterProps> = ({
                     <button
                         onClick={onAudioToggle}
                         onMouseEnter={() => audioService.playHover()}
-                        className="flex items-center gap-2 group transition-all"
+                        title={`Sound effects: ${audioEnabled ? 'on' : 'off'}`}
+                        className="flex items-center gap-2 group"
                     >
                         <span className={`arwes-label uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block ${mainFontClass}`}>SFX</span>
-                        <span className={`uppercase tracking-widest leading-none inline-block ${audioEnabled ? 'text-base-content/40' : 'text-base-content/20'} ${mainFontClass}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
+                        <span className={`uppercase tracking-widest leading-none inline-block ${audioEnabled ? 'text-base-content/60' : 'text-base-content/60'} ${mainFontClass}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
                     </button>
 
                     <div className="w-[1px] h-3 bg-base-content/10" />
@@ -310,10 +312,11 @@ const Footer: React.FC<FooterProps> = ({
                     <button
                         onClick={onMusicToggle}
                         onMouseEnter={() => audioService.playHover()}
-                        className="flex items-center gap-2 group transition-all"
+                        title={`Ambient music: ${playerState === 'playing' ? 'on' : playerState === 'syncing' ? 'loading' : 'off'}`}
+                        className="flex items-center gap-2 group"
                     >
                         <span className={`arwes-label uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block ${mainFontClass}`}>MSC</span>
-                        <span className={`uppercase tracking-widest leading-none inline-block ${playerState === 'playing' ? 'text-base-content/40' : 'text-base-content/20'} ${mainFontClass}`}>
+                        <span className={`uppercase tracking-widest leading-none inline-block ${playerState === 'playing' ? 'text-base-content/60' : 'text-base-content/60'} ${mainFontClass}`}>
                             {playerState === 'playing' ? 'ON' : playerState === 'syncing' ? 'SYNC' : 'OFF'}
                         </span>
 

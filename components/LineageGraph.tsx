@@ -21,7 +21,7 @@ export const LineageGraph: React.FC<LineageGraphProps> = ({ lineage, onRestore }
                 <div key={node.versionId} className="flex flex-col items-center gap-2 group">
                     <button 
                         onClick={() => onRestore(node.versionId)}
-                        className="w-12 h-12 rounded-full bg-primary/20 border border-primary flex items-center justify-center text-[10px] font-mono hover:bg-primary/40 transition-colors"
+                        className="w-12 h-12 rounded-full bg-primary/20 border border-primary flex items-center justify-center text-2xs font-mono hover:bg-primary/40 transition-colors"
                         title={node.refinedText.substring(0, 50) + '...'}
                     >
                         {node.versionId}

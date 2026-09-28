@@ -260,12 +260,20 @@ export interface HistoryCommand {
   do(): void;
   /** Exact inverse — restores before-state. */
   undo(): void;
+  /** ImageBitmaps this command holds (review H3): the history byte-cap walks
+   *  these to account unique decoded bytes and `.close()` bitmaps that no
+   *  surviving command and no live layer reference. Optional — structural
+   *  commands (no bitmaps) may omit it. Values may nest (objects/arrays). */
+  bitmapRefs?: unknown;
 }
 
 // ─── Editor Actions (dispatched to EditorStore) ───────────────────────────────
 
 export type EditorAction =
   | { type: 'SET_DOCUMENT'; document: EditorDocument | null }
+  // M5 leftover — rename only touches title (+ updatedAt/isDirty); unlike
+  // SET_DOCUMENT it never resets viewport/selection/paintTarget.
+  | { type: 'SET_TITLE'; title: string }
   | { type: 'SET_ACTIVE_LAYER'; layerId: string | null }
   | { type: 'SET_ACTIVE_TOOL'; tool: ToolId }
   | { type: 'SET_VIEWPORT'; viewport: Partial<Viewport> }
@@ -276,6 +284,15 @@ export type EditorAction =
   | { type: 'UPDATE_LAYER'; layerId: string; patch: Partial<Omit<ImageLayer, 'bitmap' | 'id' | 'type'>> }
   | { type: 'ADD_LAYER'; layer: Layer; insertAfterIndex?: number }
   | { type: 'REMOVE_LAYER'; layerId: string }
+  // M5 item 5 — precise insertion (nested undo) and merge/flatten
+  | { type: 'INSERT_LAYER_AT'; layer: Layer; parentId: string | null; index: number; siblingsSnapshot: Layer[] }
+  | { type: 'SET_LAYERS'; layers: Layer[] }
+  | { type: 'REPLACE_TOP_LEVEL_PAIR'; mergedLayer: Layer; upperId: string; belowId: string }
+  | { type: 'RESTORE_TOP_LEVEL_PAIR'; index: number; upper: Layer; below: Layer }
+  // M5 item 6 — Image Size (resample one layer's bitmap) and Canvas Size
+  // (grow/shrink the document, shifting every layer by the anchor offset)
+  | { type: 'RESAMPLE_LAYER'; layerId: string; bitmap: ImageBitmap; intrinsicWidth: number; intrinsicHeight: number; size: { width: number; height: number } }
+  | { type: 'RESIZE_CANVAS'; width: number; height: number; dx: number; dy: number; prevWidth: number; prevHeight: number; prevLayers: Layer[] }
   | { type: 'REORDER_LAYERS'; orderedIds: string[] }
   | { type: 'GROUP_LAYERS'; layerIds: string[]; groupId: string; groupName: string; insertIndex: number }
   | { type: 'UNGROUP_LAYER'; groupId: string }
@@ -288,8 +305,11 @@ export type EditorAction =
   | { type: 'REPLACE_LAYER_MASK_BITMAP'; layerId: string; bitmap: ImageBitmap }
   | { type: 'OPEN_ADJUSTMENT'; panel: AdjustmentPanel }
   | { type: 'CLOSE_ADJUSTMENT'; panel: AdjustmentPanel }
-  // M4 — crop
-  | { type: 'CROP_DOCUMENT'; rect: Rect }
+  // M4/M5 — crop (APPLY_CROP shifts every layer type recursively; undo restores
+  // the pre-crop doc dims + layer tree)
+  | { type: 'APPLY_CROP'; rect: Rect }
+  | { type: 'RESTORE_CROP'; width: number; height: number; layers: Layer[] }
+  | { type: 'SET_PENDING_CROP'; rect: Rect | null }
   // History
   | { type: 'PUSH_HISTORY'; command: HistoryCommand }
   | { type: 'UNDO' }
@@ -316,6 +336,8 @@ export interface EditorState {
   historyIndex: number;
   /** Which adjustment floating panels are currently open. */
   openAdjustments: Set<AdjustmentPanel>;
+  /** Crop rect dragged but not yet confirmed (Enter applies, Esc cancels). */
+  pendingCrop: Rect | null;
   /** Whether Brush/Erase paint into the active layer's color bitmap or its mask. */
   paintTarget: 'color' | 'mask';
   /** Which swatch the ColorPicker floating panel is currently editing, if open. */

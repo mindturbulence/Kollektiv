@@ -91,7 +91,7 @@ export const memoryTierService = {
 
     // Trim working memory if it exceeds the limit
     if (_workingMemory.length > MAX_WORKING_MEMORY) {
-      this.summarizeWorkingMemory();
+      void this.summarizeWorkingMemory();
     }
   },
 

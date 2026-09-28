@@ -84,8 +84,16 @@ export type StoreName = keyof KollektivDB;
 let _dbPromise: Promise<IDBPDatabase<KollektivDB>> | null = null;
 
 export const getDb = (): Promise<IDBPDatabase<KollektivDB>> => {
+  // A failed open must not be cached forever — reset the memo so the next call
+  // retries instead of returning the rejected promise permanently.
+  _dbPromise?.catch(() => { _dbPromise = null; });
   if (!_dbPromise) {
     _dbPromise = openDB<KollektivDB>('kollektiv-db', 3, {
+      // Another context upgraded the DB version; close so it can proceed.
+      // The next getDb() call reopens at the new version.
+      blocking() {
+        _dbPromise = null;
+      },
       upgrade(db, oldVersion, _newVersion, _transaction) {
         // v1: keyval store
         if (oldVersion < 1) {
@@ -134,3 +142,18 @@ export const clearAllHandles = async (): Promise<void> => {
   const db = await getDb();
   await db.clear('keyval');
 };
+
+/**
+ * Requests persistent storage so eviction can't wipe the vault handle, notes,
+ * memories and chats. Idempotent; resolves false when denied (Firefox prompt
+ * dismissed, or unsupported browser). Call once after onboarding completes.
+ */
+export async function requestPersistentStorage(): Promise<boolean> {
+  try {
+    if (typeof navigator === 'undefined' || !navigator.storage?.persist) return false;
+    if (await navigator.storage.persisted()) return true;
+    return await navigator.storage.persist();
+  } catch {
+    return false;
+  }
+}

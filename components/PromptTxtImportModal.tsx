@@ -35,7 +35,7 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
   if (!isOpen) return null;
   
   const modalContent = (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={handleClose}>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-modal flex items-center justify-center p-4 animate-fade-in" onClick={handleClose}>
         <div className="flex flex-col bg-transparent w-full max-w-2xl mx-auto relative p-[3px] corner-frame overflow-visible" onClick={(e) => e.stopPropagation()}>
             <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full flex flex-col overflow-hidden relative z-10">
                 <header className="px-8 py-4 border-b border-base-300 bg-transparent relative flex items-center justify-between">
@@ -43,9 +43,9 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
                         <h3 className="text-xl font-black tracking-tighter text-base-content leading-none">
                             IMPORT<span className="text-primary">.</span>
                         </h3>
-                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Bulk Token Archival Module</p>
+                        <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/60 mt-1.5">Bulk Token Archival Module</p>
                     </div>
-                    <button onClick={handleClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
+                    <button onClick={handleClose} className="p-2 text-error/30 hover:text-error transition-[color,transform] hover:scale-110">
                         <CloseIcon className="w-5 h-5" />
                     </button>
                 </header>
@@ -56,16 +56,16 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
                         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} 
                         onDragLeave={() => setIsDragging(false)}
                         onClick={() => { audioService.playClick(); (fileInputRef.current as any)?.click(); }}
-                        className={`p-16 border-4 border-dashed rounded-none text-center cursor-pointer transition-all ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-transparent'}`}
+                        className={`p-16 border-4 border-dashed rounded-none text-center cursor-pointer transition-colors ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-transparent'}`}
                     >
                         <input type="file" ref={fileInputRef} onChange={(e) => { const file = (e.currentTarget as any).files?.[0]; if (file?.type === 'application/zip') { setSelectedFile(file); setError(null); } else setError("Valid .zip required."); }} className="hidden" accept=".zip"/>
-                        <UploadIcon className="w-12 h-12 mx-auto text-base-content/20 mb-4"/>
-                        <p className="text-sm font-black uppercase tracking-[0.2em] text-base-content/40">Drop .zip archive of .txt tokens</p>
+                        <UploadIcon className="w-12 h-12 mx-auto text-base-content/60 mb-4"/>
+                        <p className="text-sm font-black uppercase tracking-[0.2em] text-base-content/60">Drop .zip archive of .txt tokens</p>
                         {selectedFile && <p className="text-lg font-bold text-success mt-4 tracking-tight">{selectedFile.name}</p>}
                     </div>
 
                     <div className="form-control">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Category Destination</label>
+                        <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/60 mb-2">Category Destination</label>
                         <select value={categoryId} onChange={(e) => setCategoryId((e.currentTarget as any).value)} className="form-select w-full">
                             <option value="">Global Repository</option>
                             {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
@@ -79,7 +79,7 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
                         <span/><span/><span/><span/>
                         ABORT
                     </button>
-                    <button onClick={handleSubmit} disabled={!selectedFile} className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary">
+                    <button onClick={handleSubmit} disabled={!selectedFile} title={!selectedFile ? "Select a .txt file first" : undefined} className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary">
                         <span/><span/><span/><span/>
                         INGEST ZIP
                     </button>

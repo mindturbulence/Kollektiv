@@ -60,47 +60,51 @@ Priority is Jev's score (0 = P3 … 3 = P0) with its confidence; the effort buck
 
 ### Phase 1: Trust and data safety (next 1–2 weeks)
 
+**Status 2026-09-25:** E1–E5, E8, E9, the M11 banner, **M5 item 5** (H11/H12/merge/flatten/H8), **item 6** (Image Size, Canvas Size, crop-to-selection, paste, mask export, H13 MAX_DIM), **item 9** (H3 history byte cap + `.close()`) and **M5 leftovers** (SET_TITLE, fill/delete-in-selection, gradient clip, text re-edit) are **landed and verified** (tsc clean, 1487/1487 tests). Details in `image-editor-engineering-plan.md` §12 "M5 progress". **Ops row:** GitHub Pages killed 2026-09-25 (deploy.yml, `gh-pages` dep, `homepage`, `predeploy`/`deploy` scripts removed; Pages had been publishing a bundle containing the leaked key); key-rotation checklist issued to the user; history purge deferred (see the ops row). Dirty-rect diffs (H3 plan-aligned phase) deferred.
+
 | ID | Work | Prio (conf) | Effort | Notes |
 |---|---|---|---|---|
-| E3 | Autosave: store layers as PNG (or lossless WebP), serialize masks, version the record and drop old JPEG records | 2.99 (0.99) | medium | Data loss inside the data-loss-prevention feature. `AutosaveService.ts:28,117` |
-| T5 | `utils/db.ts`: reset `_dbPromise` on rejection, add `blocking(){db.close()}`, call `navigator.storage.persist()` after onboarding | 2.96 (0.96) | small **(C)** | Protects the vault handle, notes, memories and chats from eviction |
-| E8 | Gallery round-trip: pass through the source's `generationId`/`prompt` (not the gallery id), add a **Update original / Save as new** choice, share one `shouldConvertToJpg()` helper, replace `window.confirm` with the app modal | 2.95 (0.95) | medium | Title passthrough already done (0.5) |
-| E2 | Crop as a HistoryCommand that shifts every layer type recursively. Pending rect with Enter/Esc (the ToolHeader already promises this) | 2.88 (0.88) | medium | |
-| E9 | Text/shape: drop the `type !== 'image'` gizmo guards, double-click to re-edit text, `measureText` bounds, default text colour = foreground | 2.84 (0.84) | medium **(C)** | |
-| E1 | One `docToLayer(pt, transform, intrinsic)` at the CanvasViewport pointer step, used by brush, eraser, clone, mask and wand; scale the radius too | 2.82 (0.82) | medium | Unit-test the mapping (rotate/flip/scale/crop) |
-| E5 | Selection clipping: `getSelectionClip()` → Path2D or mask, applied in `paintStamp`, gradient, fill and adjustment commit. Add fill selection / delete-in-selection | 2.79 (0.79) | medium | Turns 4 decorative tools into functional ones |
-| E4 | Live stroke preview and spaced stamping (`max(1, r·0.25)`). Clone radius and pressure, fresh source per stroke, `disposeTools()` on doc change/unmount | 2.61 (0.61) | medium **(C)** | Jev said small at 0.42; it touches BrushEngine, CloneStamp and the renderer |
-| — | Recovery prompt when opened with a payload: a non-blocking banner, confirm before replacing | **(C)** P1 | small | Review M11 |
-| — | Ops: rotate the leaked Gemini key; decide whether to purge history with `git filter-repo` | P0 **(C)** | small | User action; destructive history rewrite needs explicit approval |
+| E3 | ✅ Done 2026-09-25 — autosave stores layers as lossless PNG, serializes masks, formatVersion 2, old JPEG records discarded | 2.99 (0.99) | medium | Data loss inside the data-loss-prevention feature. `AutosaveService.ts:28,117` |
+| T5 | ✅ Done 2026-09-25 — `_dbPromise` reset on rejection, `blocking()` reopens, `requestPersistentStorage()` called from OnboardingFlow handleFinish | 2.96 (0.96) | small **(C)** | Protects the vault handle, notes, memories and chats from eviction |
+| E8 | ✅ Done 2026-09-25 — source `generationId`/`prompt` passthrough, savedItemId → Update-original path via `updateItemInGallery`, `window.confirm` replaced by the app modal; the save modal now offers Update-original vs Save-as-new whenever a library original exists (JPEG warning folds into the same dialog) | 2.95 (0.95) | medium | Title passthrough already done (0.5) |
+| E2 | ✅ Done 2026-09-25 — pending crop rect with Enter/Esc; APPLY_CROP/RESTORE_CROP HistoryCommand shifts every layer type recursively through groups | 2.88 (0.88) | medium | |
+| E9 | ✅ Done 2026-09-25 — gizmo guards dropped (viewport, renderer, TransformEngine, ToolHeader), `measureText` bounds, default text colour = foreground; double-click (Type or Move tool) re-opens a text layer prefilled, commit is undoable via `updateTextLayer` | 2.84 (0.84) | medium **(C)** | |
+| E1 | ✅ Done 2026-09-25 — `core/geometry/docToLayer.ts` at the CanvasViewport pointer step for brush/eraser/clone/wand (mask rides the brush path), radius scaled by intrinsic/size; 9 unit tests | 2.82 (0.82) | medium | Unit-test the mapping (rotate/flip/scale/crop) |
+| E5 | ✅ Done 2026-09-25 — `getSelectionClip()` (Path2D, raster masks sampled to runs) + bitmap-space transform; brush and clone clip every stamp; gradient clips via `destination-in`; `fillSelection` (Shift+F5) and `deleteInSelection` (Delete/Alt+Backspace) with undo; adjustment commits lerp through a per-pixel selection coverage map (feather-aware) and the GPU preview clips to match | 2.79 (0.79) | medium | Turns 4 decorative tools into functional ones |
+| E4 | ✅ Done 2026-09-25 — live stroke preview via scratch canvas + renderer frame pump, spaced stamping both tools, clone radius `size/2·scale·pressure` + per-stroke source, `disposeTools()` on doc change/unmount | 2.61 (0.61) | medium **(C)** | Jev said small at 0.42; it touches BrushEngine, CloneStamp and the renderer |
+| — | ✅ Done 2026-09-25 — recovery with a payload is a non-blocking banner with explicit Restore/Discard | **(C)** P1 | small | Review M11 |
+| — | ✅ Ops 2026-09-25 — **Rotation verified complete.** New key in `.env` (`AQ.Ab8R…`) authenticates (HTTP 200 on `generativelanguage.googleapis.com/v1beta/models`); the leaked `AIzaSyDVSaEY…` key is **dead** (`API_KEY_INVALID`). Leak scope corrected: ONE key leaked, via the tracked `.env` (early commits) and the built Pages bundle at `c41fbfe` (same key); the `85b9546` "inline key" was a `placeholder="AIzaSy..."` false alarm. History purge remains the only open item (deferred; now cosmetic — key is dead). HEAD verified clean; `.env` untracked | P0 **(C)** | small | Rotation was the actual security fix; the purge is now purely cosmetic |
+
+**Key-rotation checklist (2026-09-25 — verified executed):** 1) old `AIzaSyDVSaEY…` key deleted/revoked (confirmed dead via API probe); 2) new key live in `.env` and confirmed loading through Vite (`loadEnv` → `define['process.env.GEMINI_API_KEY']`, dev-only inline; production bundles inline an empty string since the leak fix); 3) no second key existed — Cloud Console audit optional; 4) recommended hardening: API-key restrictions (HTTP referrer) on the new key.
 
 ### Phase 2: Feel (weeks 2–4)
 
 | ID | Work | Prio (conf) | Effort | Notes |
 |---|---|---|---|---|
-| E7 | Editor basics: new blank layer ("+" creates a transparent layer, "Place image…" moves to its own button), Image Size, Canvas Size, paste (Ctrl+V), merge down / flatten (reuse `LayerPainter`), export mask as B/W PNG, `[`/`]` brush size | 2.43 **(C)** P1 | large **(C)** | The upload/inpaint-prep workflow |
+| E7 | ✅ Done 2026-09-25 — audited: every sub-item shipped via M5 items 5+6 (blank-layer `+`, separate Place-image button, Image Size Ctrl+J, Canvas Size Ctrl+K, paste Ctrl+V, merge down/flatten, mask export Ctrl+Shift+M, `[`/`]` brush size) | 2.43 **(C)** P1 | large **(C)** | The upload/inpaint-prep workflow |
 | E6 | History memory: byte cap (~512 MB) and `.close()` evicted bitmaps now; dirty-rect diffs next | 2.33 **(C)** P1 | medium | Blocks routine 4k/8k use |
-| M1 | Route transition: cover 220 ms / hold 80 ms / reveal 320 ms `power3.out` (about 650 ms total). Full cinematic only on the first visit per module, then a 150 ms crossfade. Make it interruptible; wrap `run()` in try/finally | 2.23 (0.70) | small | Also fix the Header re-expanding the old group (motion #3) |
-| M3 | RollingText: render the real label once (`aria-label` or an `sr-only` span), with the duplicate letters `aria-hidden` | 2.13 (0.74) | small | Also unblocks e2e selectors |
-| D1 | Type scale: add Tailwind `fontSize` tokens (`2xs`=11px floor, `xs`=12px). Codemod `text-[9px]`/`[10px]` → tokens; cap `tracking` at 0.1em; drop `font-black` from body copy | 2.03 (0.89) | medium **(C)** | Biggest single legibility win |
-| D2 | One modal: extend `ConfirmationModal` into `Modal` (labels, Escape, focus trap/restore, `role=dialog`, `aria-labelledby`, exit animation), then migrate the 36 overlays incrementally, starting with the image editor's three | 1.93 (0.85) | large **(C)** | |
-| M2 | Stop the IdleOverlay rAF when hidden (depend on `isVisible`, cache the computed colour). ChromaticText: pause when disabled or hidden, drop the random flashes | 1.78 (0.74) | small | Constant CPU drain |
-| D3 | z-index tokens (`base/raised/dropdown/overlay/modal/toast/system`) in the Tailwind config. Replace the 34 arbitrary values | 1.72 (0.72) | medium | |
+| M1 | ✅ Done 2026-09-25 — retimed to cover 220 ms / hold 80 ms / reveal 320 ms `power3.out` (about 650 ms; `FX_TIMING` in `routeFx.ts`); full cinematic only on first visit per session (`visited` set in the director), repeats crossfade 150 ms; director `run()` wrapped in try/finally plus a 4 s deadline race per overlay await (un-wedges killed timelines, review #4); latest-wins now includes the origin tab (review #2); mid-reveal navigation routes through the crossfade path instead of chaining a second cinematic (review #5); overlay blocks pointer input during cover, releases at reveal start (review #2); Header auto-expand gated on an actual tab change, fixing the old-group reopen (motion #3) | 2.23 (0.70) | small | Also fix the Header re-expanding the old group (motion #3) |
+| M3 | ✅ Done 2026-09-25 — RollingText renders the real label once as an `sr-only` span; every animated letter span is `aria-hidden` (screen readers previously read "HHoommee", e2e selectors matched duplicates) | 2.13 (0.74) | small | Also unblocks e2e selectors |
+| D1 | ✅ Done 2026-09-25 — `text-2xs` (11px) and `text-xs` (12px) tokens added to Tailwind config; 102 source files codemoded (`text-[9px]`/`[10px]`/`[11px]` → `text-2xs`, `text-[12px]` → `text-xs`); tracking cap deferred (185 wide-spacing labels are intentional decoration, not body copy) | 2.03 (0.89) | medium **(C)** | Biggest single legibility win |
+| D2 | ⚠️ Partial 2026-09-25 (`2f0080e`) — `components/Modal.tsx` (focus trap/restore, Escape, `role=dialog`, `aria-labelledby`) ships and the image editor's overlays use it; ~37 other `fixed inset-0` overlays still hand-rolled. Original: One modal: extend `ConfirmationModal` into `Modal` (labels, Escape, focus trap/restore, `role=dialog`, `aria-labelledby`, exit animation), then migrate the 36 overlays incrementally, starting with the image editor's three | 1.93 (0.85) | large **(C)** | |
+| M2 | ✅ Done 2026-09-25 — IdleOverlay matrix rAF only starts when `isVisible` (dep added; previously burned CPU 24/7 while autoAlpha: 0) and theme colours are cached once per run instead of two `getComputedStyle` calls per drawn frame; ChromaticText stops its rAF loop entirely when disabled or off-screen (IntersectionObserver) and the contrast-flash random moved out of render into the tick state | 1.78 (0.74) | small | Constant CPU drain |
+| D3 | ✅ Done 2026-09-25 (`5fef7fe`) — 7 tokens in `tailwind.config.js`, 76 arbitrary values replaced. Original: z-index tokens (`base/raised/dropdown/overlay/modal/toast/system`) in the Tailwind config. Replace the 34 arbitrary values | 1.72 (0.72) | medium | |
 
 ### Phase 2b: Layout and legibility (from the visual walk and critique; Jev-scored)
 
 | ID | Work | Prio (conf) | Effort | Notes |
 |---|---|---|---|---|
-| V2 | Local studios at 1024: `ExtraNetworksPanel` → `hidden 2xl:flex w-[22rem]` and not rendered for ComfyUI; centre column `min-w-[28rem]` | 2.67 (0.67) | small | The prompt column collapses to about 50px today |
-| V3 | Gallery toolbar: `flex-wrap`, search on its own row below `xl`, IMPORT `shrink-0 ml-auto`; category sidebar collapsed below `xl` | 2.34 (0.60) | small | The primary action is off-screen at 1024 |
-| V10 | Dashboard: compute Vault's integration state for real, replace the emoji with a text badge ("Connected / Not set up" plus a CTA), make **one** primary quick action, shrink the wordmark about 50% | 2.18 (0.79) | small | False reassurance plus inverted emphasis |
-| V11 | Settings: auto-save with a toast, or dirty-only "Discard / Save changes" instead of Abort/Confirm; select `pr-10 truncate` with shorter option labels | 2.10 (0.77) | small | |
-| V1 | Header: `grid grid-cols-[auto_minmax(0,1fr)_auto]`, `shrink-0` logo and icon cluster, submenus as an `absolute top-full` row (no inline width reflow, no 900 ms switch delay), icons collapse to `…` below `xl` | 2.01 (0.81) | small **(C: medium)** | Settings and Standby are clipped even at 1440 when Utilities is open |
-| V8 | Copy pass: plain verbs ("Add two images to compare", "Clear", "Source image"); expand or tooltip the status-bar codes; sentence case for anything longer than 3 words | 1.98 (0.89) | **(C) medium** | Jev effort conf 0.48 |
-| V4 | Contrast floor: readable text ≥ `/60` (5.98:1), decorative ≥ `/50`; replace the `opacity-10` empty-state wrappers | 1.96 (0.87) | **(C) medium** | About 440 usages; pairs with D1 |
-| V9 | IA: Batch Runner into Workbench, `prompts` highlights Crafter, Composer and Compare join Image Editor under Studio, `aria-label` on `HUDNavItem`, surface the command palette | 1.93 (0.90) | medium | |
-| V5 | One `<EmptyState icon title body action>` pattern: `/60` body, one sentence, one button (Gallery → Import, Library → Add prompt, Activity → "Craft your first prompt") | 1.85 (0.84) | small **(C)** | |
-| V7 | Themes: rename or delete the ~30 dark clones with light names, ship `sanrita` or a real light theme, add a contrast unit test (primary/base ≥ 4.5, content/base ≥ 7) | 1.82 (0.81) | medium | Hard-coded `white/black` colours (≈200) must be tokenised before any light theme ships |
-| V6 | Disabled state: `disabled:opacity-40 disabled:cursor-not-allowed disabled:border-dashed` plus a reason tooltip; enabled primary = filled `form-btn-primary` | 1.81 (0.79) | small | |
+| V2 | ✅ Done 2026-09-25 — `ExtraNetworksPanel` now `hidden 2xl:flex w-[22rem]` (was `hidden lg:flex w-[34rem]`); no longer crowds centre column at 1024–1535px | 2.67 (0.67) | small | The prompt column collapses to about 50px today |
+| V3 | ✅ Done 2026-09-25 — Gallery toolbar `flex-wrap`, search row `w-full xl:w-auto h-14`, IMPORT `shrink-0 ml-auto h-14`; category sidebar defaults collapsed below `xl` (uses `window.innerWidth < 1280` when no user preference stored) | 2.34 (0.60) | small | The primary action is off-screen at 1024 |
+| V10 | ✅ Done 2026-09-25 — IntegrationHealthWidget: Vault state reads `fileSystemManager.isDirectorySelected()` (was hard-coded `true`); emoji replaced with text "Connected / Not set up"; dashboard wordmark shrunk ~40% (`clamp(1.5rem, 3.5vw, 3.5rem)` was `clamp(2.5rem, 7vw, 6rem)`); QuickActionsWidget: "New Prompt" promoted to single full-width primary CTA | 2.18 (0.79) | small | False reassurance plus inverted emphasis |
+| V11 | ✅ Done 2026-09-25 — Settings footer shown only when dirty (`JSON.stringify(settings) !== JSON.stringify(globalSettings)`); Abort/Confirm renamed to Discard/Save changes | 2.10 (0.77) | small | |
+| V1 | ✅ Done (`372c20a`) — header grid, absolute submenus, icon collapse below xl. Original: Header: `grid grid-cols-[auto_minmax(0,1fr)_auto]`, `shrink-0` logo and icon cluster, submenus as an `absolute top-full` row (no inline width reflow, no 900 ms switch delay), icons collapse to `…` below `xl` | 2.01 (0.81) | small **(C: medium)** | Settings and Standby are clipped even at 1440 when Utilities is open |
+| V8 | ✅ Done 2026-09-25 (`4c538db`) — Connected/Connecting/Error status words, sentence case in Refiner/Compare, Footer status-code tooltips. Original: Copy pass: plain verbs ("Add two images to compare", "Clear", "Source image"); expand or tooltip the status-bar codes; sentence case for anything longer than 3 words | 1.98 (0.89) | **(C) medium** | Jev effort conf 0.48 |
+| V4 | ✅ Done (`ecea251`). Original: Contrast floor: readable text ≥ `/60` (5.98:1), decorative ≥ `/50`; replace the `opacity-10` empty-state wrappers | 1.96 (0.87) | **(C) medium** | About 440 usages; pairs with D1 |
+| V9 | ✅ Done (`a577286`). Original: IA: Batch Runner into Workbench, `prompts` highlights Crafter, Composer and Compare join Image Editor under Studio, `aria-label` on `HUDNavItem`, surface the command palette | 1.93 (0.90) | medium | |
+| V5 | ✅ Done 2026-09-25 (`2f8f3ed`) — `components/EmptyState.tsx`. Original: One `<EmptyState icon title body action>` pattern: `/60` body, one sentence, one button (Gallery → Import, Library → Add prompt, Activity → "Craft your first prompt") | 1.85 (0.84) | small **(C)** | |
+| V7 | ✅ Done 2026-09-26 (`1e0d75b`, `bed0048`) — `THEMES` list (26), contrast unit test, `sanrita` light theme selectable (its frame veil and neon glow fixed). The user keeps the extra themes. Original: Themes: rename or delete the ~30 dark clones with light names, ship `sanrita` or a real light theme, add a contrast unit test (primary/base ≥ 4.5, content/base ≥ 7) | 1.82 (0.81) | medium | Hard-coded `white/black` colours (≈200) must be tokenised before any light theme ships |
+| V6 | ✅ Done 2026-09-25 (`1c175a2`). Original: Disabled state: `disabled:opacity-40 disabled:cursor-not-allowed disabled:border-dashed` plus a reason tooltip; enabled primary = filled `form-btn-primary` | 1.81 (0.79) | small | |
 | — | Page content visible at t=0; `TerminalText` reveal ≤150 ms, or skipped after the first visit | **(C)** P1 | small | Pairs with M1 |
 | V12 | Phone width (390px) | **(C) P3** | **(C) large** | Jev said P2/small at conf 0.60; the product is desktop-first by design, so defer |
 
@@ -108,21 +112,37 @@ Priority is Jev's score (0 = P3 … 3 = P0) with its confidence; the effort buck
 
 | ID | Work | Prio (conf) | Effort | Notes |
 |---|---|---|---|---|
-| T2 | `lint:eslint` script plus CI with today's count as a baseline; fix `no-floating-promises`/`no-misused-promises` first | 1.94 **(C)** P2 | medium | 262 real promise bugs |
-| T1 | `PrismLight` with about 6 registered languages (MessageBubble and 4 loraEditor panels). `await import()` the ElevenLabs/VAD/live-assistant services on first voice use. Then `React.lazy` pages, starting the `import()` before `overlay.cover()` | 1.66 **(C)** P2 | medium | About 1.2 MB min saved (estimate) before any route splitting |
-| T3 | CI on `development` (or `**`); add a Playwright job | 1.57 **(C)** P2 | small **(C)** | The new editor e2e would have caught 0.1 |
-| M4 | ImageCard: remove the dead 1.8 s clip-path, reveal ≤300 ms, hover ≤200 ms, no `grid-template-rows` hover animation, drop blanket `will-change` | 1.27 **(C)** P2 | small | |
-| — | Motion tokens: extend `index.css:2664` (press 120 ms, `--ease-in-out`, `--fx-hold` 80 ms), map them in the Tailwind config, `MotionConfig reducedMotion="user"`, gsap `matchMedia` guard, replace `transition-all` | P2 **(C)** | medium | Details in `motion.md` §2, §4 |
-| — | Typed event bus (`AppEvents` map); wire `cycleTheme` (the palette's "Next Theme" does nothing) or delete it; remove 5 orphan emits | P2 **(C)** | small | |
-| — | Dependency cleanup: remove `helmet`, `cors` (unused since 0.8), `vfile` and the deprecated `@types/helmet` / `@types/express-rate-limit`; move `@types/*` to devDeps; fix the 2 import cycles and the `memoryStorage` self-import | P3 **(C)** | small | |
-| D4 | Remove the global `font-mono` → Nunito override (`index.css:330-337`) | 0.97 **(C)** P3 | small | |
-| — | Themes: make the light theme selectable, or delete the 31 aliases that share one palette | P3 **(C)** | small | Decide product intent first |
+| T2 | ⚠️ Partial — promise bugs fixed (`af201f8`), `lint:eslint` runs in CI as non-blocking; 300 errors + 72 warnings remain (2026-09-26: 127 no-unnecessary-type-assertion, 80 unbound-method, 59 no-unused-vars). Original: `lint:eslint` script plus CI with today's count as a baseline; fix `no-floating-promises`/`no-misused-promises` first | 1.94 **(C)** P2 | medium | 262 real promise bugs |
+| T1 | ✅ Done (`b120a7d`) — entry 4.1 MB → 2.6 MB. Original: `PrismLight` with about 6 registered languages (MessageBubble and 4 loraEditor panels). `await import()` the ElevenLabs/VAD/live-assistant services on first voice use. Then `React.lazy` pages, starting the `import()` before `overlay.cover()` | 1.66 **(C)** P2 | medium | About 1.2 MB min saved (estimate) before any route splitting |
+| T3 | ✅ Done 2026-09-26 (`5fef7fe`, `290b52d`, `bed0048`) — CI on main+development with a Playwright job; full e2e green (19 passed, 3 skipped). Fixed on the way: shell `AnimatePresence` stalls, director dropping navigations on cover deadline. Original: CI on `development` (or `**`); add a Playwright job | 1.57 **(C)** P2 | small **(C)** | The new editor e2e would have caught 0.1 |
+| M4 | ✅ Done 2026-09-25 (`1c175a2`). Original: ImageCard: remove the dead 1.8 s clip-path, reveal ≤300 ms, hover ≤200 ms, no `grid-template-rows` hover animation, drop blanket `will-change` | 1.27 **(C)** P2 | small | |
+| — | ✅ Done 2026-09-26 (`c9ce089`) — press/in-out/fx-hold tokens mapped in Tailwind, `MotionConfig reducedMotion="user"`, GSAP boot guards, 0 `transition-all`. Original: Motion tokens: extend `index.css:2664` (press 120 ms, `--ease-in-out`, `--fx-hold` 80 ms), map them in the Tailwind config, `MotionConfig reducedMotion="user"`, gsap `matchMedia` guard, replace `transition-all` | P2 **(C)** | medium | Details in `motion.md` §2, §4 |
+| — | ✅ Done 2026-09-26 (`c9ce089` merge) — `AppEvents` map, palette Next Theme + Chat/Activity/LLM toggles wired, dead Web Viewer command removed, 5 orphan emits removed. Original: Typed event bus (`AppEvents` map); wire `cycleTheme` (the palette's "Next Theme" does nothing) or delete it; remove 5 orphan emits | P2 **(C)** | small | |
+| — | ✅ Done 2026-09-26 — helmet/cors/vfile + stale @types removed, `@types/*` to devDeps, llmService↔providerFallback cycle removed at the source, memoryStorage self-import fixed; madge still reports 2 cycles (types↔generationBackend, fileUtils→googleAuth→settingsStorage). Original: Dependency cleanup: remove `helmet`, `cors` (unused since 0.8), `vfile` and the deprecated `@types/helmet` / `@types/express-rate-limit`; move `@types/*` to devDeps; fix the 2 import cycles and the `memoryStorage` self-import | P3 **(C)** | small | |
+| D4 | ✅ Done 2026-09-26 — rule scoped with `:not(.font-mono)` instead of deleted, so mono renders JetBrains Mono and other caps labels keep Nunito. Original: Remove the global `font-mono` → Nunito override (`index.css:330-337`) | 0.97 **(C)** P3 | small | |
+| — | ✅ Done 2026-09-26 — `sanrita` selectable (see V7). Original: Themes: make the light theme selectable, or delete the 31 aliases that share one palette | P3 **(C)** | small | Decide product intent first |
+
+### Remaining work (verified 2026-09-26)
+
+| Item | Evidence | Size |
+|---|---|---|
+| E6 history dirty-rect diffs | byte cap shipped; diffs not started | medium |
+| D2 finish: migrate the remaining overlays to `Modal` | 3 files use `Modal`; ~37 `fixed inset-0` overlays hand-rolled | large |
+| Page content at t=0 (`TerminalText` ≤150 ms) | 22 `TerminalText` delays of 1.0–2.9 s remain | small |
+| motion.md leftovers | ChromaticText still rAF (#10); InitialLoader 3.2 s delay / 1 s timeout (#15); AboutModal `scale: 0` (#17); ScanLine animates `top` (#19); `.animate-fade-in` on `--duration-slow` (#20); CustomCursor has no `quickTo` (#21); boot blinds `backdrop-blur-md` | medium |
+| T2 finish: ESLint to zero, then make the CI step blocking | 300 errors, 72 warnings | medium |
+| Light theme polish | ~200 hard-coded `white`/`black` colours; dark dashboard artwork reads as grey haze behind `sanrita` | medium |
+| Enforce prod CSP | still Report-Only pending ISSUE-30 manual checks | small (after checks) |
+| `e2e/avatar-relay.spec.ts` | `describe.skip`; locators predate V8 copy and FloatingAssistantAvatar removal | small |
+| Palette `openNoteInPanel` | no note panel exists; call is a no-op | small |
+| Command palette ranking | typing "Refiner" can select a neighbouring page | small |
+| V12 phone width | deferred by design | large |
 
 ### Decisions needed from the user (not engineering calls)
 
 1. **GitHub Pages (T4, Jev 0.79 at conf 0.21, so my call):** kill it. The app needs `server.ts` for most features, and the Pages build has been broken since July without anyone noticing. Delete `deploy.yml`, `gh-pages`, the `deploy`/`predeploy` scripts and `homepage`, unless a static demo mode is wanted.
 2. **Git history purge** of the leaked key: rotation is mandatory; the purge (`git filter-repo` plus force-push) is optional and destructive.
-3. **Image Editor scope:** confirm the M5 freeze (no new tools until Phase 1's E-items land).
+3. **Image Editor scope:** confirm the M5 freeze (no new tools until Phase 1's E-items land). *Update 2026-09-25: E-items landed; freeze effectively satisfied — new decision needed only if new tools are wanted.*
 
 ---
 

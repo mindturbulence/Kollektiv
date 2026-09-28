@@ -13,7 +13,7 @@ const CategoryPanelToggle: React.FC<CategoryPanelToggleProps> = ({ isCollapsed, 
   const isLeftOfPanel = position === 'left'; 
 
   return (
-    <div className={`absolute top-1/2 transform -translate-y-1/2 z-[100] ${isLeftOfPanel ? 'right-full mr-0' : 'left-full ml-0'}`}>
+    <div className={`absolute top-1/2 transform -translate-y-1/2 z-dropdown ${isLeftOfPanel ? 'right-full mr-0' : 'left-full ml-0'}`}>
       <button
         onClick={() => {
             if (isCollapsed) {

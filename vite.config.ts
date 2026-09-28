@@ -178,7 +178,7 @@ export default defineConfig(({ mode }) => {
       },
       optimizeDeps: {
         exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
-        include: ['react-markdown', 'remark-gfm', 'vfile']
+        include: ['react-markdown', 'remark-gfm']
       },
       define: {
         'process.env.NODE_ENV': JSON.stringify(env.NODE_ENV || 'development'),
@@ -198,8 +198,8 @@ export default defineConfig(({ mode }) => {
       // Vitest config — exclude Playwright E2E tests
       // @ts-ignore
 test: {
-    timeout: 20000,
-    exclude: ['e2e/**', 'node_modules/**'],
+    testTimeout: 20000, // vitest option name; `timeout` is silently ignored
+    exclude: ['e2e/**', 'node_modules/**', '.claude/**', 'test-results/**'],
     environment: 'jsdom',
     setupFiles: [],
 },

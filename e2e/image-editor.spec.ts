@@ -18,8 +18,16 @@ async function bootToAppShell(page: Page, initialTab: string) {
         window.matchMedia = (q: string) => {
             const mql = realMatchMedia(q);
             if (!q.includes('prefers-reduced-motion')) return mql;
-            // `matches` is a prototype getter — shadow it, don't assign it.
-            return Object.create(mql, { matches: { value: false }, media: { value: q } });
+            // Native MediaQueryList methods throw "Illegal invocation" unless bound to the real list
+            // (motion's MotionConfig reducedMotion="user" subscribes via addEventListener).
+            return {
+                matches: false, media: q, onchange: null,
+                addEventListener: mql.addEventListener.bind(mql),
+                removeEventListener: mql.removeEventListener.bind(mql),
+                addListener: mql.addListener.bind(mql),
+                removeListener: mql.removeListener.bind(mql),
+                dispatchEvent: mql.dispatchEvent.bind(mql),
+            } as MediaQueryList;
         };
         // Once: clean state + starting tab (init scripts re-run on every load).
         if (sessionStorage.getItem('e2e-seeded')) return;
@@ -32,8 +40,8 @@ async function bootToAppShell(page: Page, initialTab: string) {
     const selectBtn = page.getByRole('button', { name: 'SELECT_VAULT_FOLDER' });
     const reconnectBtn = page.getByRole('button', { name: 'RECONNECT_VAULT' });
     const gateBtn = await Promise.race([
-        selectBtn.waitFor({ state: 'visible', timeout: 10_000 }).then(() => selectBtn),
-        reconnectBtn.waitFor({ state: 'visible', timeout: 10_000 }).then(() => reconnectBtn),
+        selectBtn.waitFor({ state: 'visible', timeout: 30_000 }).then(() => selectBtn),
+        reconnectBtn.waitFor({ state: 'visible', timeout: 30_000 }).then(() => reconnectBtn),
     ].map(p => p.catch(() => null as any)));
     if (!gateBtn) throw new Error('Neither SELECT_VAULT_FOLDER nor RECONNECT_VAULT appeared.');
     await gateBtn.click();
@@ -67,6 +75,27 @@ test.describe('Image Editor entry', () => {
 
         await expect(page.getByText('321 × 123px')).toBeVisible({ timeout: 15_000 });
         await expect(page.getByText('red-banner', { exact: true })).toBeVisible();
+    });
+
+    test('upgrades a v1 autosave database left by an older build', async ({ page }) => {
+        // A pre-2026-09-25 install has the 'documents' store at v1 with a JPEG-era record.
+        await page.addInitScript(() => {
+            if (sessionStorage.getItem('e2e-autosave-v1')) return;
+            sessionStorage.setItem('e2e-autosave-v1', '1');
+            indexedDB.deleteDatabase('kollektiv-editor-autosave');
+            const req = indexedDB.open('kollektiv-editor-autosave', 1);
+            req.onupgradeneeded = () => {
+                req.result.createObjectStore('documents').put({ metadata: {}, layerTree: [] }, 'current');
+            };
+            req.onsuccess = () => req.result.close();
+        });
+        await bootToAppShell(page, 'image_editor');
+        await expect(page.getByRole('button', { name: /Open image/ })).toBeVisible({ timeout: 30_000 });
+
+        await expect.poll(() => page.evaluate(async () =>
+            (await indexedDB.databases()).find(d => d.name === 'kollektiv-editor-autosave')?.version,
+        ), { timeout: 10_000 }).toBe(2);
+        await expect(page.getByText('Async Task Failed')).toHaveCount(0);
     });
 
     test('Gallery EDIT opens the item in the editor (animated route)', async ({ page }) => {

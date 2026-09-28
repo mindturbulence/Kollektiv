@@ -12,10 +12,11 @@
  */
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
-import type { WorkerRequest, WorkerResponse } from '../services/convert/protocol';
+import type { EncodeFramesRequest, FfmpegWorkerRequest, WorkerRequest, WorkerResponse } from '../services/convert/protocol';
 import { getFormatById } from '../constants/converterFormats';
 
 type ConvertJobRequest = Extract<WorkerRequest, { kind: 'convert' }>;
+type QueueableRequest = ConvertJobRequest | EncodeFramesRequest;
 
 let ffmpeg: FFmpeg | null = null;
 let coreLoad: Promise<void> | null = null;
@@ -45,7 +46,7 @@ async function ensureCore(): Promise<void> {
 }
 
 /** Serial queue — single-thread core handles one job at a time. */
-type Job = { req: ConvertJobRequest; cancelled: boolean };
+type Job = { req: QueueableRequest; cancelled: boolean };
 const queue: Job[] = [];
 let running = false;
 
@@ -53,19 +54,11 @@ function post(msg: WorkerResponse, transfer?: Transferable[]): void {
   (self as unknown as DedicatedWorkerGlobalScope).postMessage(msg, (transfer ?? []) as never);
 }
 
-async function runNext(): Promise<void> {
-  if (running) return;
-  const job = queue.shift();
-  if (!job) return;
-  running = true;
+async function runConvert(ff: FFmpeg, job: Job & { req: ConvertJobRequest }): Promise<void> {
   const { req } = job;
-
   let progressHandler: ((e: { progress: number; time: number }) => void) | null = null;
 
   try {
-    await ensureCore();
-    const ff = ffmpeg!;
-
     if (job.cancelled) {
       post({ id: req.id, kind: 'result', ok: false, cancelled: true });
       return;
@@ -121,19 +114,117 @@ async function runNext(): Promise<void> {
     }
     const buffer = u8.slice().buffer as ArrayBuffer;
     post({ id: req.id, kind: 'result', ok: true, data: buffer, mime: target.mime, byteLength: buffer.byteLength }, [buffer]);
+  } finally {
+    if (progressHandler) ff.off('progress', progressHandler);
+    try { await ff.deleteFile(`in_${req.id}.${extOf(req.fileName)}`); } catch { /* already gone */ }
+    try { await ff.deleteFile(`out_${req.id}.${getFormatById(req.targetId)?.ext ?? 'bin'}`); } catch { /* already gone */ }
+  }
+}
+
+/** Video-export ffmpeg fallback (plan §4/§7): mux JPEG frames + optional WAV into mp4/webm. */
+async function runEncodeFrames(ff: FFmpeg, job: Job & { req: EncodeFramesRequest }): Promise<void> {
+  const { req } = job;
+  const frameNames: string[] = [];
+  const audioName = `a_${req.id}.wav`;
+  const outName = `out_${req.id}.${req.container}`;
+  let progressHandler: ((e: { progress: number }) => void) | null = null;
+
+  try {
+    if (job.cancelled) {
+      post({ id: req.id, kind: 'result', ok: false, cancelled: true });
+      return;
+    }
+
+    for (let i = 0; i < req.frames.length; i++) {
+      if (job.cancelled) {
+        post({ id: req.id, kind: 'result', ok: false, cancelled: true });
+        return;
+      }
+      const name = `f_${req.id}_${String(i).padStart(5, '0')}.jpg`;
+      frameNames.push(name);
+      await ff.writeFile(name, new Uint8Array(req.frames[i]));
+    }
+    if (req.audio) await ff.writeFile(audioName, new Uint8Array(req.audio));
+
+    progressHandler = ({ progress }) => {
+      if (progress >= 0 && progress <= 1) post({ id: req.id, kind: 'progress', fraction: progress });
+    };
+    ff.on('progress', progressHandler);
+
+    // WebM is VP8 + Vorbis: in @ffmpeg/core 0.12.10 libvpx-vp9 (any input)
+    // and stereo libopus abort with "memory access out of bounds" (see
+    // constants/converterFormats.ts). Realtime/cpu-used 8 is libvpx's
+    // counterpart to x264 ultrafast.
+    const videoArgs = req.container === 'mp4'
+      ? ['-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p']
+      : ['-c:v', 'libvpx', '-crf', '10', '-b:v', '4M', '-deadline', 'realtime', '-cpu-used', '8', '-pix_fmt', 'yuv420p'];
+    const audioArgs = req.audio ? (req.container === 'mp4' ? ['-c:a', 'aac'] : ['-c:a', 'libvorbis']) : [];
+
+    if (job.cancelled) {
+      post({ id: req.id, kind: 'result', ok: false, cancelled: true });
+      return;
+    }
+
+    const rc = await ff.exec([
+      '-framerate', String(req.fps),
+      '-i', `f_${req.id}_%05d.jpg`,
+      ...(req.audio ? ['-i', audioName] : []),
+      ...videoArgs,
+      ...audioArgs,
+      ...(req.audio ? ['-shortest'] : []),
+      outName,
+    ]);
+    if (job.cancelled) {
+      post({ id: req.id, kind: 'result', ok: false, cancelled: true });
+      return;
+    }
+    if (rc !== 0) {
+      post({ id: req.id, kind: 'result', ok: false, error: `ffmpeg exited with code ${rc}`, code: 'CONVERT_FAILED' });
+      return;
+    }
+
+    const data = await ff.readFile(outName);
+    const u8 = data instanceof Uint8Array ? data : new Uint8Array();
+    if (u8.length === 0) {
+      post({ id: req.id, kind: 'result', ok: false, error: 'ffmpeg produced no output', code: 'CONVERT_FAILED' });
+      return;
+    }
+    const buffer = u8.slice().buffer as ArrayBuffer;
+    const mime = req.container === 'mp4' ? 'video/mp4' : 'video/webm';
+    post({ id: req.id, kind: 'result', ok: true, data: buffer, mime, byteLength: buffer.byteLength }, [buffer]);
+  } finally {
+    if (progressHandler) ff.off('progress', progressHandler);
+    for (const name of frameNames) {
+      try { await ff.deleteFile(name); } catch { /* already gone */ }
+    }
+    if (req.audio) { try { await ff.deleteFile(audioName); } catch { /* already gone */ } }
+    try { await ff.deleteFile(outName); } catch { /* already gone */ }
+  }
+}
+
+async function runNext(): Promise<void> {
+  if (running) return;
+  const job = queue.shift();
+  if (!job) return;
+  running = true;
+
+  try {
+    await ensureCore();
+    const ff = ffmpeg!;
+    if (job.req.kind === 'convert') {
+      await runConvert(ff, job as Job & { req: ConvertJobRequest });
+    } else {
+      await runEncodeFrames(ff, job as Job & { req: EncodeFramesRequest });
+    }
   } catch (err) {
     post({
-      id: req.id,
+      id: job.req.id,
       kind: 'result',
       ok: false,
       error: err instanceof Error ? err.message : String(err),
       code: /load|fetch|network/i.test(String(err)) ? 'CONVERT_CORE_LOAD' : 'CONVERT_FAILED',
     });
   } finally {
-    if (progressHandler && ffmpeg) ffmpeg.off('progress', progressHandler);
-    try { if (ffmpeg) await ffmpeg.deleteFile(`in_${req.id}.${extOf(req.fileName)}`); } catch { /* already gone */ }
-    try { if (ffmpeg) await ffmpeg.deleteFile(`out_${req.id}.${getFormatById(req.targetId)?.ext ?? 'bin'}`); } catch { /* already gone */ }
-    if (progressHandler && ffmpeg) ffmpeg.off('progress', progressHandler);
     running = false;
     setTimeout(() => void runNext(), 0);
   }
@@ -144,7 +235,7 @@ function extOf(name: string): string {
   return m ? m[1].toLowerCase() : 'bin';
 }
 
-self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
+self.onmessage = async (event: MessageEvent<FfmpegWorkerRequest>) => {
   const msg = event.data;
   if (msg.kind === 'cancel') {
     const job = queue.find(j => j.req.id === msg.id);

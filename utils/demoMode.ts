@@ -67,7 +67,7 @@ export class DemoFileSystemManager implements IFileSystemManager {
   public isMigrationAborted = false;
 
   constructor() {
-    this.initOpfs();
+    void this.initOpfs();
   }
 
   private async initOpfs(): Promise<void> {

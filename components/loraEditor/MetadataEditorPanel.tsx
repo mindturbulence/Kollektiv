@@ -72,18 +72,18 @@ const MetadataEditorPanel: React.FC<MetadataEditorPanelProps> = ({ state, settin
     return (
         <div className="flex flex-col h-full overflow-hidden">
             <div className="flex items-center justify-between p-2 border-b border-base-content/10">
-                <select value={format} onChange={(e) => setFormat(e.target.value as 'manual' | 'simple')} className="form-select h-7 text-[10px]">
+                <select value={format} onChange={(e) => setFormat(e.target.value as 'manual' | 'simple')} className="form-select h-7 text-2xs">
                     <option value="manual">Manual</option>
                     <option value="simple">Simple</option>
                 </select>
                 <div className="flex gap-2">
-                    <button onClick={() => handleDownload(false)} className="form-btn h-7 px-3 text-[10px]">UPDATE &amp; DOWNLOAD</button>
-                    <button onClick={() => handleDownload(true)} className="form-btn h-7 px-3 text-[10px] text-error/70 hover:text-error">PURGE &amp; DOWNLOAD</button>
+                    <button onClick={() => handleDownload(false)} className="form-btn h-7 px-3 text-2xs">UPDATE &amp; DOWNLOAD</button>
+                    <button onClick={() => handleDownload(true)} className="form-btn h-7 px-3 text-2xs text-error/70 hover:text-error">PURGE &amp; DOWNLOAD</button>
                 </div>
             </div>
             <div className="flex-grow overflow-auto p-2">
                 {format === 'manual' ? (
-                    <textarea value={editorText} onChange={(e) => setEditorText(e.target.value)} className="form-textarea w-full h-full font-mono text-[11px]" spellCheck={false} />
+                    <textarea value={editorText} onChange={(e) => setEditorText(e.target.value)} className="form-textarea w-full h-full font-mono text-2xs" spellCheck={false} />
                 ) : (
                     <table className="w-full text-xs font-mono">
                         <tbody>

@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { SyntaxHighlighter, vscDarkPlus } from '../codeHighlighter';
 import type { LoraEditorState } from './LoraEditorPage';
 
 interface OnlineLookupPanelProps {
@@ -25,7 +24,7 @@ const OnlineLookupPanel: React.FC<OnlineLookupPanelProps> = ({ state }) => {
     }, [source, data]);
 
     if (!source) {
-        return <div className="h-full flex items-center justify-center text-xs text-base-content/40 uppercase tracking-widest">No matching resource found</div>;
+        return <div className="h-full flex items-center justify-center text-xs text-base-content/60 uppercase tracking-widest">No matching resource found</div>;
     }
 
     const modelUrl = source === 'civitai'
@@ -36,7 +35,7 @@ const OnlineLookupPanel: React.FC<OnlineLookupPanelProps> = ({ state }) => {
 
     return (
         <div className="flex flex-col h-full overflow-auto p-4 gap-4">
-            <div className="text-[10px] uppercase tracking-widest opacity-40">Source: {source === 'civitai' ? 'CivitAI' : 'Arc En Ciel'}</div>
+            <div className="text-2xs uppercase tracking-widest opacity-40">Source: {source === 'civitai' ? 'CivitAI' : 'Arc En Ciel'}</div>
             <table className="text-xs font-mono">
                 <tbody>
                     <tr><td className="opacity-50 pr-4 align-top">Model URL</td><td><a href={modelUrl!} target="_blank" rel="noreferrer" className="text-primary hover:underline break-all">{modelUrl}</a></td></tr>

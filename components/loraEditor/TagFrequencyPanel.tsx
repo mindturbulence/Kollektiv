@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { SyntaxHighlighter, vscDarkPlus } from '../codeHighlighter';
 import TagFilterControls from './TagFilterControls';
 import { applyTagFilters } from './lib/tagTools';
 import type { LoraEditorState } from './LoraEditorPage';

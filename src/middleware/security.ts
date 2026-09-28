@@ -22,8 +22,7 @@ const PROD_CSP = [
 ].join('; ');
 
 /**
- * Global security headers via helmet.
- * Includes a reasonable Content‑Security‑Policy.
+ * Sets the Content-Security-Policy header (the only security header set; helmet was removed as unused).
  */
 export const securityHeaders = (_req: Request, _res: Response, next: NextFunction) => {
   const isProd = process.env.NODE_ENV === 'production';

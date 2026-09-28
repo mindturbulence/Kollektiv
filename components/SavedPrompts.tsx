@@ -17,6 +17,8 @@ import CategoryPanelToggle from './CategoryPanelToggle';
 import PromptEditorModal from './PromptEditorModal';
 import LoadingSpinner from './LoadingSpinner';
 import PromptDetailView from './PromptDetailView';
+import EmptyState from './EmptyState';
+import { takePendingOpen } from '../utils/pendingOpen';
 import { pageVariants } from './AnimatedPanels';
 
 interface SavedPromptsProps {
@@ -92,7 +94,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
             vel = 0;
             skewSetter(0);
             scaleSetter(1);
-            columnRefs.current.forEach(col => col && gsap.set(col, { y: 0 }));
+            columnRefs.current.forEach(col => { if (col) gsap.set(col, { y: 0 }); });
         }
     };
 
@@ -122,6 +124,13 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
       else sorted.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       return sorted;
   }, [prompts, selectedCategoryId, sortOrder, searchQuery]);
+
+  // Home's "recent prompts" asks for a prompt to open once the library has loaded.
+  useEffect(() => {
+    if (isLoading) return;
+    const id = takePendingOpen('prompt');
+    if (id && sortedAndFilteredPrompts.some(p => p.id === id)) setDetailViewPromptId(id);
+  }, [isLoading, sortedAndFilteredPrompts]);
 
   useEffect(() => {
     const node = gridRef.current;
@@ -163,7 +172,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
       }
   }, []);
 
-  useEffect(() => { refreshData(); }, [refreshData]);
+  useEffect(() => { void refreshData(); }, [refreshData]);
 
   // Intersection Observer for Infinite Scroll
   useEffect(() => {
@@ -276,12 +285,12 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
         className="flex flex-col h-full bg-transparent w-full relative overflow-hidden"
     >
         <div className="flex flex-row h-full w-full overflow-hidden relative z-10 gap-6 bg-transparent">
-          <aside className={`relative z-20 flex-shrink-0 transition-all duration-300 ease-in-out flex flex-col overflow-visible ${isCategoryPanelCollapsed ? 'w-0 p-0' : 'w-80 p-[3px] corner-frame'}`}>
+          <aside className={`relative z-20 flex-shrink-0 transition-[width,padding] duration-300 ease-in-out flex flex-col overflow-visible ${isCategoryPanelCollapsed ? 'w-0 p-0' : 'w-80 p-[3px] corner-frame'}`}>
             <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
-            <div className={`flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden transition-all duration-300 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
+            <div className={`flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden transition-opacity duration-300 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <div className={`flex flex-col h-full w-full overflow-hidden relative z-10 transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <div className="flex-shrink-0 h-14 px-6 flex items-center border-b border-white/5">
-                <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-primary">Category Folder</h3>
+                <h3 className="text-2xs font-black uppercase tracking-[0.3em] text-primary">Category Folder</h3>
               </div>
               <div className="flex-shrink-0 h-14 px-2 mt-4">
                 <div className="flex items-center h-full relative px-4">
@@ -327,14 +336,14 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
           )}
 
 
-          <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewPromptId ? 'blur-sm pointer-events-none' : ''}`}>
+          <div className={`flex flex-col h-full overflow-hidden transition-[filter] duration-300 ${detailViewPromptId ? 'blur-sm pointer-events-none' : ''}`}>
               <div className="relative flex-grow overflow-hidden">
                   <div ref={scrollerRef} className="h-full w-full overflow-y-auto overflow-x-hidden bg-transparent">
                       <header className="bg-transparent">
                       <div className="p-4 md:p-6">
                           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                               <div className="space-y-1">
-                                  <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary/60 block">LIBRARY INDEX</span>
+                                  <span className="text-2xs font-black uppercase tracking-[0.6em] text-primary/60 block">LIBRARY INDEX</span>
                                   <h1 className="text-3xl lg:text-4xl font-black tracking-tighter text-base-content leading-none uppercase font-sf-mono">
                                       {currentCategoryName}<span className="text-primary">.</span>
                                   </h1>
@@ -342,7 +351,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                               <div className="flex">
                                   <div className="px-6 py-2 flex flex-col items-center justify-center">
                                       <span className="text-3xl font-black tracking-tighter leading-none">{sortedAndFilteredPrompts.length}</span>
-                                      <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Saved Prompts</span>
+                                      <span className="text-[8px] uppercase font-black text-base-content/60 tracking-[0.2em] mt-1">Saved Prompts</span>
                                   </div>
                               </div>
                           </div>
@@ -368,11 +377,11 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                       
                       <div className="flex items-stretch flex-shrink-0">
                           <div className="form-tab-group h-full rounded-none">
-                              <button onClick={() => { setSortOrder('newest'); setDisplayCount(30); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${sortOrder === 'newest' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                              <button onClick={() => { setSortOrder('newest'); setDisplayCount(30); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-2xs tracking-widest uppercase btn-snake ${sortOrder === 'newest' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
                                   <span/><span/><span/><span/>
                                   BY DATE
                               </button>
-                              <button onClick={() => { setSortOrder('title'); setDisplayCount(30); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${sortOrder === 'title' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                              <button onClick={() => { setSortOrder('title'); setDisplayCount(30); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-2xs tracking-widest uppercase btn-snake ${sortOrder === 'title' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
                                   <span/><span/><span/><span/>
                                   BY NAME
                               </button>
@@ -405,12 +414,16 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                               </div>
                           ))}
                       </div>
+                  ) : prompts.length === 0 ? (
+                      <EmptyState
+                          icon={<ArchiveIcon className="w-16 h-16" />}
+                          title="No prompts yet"
+                          body="Save your first prompt to start the library."
+                          action={{ label: 'Add prompt', onClick: () => { setPromptToEdit(null); setIsEditorModalOpen(true); } }}
+                          className="py-40"
+                      />
                   ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-center py-40 opacity-10">
-                          <ArchiveIcon className="w-20 h-20 mb-6" />
-                          <h3 className="text-3xl font-black uppercase tracking-widest">Library Empty</h3>
-                          <p className="text-[10px] font-bold uppercase tracking-[0.3em] mt-4">Awaiting content input</p>
-                      </div>
+                      <EmptyState title="No matches" body="Try another search or folder." className="py-40" />
                   )}
                   
                   {/* Scroll Target for Infinite Loading */}

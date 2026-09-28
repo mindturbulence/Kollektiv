@@ -10,14 +10,14 @@ export const PropertyCard: React.FC<{
 }> = ({ label, value, onClear, onClick, active }) => (
     <div
         onClick={onClick}
-        className={`group relative p-4 transition-all duration-300 cursor-pointer select-none flex flex-col justify-center min-h-[5rem] last:border-b-0 border-b border-base-content/5 ${active ? 'bg-primary/5' : 'hover:bg-base-content/5'}`}
+        className={`group relative p-4 transition-colors duration-300 cursor-pointer select-none flex flex-col justify-center min-h-[5rem] last:border-b-0 border-b border-base-content/5 ${active ? 'bg-primary/5' : 'hover:bg-base-content/5'}`}
     >
         <div className="flex items-center justify-between gap-2 mb-1.5">
-            <span className={`text-xs font-black uppercase tracking-[0.2em] ${active ? 'text-primary' : 'text-base-content/30'}`}>{label}</span>
+            <span className={`text-xs font-black uppercase tracking-[0.2em] ${active ? 'text-primary' : 'text-base-content/60'}`}>{label}</span>
             {value && (
                 <button
                     onClick={(e) => { e.stopPropagation(); onClear(); }}
-                    className={`btn btn-ghost btn-xs btn-square h-5 w-5 min-h-0 opacity-0 group-hover:opacity-100 transition-opacity ${active ? 'text-primary' : 'text-base-content/20 hover:text-error'}`}
+                    className={`btn btn-ghost btn-xs btn-square h-5 w-5 min-h-0 opacity-0 group-hover:opacity-100 transition-opacity ${active ? 'text-primary' : 'text-base-content/60 hover:text-error'}`}
                 >
                     <CloseIcon className="w-4 h-4" />
                 </button>
@@ -50,7 +50,7 @@ export const ReferenceSlot: React.FC<{
     return (
         <div
             onClick={() => !url && inputRef.current?.click()}
-            className={`relative flex items-center justify-center border border-dashed rounded-none cursor-pointer overflow-hidden group transition-all min-h-[60px] ${url ? 'border-base-content/20' : 'border-base-content/10 hover:border-base-content/30 hover:bg-base-content/5'}`}
+            className={`relative flex items-center justify-center border border-dashed rounded-none cursor-pointer overflow-hidden group transition-colors min-h-[60px] ${url ? 'border-base-content/20' : 'border-base-content/10 hover:border-base-content/30 hover:bg-base-content/5'}`}
         >
             {url ? (
                 <>
@@ -60,7 +60,7 @@ export const ReferenceSlot: React.FC<{
                     </div>
                 </>
             ) : (
-                <span className="text-[9px] font-black uppercase tracking-widest text-base-content/20">SLOT {index + 1}</span>
+                <span className="text-2xs font-black uppercase tracking-widest text-base-content/60">SLOT {index + 1}</span>
             )}
             <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
         </div>

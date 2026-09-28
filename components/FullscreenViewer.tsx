@@ -125,7 +125,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
             }
         };
     
-        loadMedia();
+        void loadMedia();
         return () => { isMounted = false; };
     }, [itemGroup, currentImageIndex]);
 
@@ -297,7 +297,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
-            className="fixed inset-0 bg-black/95 z-[1000] group select-none overflow-hidden"
+            className="fixed inset-0 bg-black/95 z-modal group select-none overflow-hidden"
             onClick={handleClose}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -371,12 +371,12 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                 </motion.div>
 
                 {/* Navigation Controls - High Z-index for visibility */}
-                <div className="pointer-events-none absolute inset-0 z-[100]">
+                <div className="pointer-events-none absolute inset-0 z-base">
                     {/* Unified Navigation (Items & Groups) - Docked to far edges */}
                     <div className="absolute inset-y-0 left-0 w-32 flex items-center justify-center">
                         <button 
                             onClick={(e) => { e.stopPropagation(); handleUnifiedNavigation('prev'); }} 
-                            className="pointer-events-auto p-4 text-white hover:text-primary transition-all duration-300 opacity-40 hover:opacity-100 scale-100 hover:scale-110" 
+                            className="pointer-events-auto p-4 text-white hover:text-primary transition-[color,opacity,transform] duration-300 opacity-40 hover:opacity-100 scale-100 hover:scale-110" 
                             aria-label="Previous"
                         >
                             <ChevronLeftIcon className="w-16 h-16" />
@@ -385,7 +385,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                     <div className="absolute inset-y-0 right-0 w-32 flex items-center justify-center">
                         <button 
                             onClick={(e) => { e.stopPropagation(); handleUnifiedNavigation('next'); }} 
-                            className="pointer-events-auto p-4 text-white hover:text-primary transition-all duration-300 opacity-40 hover:opacity-100 scale-100 hover:scale-110" 
+                            className="pointer-events-auto p-4 text-white hover:text-primary transition-[color,opacity,transform] duration-300 opacity-40 hover:opacity-100 scale-100 hover:scale-110" 
                             aria-label="Next"
                         >
                             <ChevronRightIcon className="w-16 h-16" />
@@ -393,15 +393,15 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                     </div>
                 </div>
 
-                <div className="absolute top-8 right-8 z-[110] flex items-center gap-4 pointer-events-auto">
+                <div className="absolute top-8 right-8 z-raised flex items-center gap-4 pointer-events-auto">
                     <button 
                         onClick={(e) => { e.stopPropagation(); setIsSlideshowPlaying(!isSlideshowPlaying); }} 
-                        className={`p-2 transition-all duration-300 ${isSlideshowPlaying ? 'text-primary scale-110' : 'text-white/40 hover:text-white'}`} 
+                        className={`p-2 transition-[color,transform] duration-300 ${isSlideshowPlaying ? 'text-primary scale-110' : 'text-white/40 hover:text-white'}`}
                         title={isSlideshowPlaying ? "Pause Slideshow" : "Play Slideshow"}
                     >
                         {isSlideshowPlaying ? <PauseIcon className="w-6 h-6"/> : <PlayIcon className="w-6 h-6"/>}
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDownload() }} className="p-2 text-white/40 hover:text-white transition-colors" title="Download"><DownloadIcon className="w-6 h-6"/></button>
+                    <button onClick={(e) => { e.stopPropagation(); void handleDownload(); }} className="p-2 text-white/40 hover:text-white transition-colors" title="Download"><DownloadIcon className="w-6 h-6"/></button>
                     <button onClick={(e) => { e.stopPropagation(); setZoom(1); setPosition({x:0, y:0}); }} className="p-2 text-white/40 hover:text-white transition-colors" title="Reset view"><CenterIcon className="w-6 h-6"/></button>
                     <button onClick={handleClose} className="p-2 text-error/40 hover:text-error transition-colors" title="Close"><CloseIcon className="w-6 h-6"/></button>
                 </div>
@@ -421,8 +421,8 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                                 </span>
                             </div>
                             <div className="flex items-center gap-3 opacity-30">
-                                <span className="text-[11px] font-mono font-normal uppercase tracking-widest text-white/50">Registry ID:</span>
-                                <span className="text-[11px] font-mono font-normal uppercase tracking-widest text-white">
+                                <span className="text-2xs font-mono font-normal uppercase tracking-widest text-white/50">Registry ID:</span>
+                                <span className="text-2xs font-mono font-normal uppercase tracking-widest text-white">
                                     <ScramblingText text={itemGroup.id} />
                                 </span>
                             </div>
@@ -433,31 +433,31 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                             {metadata && (
                                 <>
                                     <div className="flex items-center gap-3">
-                                        <span className="text-[11px] font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap pt-0.5">Resolution:</span>
+                                        <span className="text-2xs font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap pt-0.5">Resolution:</span>
                                         <div className="min-w-[120px] flex items-center">
-                                            <ScramblingText className="text-[11px] font-mono font-normal text-white tracking-tighter" text={`${metadata.width} × ${metadata.height}`} />
+                                            <ScramblingText className="text-2xs font-mono font-normal text-white tracking-tighter" text={`${metadata.width} × ${metadata.height}`} />
                                         </div>
                                     </div>
                                     <div className="w-px h-5 bg-white/5" />
                                     <div className="flex items-center gap-3">
-                                        <span className="text-[11px] font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap pt-0.5">Aspect Ratio:</span>
+                                        <span className="text-2xs font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap pt-0.5">Aspect Ratio:</span>
                                         <div className="min-w-[60px] flex items-center">
-                                            <ScramblingText className="text-[11px] font-mono font-normal text-white tracking-tighter" text={metadata.ratio} />
+                                            <ScramblingText className="text-2xs font-mono font-normal text-white tracking-tighter" text={metadata.ratio} />
                                         </div>
                                     </div>
                                     <div className="w-px h-5 bg-white/5" />
                                     <div className="flex items-center gap-3">
-                                        <span className="text-[11px] font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap pt-0.5">File Size:</span>
+                                        <span className="text-2xs font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap pt-0.5">File Size:</span>
                                         <div className="min-w-[80px] flex items-center">
-                                            <ScramblingText className="text-[11px] font-mono font-normal text-white tracking-tighter" text={formatFileSize(metadata.size)} />
+                                            <ScramblingText className="text-2xs font-mono font-normal text-white tracking-tighter" text={formatFileSize(metadata.size)} />
                                         </div>
                                     </div>
                                 </>
                             )}
                             <div className="w-px h-5 bg-white/5" />
                             <div className="flex items-center gap-3">
-                                <span className="text-[11px] font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap">Media Library:</span>
-                                <span className="text-[11px] font-mono font-normal text-white tracking-tighter min-w-[50px]">
+                                <span className="text-2xs font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap">Media Library:</span>
+                                <span className="text-2xs font-mono font-normal text-white tracking-tighter min-w-[50px]">
                                     {String(currentImageIndex + 1).padStart(2, '0')} / {String(itemGroup.urls.length).padStart(2, '0')}
                                 </span>
                             </div>

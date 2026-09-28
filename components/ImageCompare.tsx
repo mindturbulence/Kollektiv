@@ -60,10 +60,10 @@ const ImageSlot: React.FC<{
             <div className="p-4 group">
                 <div className="flex items-center gap-4">
                     <img src={image.url} alt={image.file?.name || 'Library File'} className="w-16 h-16 object-cover rounded-none flex-shrink-0 bg-transparent" />
-                    <div className="text-[10px] flex-grow min-w-0">
+                    <div className="text-2xs flex-grow min-w-0">
                         <p className="font-black uppercase tracking-widest text-primary mb-1">{title}</p>
                         <p className="truncate font-bold text-base-content/60" title={image.file?.name || 'Library Image'}>{image.file?.name || 'Library Item'}</p>
-                        <p className="text-[9px] font-mono text-base-content/30 mt-1 uppercase">{image.width}×{image.height} {image.file ? `• ${formatBytes(image.file.size)}` : ''}</p>
+                        <p className="text-2xs font-mono text-base-content/60 mt-1 uppercase">{image.width}×{image.height} {image.file ? `• ${formatBytes(image.file.size)}` : ''}</p>
                     </div>
                     <button onClick={onRemove} className="form-btn h-6 w-6 text-error opacity-20 group-hover:opacity-100 transition-opacity">✕</button>
                 </div>
@@ -73,15 +73,15 @@ const ImageSlot: React.FC<{
 
     return (
         <div
-            className={`p-6 border-2 border-dashed transition-all flex flex-col items-center justify-center text-center cursor-pointer gap-4 ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
+            className={`p-6 border-2 border-dashed transition-colors flex flex-col items-center justify-center text-center cursor-pointer gap-4 ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
         >
             <input type="file" ref={inputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
             <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-1">{title}</p>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-base-content/20">Source Input</p>
+                <p className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/60 mb-1">{title}</p>
+                <p className="text-2xs font-bold uppercase tracking-widest text-base-content/60">Source Input</p>
             </div>
             <div className="flex gap-2">
                 <button onClick={(e) => { e.stopPropagation(); (inputRef.current as any)?.click(); }} className="form-btn h-8 px-4">UPLOAD</button>
@@ -209,7 +209,7 @@ const ImageCompare: React.FC<ImageCompareProps> = ({ isExiting = false }) => {
                     img.src = url;
                 });
 
-            Promise.all([loadImg(detail.imageA), loadImg(detail.imageB)]).then(([a, b]) => {
+            void Promise.all([loadImg(detail.imageA), loadImg(detail.imageB)]).then(([a, b]) => {
                 setImageA(a);
                 setImageB(b);
             });
@@ -323,7 +323,7 @@ const ImageCompare: React.FC<ImageCompareProps> = ({ isExiting = false }) => {
                             exit="exit"
                             className="p-6 bg-base-100/10 backdrop-blur-md"
                         >
-                            <TerminalText text="ARTIFACT INPUTS" delay={2.0} className="text-[10px] font-black uppercase text-primary" />
+                            <TerminalText text="ARTIFACT INPUTS" delay={2.0} className="text-2xs font-black uppercase text-primary" />
                         </motion.header>
                         <motion.div 
                             variants={contentVariants}
@@ -350,7 +350,7 @@ const ImageCompare: React.FC<ImageCompareProps> = ({ isExiting = false }) => {
                             </div>
 
                             <div className="space-y-4 pt-4">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Visual Matrix</label>
+                                <label className="text-2xs font-black uppercase tracking-widest text-base-content/60">Visual Matrix</label>
                                 <div className="form-tab-group w-full">
                                     <button onClick={() => setViewMode('split')} className={`form-tab-item flex-1 ${viewMode === 'split' ? 'active' : ''}`}><ViewSplitHorizontalIcon className="w-4 h-4 mr-2" />SPLIT</button>
                                     <button onClick={() => setViewMode('sideBySide')} className={`form-tab-item flex-1 ${viewMode === 'sideBySide' ? 'active' : ''}`}><ViewColumnsIcon className="w-4 h-4 mr-2" />DUAL</button>
@@ -404,9 +404,9 @@ const ImageCompare: React.FC<ImageCompareProps> = ({ isExiting = false }) => {
                             onMouseLeave={handleMouseUpOrLeave}
                         >
                             {!imageA || !imageB ? (
-                                <div className="w-full h-full flex flex-col items-center justify-center text-center p-12 opacity-10">
+                                <div className="w-full h-full flex flex-col items-center justify-center text-center p-12 opacity-60">
                                     <RefreshIcon className="w-24 h-24 mb-6" />
-                                    <p className="text-xl font-black uppercase tracking-widest">Awaiting Dual Input Sequence</p>
+                                    <p className="text-xl font-black tracking-wide">Add two images to compare</p>
                                 </div>
                             ) : viewMode === 'split' ? (
                                 <SplitView key="split" imageA={imageA} imageB={imageB} transform={transform} />

@@ -151,7 +151,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         const title = firstUser ? (firstUser.content.length > 30 ? firstUser.content.substring(0, 30) + '...' : firstUser.content) : 'New Chat Session';
 
         const newSession: ChatSession = { id, title, messages: currentMessages, updatedAt: Date.now() };
-        saveChatSession(newSession);
+        void saveChatSession(newSession);
 
         // Refresh session list without losing focus
         setSavedSessions(getChatSessionsSync());
@@ -420,7 +420,7 @@ ${systemResponse}` };
             {isOpen && (
                 <>
                     <div
-                        className="fixed inset-0 bg-transparent z-[190] pointer-events-auto"
+                        className="fixed inset-0 bg-transparent z-dropdown pointer-events-auto"
                         onClick={() => { audioService.playClick(); onClose(); }}
                     />
                     <motion.div
@@ -428,7 +428,7 @@ ${systemResponse}` };
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: '100%', opacity: 0 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className={`fixed top-[84px] right-[42px] bottom-[var(--footer-h,81px)] bg-transparent z-[200] pointer-events-auto shadow-2xl transition-[left,width] duration-300 ${(isExpanded || researchMode) ? 'left-[42px] w-auto' : 'w-full md:w-[400px] lg:w-[480px]'}`}
+                        className={`fixed top-[84px] right-[42px] bottom-[var(--footer-h,81px)] bg-transparent z-overlay pointer-events-auto shadow-2xl transition-[left,width] duration-300 ${(isExpanded || researchMode) ? 'left-[42px] w-auto' : 'w-full md:w-[400px] lg:w-[480px]'}`}
                     >
                         <div className="w-full h-full relative corner-frame overflow-visible flex flex-col">
                             <div className="bg-base-100/90 backdrop-blur-3xl rounded-none w-[calc(100%-6px)] h-[calc(100%-6px)] m-[3px] flex flex-col overflow-hidden relative z-10 border border-white/5">
@@ -449,7 +449,7 @@ ${systemResponse}` };
                                                 <h3 className="font-rajdhani text-[20px] uppercase tracking-[0.3em] truncate">{getChatTitle()}</h3>
                                                 {activeSessionId && <span className="font-rajdhani opacity-40 text-[20px] shrink-0">:&nbsp;{activeSessionId.substring(0, 4)}</span>}
                                             </div>
-                                            <p className="text-[10px] uppercase tracking-[0.3em] text-base-content/50 font-mono hidden md:block truncate">
+                                            <p className="text-2xs uppercase tracking-[0.3em] text-base-content/60 font-mono hidden md:block truncate">
                                                 {getChatSubtitle()}
                                             </p>
                                         </div>
@@ -472,14 +472,14 @@ ${systemResponse}` };
                                     <div className="flex items-center gap-0.5 border border-white/10 rounded">
                                         <button
                                             onClick={() => setResearchMode(false)}
-                                            className={`btn btn-xs rounded-none px-2 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors ${!researchMode ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-80'}`}
+                                            className={`btn btn-xs rounded-none px-2 py-1 text-2xs font-mono uppercase tracking-wider transition-colors ${!researchMode ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-80'}`}
                                             aria-pressed={!researchMode}
                                         >
                                             Chat
                                         </button>
                                         <button
                                             onClick={() => setResearchMode(true)}
-                                            className={`btn btn-xs rounded-none px-2 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors ${researchMode ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-80'}`}
+                                            className={`btn btn-xs rounded-none px-2 py-1 text-2xs font-mono uppercase tracking-wider transition-colors ${researchMode ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-80'}`}
                                             aria-pressed={researchMode}
                                         >
                                             Research
@@ -510,11 +510,11 @@ ${systemResponse}` };
                                                         <div className="text-center p-4 text-xs font-mono opacity-30 mt-4">No saved sessions</div>
                                                     )}
                                                     {savedSessions.map(session => (
-                                                        <div key={session.id} className={`group flex items-center justify-between p-2.5 rounded-md cursor-pointer transition-colors ${activeSessionId === session.id ? 'bg-primary/10 text-primary border border-primary/20' : 'hover:bg-base-200 text-base-content/70 border border-transparent'}`} onClick={() => loadSession(session.id)}>
+                                                        <div key={session.id} className={`group flex items-center justify-between p-2.5 rounded-md cursor-pointer transition-colors ${activeSessionId === session.id ? 'bg-primary/10 text-primary border border-primary/20' : 'hover:bg-base-200 text-base-content/70 border border-transparent'}`} onClick={() => void loadSession(session.id)}>
                                                             <div className="truncate text-xs font-mono">{session.title}</div>
                                                             <button
-                                                                onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
-                                                                className="opacity-0 group-hover:opacity-100 p-1 text-error/60 hover:text-error transition-all"
+                                                                onClick={(e) => { e.stopPropagation(); void deleteSession(session.id); }}
+                                                                className="opacity-0 group-hover:opacity-100 p-1 text-error/60 hover:text-error transition-[opacity,color]"
                                                             >
                                                                 <DeleteIcon className="w-3.5 h-3.5" />
                                                             </button>
@@ -541,7 +541,7 @@ ${systemResponse}` };
                                                 <div
                                                     role="status"
                                                     aria-live="polite"
-                                                    className="absolute left-1/2 -translate-x-1/2 top-2 z-30 pointer-events-none inline-flex items-center gap-2 px-3 py-1 bg-primary/15 border border-primary/40 rounded-full text-[10px] font-mono uppercase tracking-[0.3em] text-primary"
+                                                    className="absolute left-1/2 -translate-x-1/2 top-2 z-30 pointer-events-none inline-flex items-center gap-2 px-3 py-1 bg-primary/15 border border-primary/40 rounded-full text-2xs font-mono uppercase tracking-[0.3em] text-primary"
                                                 >
                                                     <span className="relative flex h-2 w-2">
                                                         <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping" />
@@ -577,7 +577,7 @@ ${systemResponse}` };
                                                     <button
                                                         onClick={loadMoreMessages}
                                                         disabled={isLoadingMore}
-                                                        className="btn btn-xs btn-ghost font-mono text-[10px] uppercase tracking-[0.2em] text-base-content/40 hover:text-primary/80 transition-colors disabled:opacity-30"
+                                                        className="btn btn-xs btn-ghost font-mono text-2xs uppercase tracking-[0.2em] text-base-content/60 hover:text-primary/80 transition-colors disabled:opacity-30"
                                                     >
                                                         {isLoadingMore ? 'Loading…' : `↑ Load older messages`}
                                                     </button>
@@ -596,7 +596,7 @@ ${systemResponse}` };
                                         {/* Input Area */}
                                         <div className="p-4 border-t border-white/5 bg-base-200/30 shrink-0 relative">
                                             {showCommandMenu && (
-                                                <div className="absolute bottom-[calc(100%-1rem)] left-4 mb-2 w-72 bg-base-300 border border-white/10 rounded-xl shadow-xl overflow-hidden z-[100]">
+                                                <div className="absolute bottom-[calc(100%-1rem)] left-4 mb-2 w-72 bg-base-300 border border-white/10 rounded-xl shadow-xl overflow-hidden z-dropdown">
                                                     <div className="max-h-80 overflow-y-auto w-full flex flex-col p-1 custom-scrollbar">
                                                         {availableCommands.filter(c => input.startsWith('/') ? c.cmd.toLowerCase().includes(input.toLowerCase().split(' ')[0]) : true).map((c, i) => (
                                                             <button
@@ -605,12 +605,12 @@ ${systemResponse}` };
                                                                 onClick={() => insertCommand(c.cmd)}
                                                                 className="text-left py-1.5 px-3 hover:bg-white/10 rounded-md transition-colors flex flex-col w-full"
                                                             >
-                                                                <span className="text-primary text-[12px] font-mono leading-relaxed mb-1">{c.cmd.replace('/', '')}</span>
-                                                                <span className="text-base-content/50 text-[12px] leading-relaxed">{c.desc}</span>
+                                                                <span className="text-primary text-xs font-mono leading-relaxed mb-1">{c.cmd.replace('/', '')}</span>
+                                                                <span className="text-base-content/60 text-xs leading-relaxed">{c.desc}</span>
                                                             </button>
                                                         ))}
                                                     </div>
-                                                    <div className="bg-base-200 border-t border-white/10 p-2 text-xs text-base-content/40 flex items-center font-mono">
+                                                    <div className="bg-base-200 border-t border-white/10 p-2 text-xs text-base-content/60 flex items-center font-mono">
                                                         <span className="text-base-content/60 mr-1">/</span> Type to filter
                                                     </div>
                                                 </div>
@@ -644,7 +644,7 @@ ${systemResponse}` };
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter' && !e.shiftKey) {
                                                             e.preventDefault();
-                                                            handleSubmit(e as any);
+                                                            void handleSubmit(e as any);
                                                         }
                                                     }}
                                                     placeholder="Enter command directive..."

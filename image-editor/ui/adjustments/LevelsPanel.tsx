@@ -79,7 +79,7 @@ const LevelsPanel: React.FC<LevelsPanelProps> = ({ layerId, onClose }) => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
       if (!sourceRef.current) return;
-      AdjustmentEngine.updatePreview(layerId, sourceRef.current, {
+      void AdjustmentEngine.updatePreview(layerId, sourceRef.current, {
         kind: 'levels', channel, inBlack, inWhite, gamma, outBlack, outWhite,
       });
     });
@@ -133,19 +133,19 @@ const LevelsPanel: React.FC<LevelsPanelProps> = ({ layerId, onClose }) => {
       <div className="flex gap-1 mb-3">
         {channels.map(ch => (
           <button key={ch} type="button"
-            className={`px-2 py-0.5 text-[10px] font-mono uppercase border ${channel === ch ? 'border-primary text-primary bg-primary/10' : 'border-base-content/20 text-base-content/60 hover:border-base-content/40'}`}
+            className={`px-2 py-0.5 text-2xs font-mono uppercase border ${channel === ch ? 'border-primary text-primary bg-primary/10' : 'border-base-content/20 text-base-content/60 hover:border-base-content/40'}`}
             onClick={() => { setChannel(ch); setInBlack(0); setInWhite(255); setGamma(1); setOutBlack(0); setOutWhite(255); }}>
             {ch.toUpperCase()}
           </button>
         ))}
-        <button type="button" className="ml-auto px-2 py-0.5 text-[10px] font-mono uppercase border border-base-content/20 text-base-content/60 hover:border-primary hover:text-primary" onClick={handleAuto}>Auto</button>
+        <button type="button" className="ml-auto px-2 py-0.5 text-2xs font-mono uppercase border border-base-content/20 text-base-content/60 hover:border-primary hover:text-primary" onClick={handleAuto}>Auto</button>
       </div>
 
       {/* Histogram */}
       <canvas ref={histCanvas} width={256} height={80} className="w-full h-20 border border-base-content/10 mb-2" />
 
       {/* Input sliders */}
-      <div className="space-y-1.5 text-[10px] font-mono text-base-content/60">
+      <div className="space-y-1.5 text-2xs font-mono text-base-content/60">
         {[
           { label: 'In Black',  value: inBlack,  set: setInBlack,  min: 0,   max: 254, step: 1 },
           { label: 'Gamma',     value: gamma,     set: setGamma,    min: 0.1, max: 9.99, step: 0.01 },

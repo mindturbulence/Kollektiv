@@ -66,8 +66,8 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
     }, [selectedId]);
 
     useEffect(() => {
-        refreshStatus();
-        const iv = setInterval(refreshStatus, 3000);
+        void refreshStatus();
+        const iv = setInterval(() => { void refreshStatus(); }, 3000);
         return () => clearInterval(iv);
     }, [refreshStatus]);
 
@@ -133,7 +133,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
 
     // On mount, check if Chrome was already auto-launched
     useEffect(() => {
-        (async () => {
+        void (async () => {
             try {
                 const st = await externalBrowserService.launchStatus();
                 if (st.isRunning && st.port) {
@@ -176,7 +176,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
     ];
 
     const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text).then(() => {
+        void navigator.clipboard.writeText(text).then(() => {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         });
@@ -200,11 +200,11 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
             <SettingsGroup title="Connection">
                 <SettingRow label="Status" desc="Live connection state to the Chrome DevTools Protocol endpoint.">
                     <div className="flex items-center gap-3">
-                        <span className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 border ${
+                        <span className={`flex items-center gap-2 text-2xs font-black uppercase tracking-widest px-3 py-1.5 border ${
                             isConnected ? (selectedId ? 'bg-success/5 border-success/30 text-success' : 'bg-info/5 border-info/30 text-info') :
                             connState === 'error' ? 'bg-error/5 border-error/30 text-error' :
                             connState === 'unknown' ? 'bg-warning/5 border-warning/30 text-warning' :
-                            'bg-base-300/30 border-base-content/20 text-base-content/40'
+                            'bg-base-300/30 border-base-content/20 text-base-content/60'
                         }`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${
                                 isConnected ? (selectedId ? 'bg-success' : 'bg-info') :
@@ -215,7 +215,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
                             {statusText}
                         </span>
                         {browserInfo && (
-                            <span className="text-[9px] font-mono text-base-content/40 truncate max-w-[200px]">
+                            <span className="text-2xs font-mono text-base-content/60 truncate max-w-[200px]">
                                 {browserInfo}
                             </span>
                         )}
@@ -234,16 +234,16 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
                             disabled={isConnected}
                         />
                         {isConnected ? (
-                            <button onClick={() => { audioService.playClick(); handleDisconnect(); }} className="form-btn text-error px-4 flex items-center gap-2">
+                            <button onClick={() => { audioService.playClick(); void handleDisconnect(); }} className="form-btn text-error px-4 flex items-center gap-2">
                                 <PowerIcon className="w-3.5 h-3.5" /> DISCONNECT
                             </button>
                         ) : (
                             <div className="flex gap-2">
-                                <button onClick={() => { audioService.playClick(); handleConnect(); }} disabled={connecting} className="form-btn px-4 flex items-center gap-2">
+                                <button onClick={() => { audioService.playClick(); void handleConnect(); }} disabled={connecting} className="form-btn px-4 flex items-center gap-2">
                                     {connecting ? '...' : <PowerIcon className="w-3.5 h-3.5" />}
                                     {connecting ? 'CONNECTING' : 'CONNECT'}
                                 </button>
-                                <button onClick={() => { audioService.playClick(); handleLaunchBrowser(); }} disabled={launching} className="form-btn px-4 flex items-center gap-2 text-primary border-primary/30 hover:bg-primary/10">
+                                <button onClick={() => { audioService.playClick(); void handleLaunchBrowser(); }} disabled={launching} className="form-btn px-4 flex items-center gap-2 text-primary border-primary/30 hover:bg-primary/10">
                                     {launching ? '...' : <PowerIcon className="w-3.5 h-3.5" />}
                                     {launching ? 'LAUNCHING...' : 'LAUNCH BROWSER'}
                                 </button>
@@ -251,7 +251,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
                         )}
                     </div>
                     {launchedPort && !isConnected && (
-                        <p className="text-[9px] font-mono text-primary/60 mt-1 px-1">
+                        <p className="text-2xs font-mono text-primary/60 mt-1 px-1">
                             Chrome auto-launched on port {launchedPort} — click CONNECT above to link it.
                         </p>
                     )}
@@ -261,28 +261,28 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
             {isConnected && (
                 <SettingsGroup title="Browser Tabs">
                     <div className="px-6 py-3 border-b border-base-content/10 flex justify-end">
-                        <button onClick={() => { audioService.playClick(); handleRefreshTargets(); }} className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors">
+                        <button onClick={() => { audioService.playClick(); void handleRefreshTargets(); }} className="flex items-center gap-1.5 text-2xs font-black uppercase tracking-widest text-base-content/60 hover:text-primary transition-colors">
                             <RefreshIcon className="w-3 h-3" /> REFRESH
                         </button>
                     </div>
                     {targets.length === 0 ? (
-                        <div className="p-6 text-[10px] font-mono text-base-content/30 uppercase tracking-wider text-center">
+                        <div className="p-6 text-2xs font-mono text-base-content/60 uppercase tracking-wider text-center">
                             No browser tabs found.
                         </div>
                     ) : (
                         targets.map(t => (
                             <div
                                 key={t.id}
-                                onClick={() => { audioService.playClick(); handleSelectTarget(t); }}
-                                className={`p-4 flex items-center justify-between gap-4 cursor-pointer transition-all border-b border-base-content/5 hover:bg-base-200/30 ${
+                                onClick={() => { audioService.playClick(); void handleSelectTarget(t); }}
+                                className={`p-4 flex items-center justify-between gap-4 cursor-pointer transition-colors border-b border-base-content/5 hover:bg-base-200/30 ${
                                     selectedId === t.id ? 'bg-primary/5 border-l-2 border-l-primary' : ''
                                 }`}
                             >
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[11px] font-black uppercase tracking-wider truncate text-base-content/80">
+                                    <p className="text-2xs font-black uppercase tracking-wider truncate text-base-content/80">
                                         {t.title || '(untitled)'}
                                     </p>
-                                    <p className="text-[9px] font-mono text-base-content/30 truncate mt-0.5">
+                                    <p className="text-2xs font-mono text-base-content/60 truncate mt-0.5">
                                         {t.url}
                                     </p>
                                 </div>
@@ -298,10 +298,10 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
             {launchedPort && targets.length === 0 && !selectedId && (
                 <SettingsGroup title="Next Steps">
                     <div className="p-6 text-center">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-primary/60 mb-2">
+                        <p className="text-2xs font-black uppercase tracking-wider text-primary/60 mb-2">
                             Browser is running on port {launchedPort}
                         </p>
-                        <p className="text-xs font-mono text-base-content/40 leading-relaxed">
+                        <p className="text-xs font-mono text-base-content/60 leading-relaxed">
                             Open a tab in the launched Chrome window, then click <span className="text-primary">REFRESH</span> above to see it here.
                             <br />
                             Select a tab, then use the assistant's browser tools to control it.
@@ -321,7 +321,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
 
                     {BROWSER_COMMANDS.map((b, i) => (
                         <div key={i} className="space-y-2">
-                            <p className="text-[10px] font-black uppercase tracking-wider text-base-content/40">{b.name}</p>
+                            <p className="text-2xs font-black uppercase tracking-wider text-base-content/60">{b.name}</p>
                             <div className="flex items-center gap-2">
                                 <code className="flex-1 text-sm font-mono bg-black/30 px-4 py-3 text-primary break-all select-all">
                                     {b.cmd}
@@ -331,14 +331,14 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
                                     className="shrink-0 p-2.5 hover:text-primary transition-colors border border-white/10 hover:border-primary/40"
                                     title="Copy command"
                                 >
-                                    {copied ? <span className="text-[9px] font-black text-success">COPIED</span> : <CopyIcon className="w-4 h-4" />}
+                                    {copied ? <span className="text-2xs font-black text-success">COPIED</span> : <CopyIcon className="w-4 h-4" />}
                                 </button>
                             </div>
                         </div>
                     ))}
 
                     <div className="p-4 bg-black/20 border border-white/5 space-y-2">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-warning">TROUBLESHOOTING</p>
+                        <p className="text-2xs font-black uppercase tracking-wider text-warning">TROUBLESHOOTING</p>
                         <ul className="text-xs font-mono text-base-content/60 space-y-1.5 leading-relaxed">
                             <li>• Fully quit all browser windows before restarting with the flag</li>
                             <li>• Verify the port is not in use: <code className="text-primary px-1 bg-black/30">netstat -ano | findstr :{port}</code></li>
@@ -350,7 +350,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
             </SettingsGroup>
 
             {feedback && (
-                <div className={`mx-6 mb-4 flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${feedback.ok ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in`}>
+                <div className={`mx-6 mb-4 flex items-center gap-2 text-2xs font-black uppercase tracking-widest px-3 py-1.5 border ${feedback.ok ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${feedback.ok ? 'bg-success' : 'bg-error'} animate-pulse`} />
                     {feedback.msg}
                 </div>

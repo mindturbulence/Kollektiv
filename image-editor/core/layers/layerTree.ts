@@ -55,3 +55,29 @@ export function findTopLevelIndex(layers: Layer[], id: string): number {
     (layer) => layer.id === id || (layer.type === 'group' && findLayerById(layer.children, id) !== undefined),
   );
 }
+
+export interface LayerLocation {
+  /** The layer itself. */
+  layer: Layer;
+  /** The array containing it (top-level or a group's children). */
+  siblings: Layer[];
+  /** Index within `siblings`. */
+  index: number;
+  /** Group id containing the layer, or null when top-level. */
+  parentId: string | null;
+}
+
+/** Locates a layer anywhere in the tree, including its parent and exact index
+ *  (review H12 — tools used top-level `findIndex`, so nested delete silently
+ *  did nothing). Returns null when the id doesn't resolve. */
+export function findLayerLocation(layers: Layer[], id: string, parentId: string | null = null): LayerLocation | null {
+  for (let index = 0; index < layers.length; index++) {
+    const layer = layers[index];
+    if (layer.id === id) return { layer, siblings: layers, index, parentId };
+    if (layer.type === 'group') {
+      const found = findLayerLocation(layer.children, id, layer.id);
+      if (found) return found;
+    }
+  }
+  return null;
+}

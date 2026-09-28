@@ -1,8 +1,8 @@
-import { useState, useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { useTransitionDirector } from '../components/transitions/useTransitionDirector';
 import type { TransitionOverlayHandle } from '../components/transitions/TransitionOverlay';
-import type { FxKind } from '../components/transitions/routeFx';
 import type { ActiveTab } from '../types';
+import { recordTabVisit } from '../utils/tabHistory';
 
 interface UsePageTransitionsInput {
   activeTab: ActiveTab;
@@ -12,7 +12,6 @@ interface UsePageTransitionsInput {
 }
 
 interface UsePageTransitionsReturn {
-  pageFxKind: FxKind;
   handleNavigate: (tab: ActiveTab) => void;
 }
 
@@ -27,16 +26,20 @@ export const usePageTransitions = ({
   contentRef,
   transitionOverlayHandleRef,
 }: UsePageTransitionsInput): UsePageTransitionsReturn => {
-  const [pageFxKind, setPageFxKind] = useState<FxKind>('module-boot');
   const activeTabRef = useRef(activeTab);
   activeTabRef.current = activeTab;
+
+  // Record the persisted tab once on boot so history isn't empty after a reload.
+  useEffect(() => {
+    recordTabVisit(activeTabRef.current);
+  }, []);
 
   const { navigate: directorNavigate } = useTransitionDirector({
     overlayRef: transitionOverlayHandleRef,
     contentRef,
     getActiveTab: () => activeTabRef.current,
-    commit: (tag, kind) => {
-      setPageFxKind(kind);
+    commit: (tag) => {
+      recordTabVisit(tag);
       setActiveTab(tag);
     },
   });
@@ -45,5 +48,5 @@ export const usePageTransitions = ({
     directorNavigate(tab);
   }, [directorNavigate]);
 
-  return { pageFxKind, handleNavigate };
+  return { handleNavigate };
 };

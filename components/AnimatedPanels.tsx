@@ -120,30 +120,6 @@ export const ScanLine = ({ delay = 0 }: { delay?: number }) => (
     </div>
 );
 
-/**
- * Shell-level variants for the App page wrapper. The Context Shift Engine's
- * overlay owns the visual drama; the shell only coordinates a light blur-settle
- * and keeps exit near-instant (it happens behind an opaque cover).
- */
-export const shellVariants: Variants = {
-    hidden: { opacity: 0, scale: 0.995, filter: 'blur(6px)' },
-    visible: {
-        opacity: 1,
-        scale: 1,
-        filter: 'blur(0px)',
-        transition: {
-            duration: 0.5,
-            ease: [0.22, 1, 0.36, 1] as any,
-            when: "beforeChildren",
-            staggerChildren: 0.08
-        }
-    },
-    exit: {
-        opacity: 0,
-        transition: { duration: 0.15 }
-    }
-};
-
 export const pageVariants: Variants = {
     hidden: {
         clipPath: 'inset(100% 0 0 0)',

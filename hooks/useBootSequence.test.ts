@@ -105,7 +105,7 @@ describe('useBootSequence', () => {
     (result.current.loaderRef as any).current = document.createElement('div');
 
     act(() => {
-      result.current.handleInitContinue(true);
+      void result.current.handleInitContinue(true);
     });
 
     expect(result.current.bootState.isInitialized).toBe(true);
@@ -127,7 +127,7 @@ describe('useBootSequence', () => {
     }, { timeout: 15_000 });
 
     act(() => {
-      result.current.handleInitContinue(false);
+      void result.current.handleInitContinue(false);
     });
 
     expect(defaultInput.startupContinue).toHaveBeenCalledWith(false);
@@ -149,15 +149,16 @@ describe('useBootSequence', () => {
 
     const { result } = renderHook(() => useBootSequence(defaultInput));
 
+    // Generous timeout and state checks inside the wait: under CPU load the
+    // error state can land after the feedback call (flaked the pre-push hook).
     await vi.waitFor(() => {
       expect(defaultInput.showGlobalFeedback).toHaveBeenCalledWith(
         expect.any(String),
         true,
       );
-    });
-
-    expect(result.current.bootState.isLoading).toBe(false);
-    expect(result.current.bootState.phase).toBe('error');
+      expect(result.current.bootState.isLoading).toBe(false);
+      expect(result.current.bootState.phase).toBe('error');
+    }, { timeout: 5000 });
   });
 
   // Regression guard for ISSUE-45: the storage gate was dropped when this hook

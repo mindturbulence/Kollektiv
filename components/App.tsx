@@ -1,11 +1,13 @@
 import React, { useState, useCallback, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { gsap } from 'gsap';
+import { MotionConfig } from 'motion/react';
+import { prefersReducedMotion } from './transitions/routeFx';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import useLocalStorage from '../utils/useLocalStorage';
 import { audioService } from '../services/audioService';
 import { BusyProvider } from '../contexts/BusyContext';
-import type { ActiveTab } from '../types';
+import type { ActiveTab, ActiveSettingsTab } from '../types';
 import CommandPalette from './CommandPalette';
 
 // Layout & Global Components
@@ -20,6 +22,7 @@ import VaultMapPanel from './VaultMapPanel';
 import LlmStatusPanel from './LlmStatusPanel';
 import FeedbackToast from './FeedbackToast';
 import Footer from './Footer';
+import LoadingSpinner from './LoadingSpinner';
 import IdleOverlay from './IdleOverlay';
 import { TabTitleManager } from './TabTitleManager';
 
@@ -43,6 +46,11 @@ import LoraEditorPage from './loraEditor/LoraEditorPage';
 import BatchRunnerPage from './BatchRunnerPage';
 import ImageEditorPage from '../image-editor/ui/ImageEditorPage';
 import type { EditorOpenPayload } from '../image-editor/core/types';
+import type { VideoEditorOpenPayload } from '../video-editor/core/types';
+import { subscribeVideoEditorOpen, takePendingVideoEditorPayload } from '../video-editor/bridge/openInVideoEditor';
+// Own chunk: video-editor pulls in its own media/render/export engines and
+// must not add to the ~4MB main entry (plan §7).
+const VideoEditorPage = React.lazy(() => import('../video-editor/ui/VideoEditorPage'));
 import LocalGenerationStudioPage from './LocalGenerationStudioPage';
 import { LLMChatPanel } from './LLMChatPanel';
 import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
@@ -56,14 +64,13 @@ import { useAmbientMusic } from '../utils/useAmbientMusic';
 
 import LiveCaptionOverlay from './LiveCaptionOverlay';
 import { ScreenControlOverlay } from './ScreenControlOverlay';
-import { motion, AnimatePresence } from 'motion/react';
-import { shellVariants } from './AnimatedPanels';
 import TransitionOverlay, { type TransitionOverlayHandle } from './transitions/TransitionOverlay';
 import { useBootSequence } from '../hooks/useBootSequence';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { usePageTransitions } from '../hooks/usePageTransitions';
 import { useAppShell } from '../hooks/useAppShell';
 import { useAppEventBus } from '../hooks/useAppEventBus';
+import { getNextTheme } from '../constants/themes';
 
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any, errorInfo: any }> {
@@ -83,7 +90,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
                     <h1 className="text-4xl font-black uppercase tracking-tighter mb-4">CRITICAL ERROR</h1>
                     <p className="text-base-content/60 font-bold uppercase tracking-widest mb-4">The application encountered an unrecoverable state.</p>
 
-                    <div className="bg-error/10 border border-error/20 p-4 mb-8 max-w-4xl w-full overflow-auto transition-all animate-fade-in shadow-2xl">
+                    <div className="bg-error/10 border border-error/20 p-4 mb-8 max-w-4xl w-full overflow-auto animate-fade-in shadow-2xl">
                         <div className="text-xs text-error font-mono font-black uppercase tracking-widest mb-2 border-b border-error/20 pb-1">Trace Summary</div>
                         <code className="text-xs text-error font-mono break-words whitespace-pre-wrap text-left block max-h-[30vh]">
                             {typeof this.state.error === 'object' ? (this.state.error.stack || this.state.error.message || JSON.stringify(this.state.error)) : String(this.state.error)}
@@ -144,7 +151,13 @@ const AppContent: React.FC = () => {
     // nothing ever read; that copy was removed rather than kept "in sync".
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
     const [editorOpenPayload, setEditorOpenPayload] = useState<EditorOpenPayload | undefined>(undefined);
+    const [videoEditorOpenPayload, setVideoEditorOpenPayload] = useState<VideoEditorOpenPayload | undefined>(() => takePendingVideoEditorPayload());
     const [converterOpenFiles, setConverterOpenFiles] = useState<File[] | undefined>(undefined);
+
+    // Bridge from Assets Manager / Gallery (video-editor/bridge/openInVideoEditor.ts)
+    // — navigation itself rides the existing generic 'navigate' bus event
+    // (useAppEventBus.ts), only the payload needs this direct subscription.
+    useEffect(() => subscribeVideoEditorOpen(setVideoEditorOpenPayload), []);
 
     // Clear one-shot open payloads only when their tab is LEFT, so a later return
     // via a plain nav link starts blank. Must key on the transition, not on
@@ -157,6 +170,7 @@ const AppContent: React.FC = () => {
         prevTabRef.current = activeTab;
         if (prev === activeTab) return;
         if (prev === 'image_editor') setEditorOpenPayload(undefined);
+        if (prev === 'video_editor') setVideoEditorOpenPayload(undefined);
         if (prev === 'converter') setConverterOpenFiles(undefined);
     }, [activeTab]);
 
@@ -187,6 +201,7 @@ const AppContent: React.FC = () => {
             case 'comfy_studio': return `COMFYUI | ${base}`;
             case 'a1111_studio': return `FORGE | ${base}`;
             case 'image_editor': return `IMAGE EDITOR | ${base}`;
+            case 'video_editor': return `VIDEO EDITOR | ${base}`;
             default: return base;
         }
     }, [activeTab]);
@@ -214,7 +229,7 @@ const AppContent: React.FC = () => {
     // 2. App shell (needs handleNavigate from transitions)
     // 3. Boot sequence (needs setGlobalFeedback from shell)
 
-    const { pageFxKind, handleNavigate } = usePageTransitions({
+    const { handleNavigate } = usePageTransitions({
         activeTab,
         setActiveTab,
         contentRef,
@@ -358,10 +373,26 @@ const AppContent: React.FC = () => {
             );
             tl.to(contentRef.current, { alpha: 1, duration: 1.0, ease: "power2.out" }, "<0.2");
             tl.set(apertureRef.current, { visibility: 'hidden', alpha: 0 });
+
+            // Reduced motion: jump the fully-built timeline to its end state
+            // instead of skipping construction — every to/from/set below still
+            // lands correctly, and onComplete-style side effects aren't lost.
+            if (prefersReducedMotion()) tl.progress(1);
         });
 
         return () => ctx.revert();
     }, [isInitialized]);
+
+    // Shares the cycling logic with the header's ThemeSwitcher (constants/themes.ts)
+    // so the command palette's "Next Theme" command does the same thing as the button.
+    const handleCycleTheme = useCallback(() => {
+        updateSettings({ ...settings, darkTheme: getNextTheme(settings.darkTheme), activeThemeMode: 'dark' });
+    }, [settings, updateSettings]);
+
+    const handleToggleLlmPanel = useCallback(() => {
+        audioService.playClick();
+        setIsLlmPanelOpen(prev => !prev);
+    }, [setIsLlmPanelOpen]);
 
     useAppEventBus({
         handleNavigate,
@@ -375,18 +406,30 @@ const AppContent: React.FC = () => {
         handleClipIdea,
         setEditorOpenPayload,
         setConverterOpenFiles,
+        handleCycleTheme,
+        handleToggleChatPanel,
+        handleToggleActivityPanel,
+        handleToggleLlmPanel,
     });
 
     const renderContent = () => {
         const categoryPanelProps = {
-            isCategoryPanelCollapsed: !!collapsedPanels[activeTab],
+            isCategoryPanelCollapsed: collapsedPanels[activeTab] !== undefined
+                ? !!collapsedPanels[activeTab]
+                : window.innerWidth < 1280,
             onToggleCategoryPanel: () => {
                 setCollapsedPanels(p => ({ ...p, [activeTab]: !p[activeTab] }));
             },
         };
 
+        const openSettings = (tab: ActiveSettingsTab, subTab: string) => {
+            setActiveSettingsTab(tab);
+            setActiveSettingsSubTab(subTab);
+            handleNavigate('settings');
+        };
+
         switch (activeTab) {
-            case 'dashboard': return <Dashboard key="dashboard" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'dashboard': return <Dashboard key="dashboard" onNavigate={handleNavigate} onOpenSettings={openSettings} isExiting={false} />;
             case 'assistant': return <AssistantPage key="assistant" />;
             case 'discovery': return <DiscoveryPage key="discovery" isExiting={false} onClipIdea={handleClipIdea} onSendToBuilder={handleSendToPromptsPage} showGlobalFeedback={showGlobalFeedback} />;
             case 'prompts': return <PromptsPage key="prompts" onClipIdea={handleClipIdea} initialState={promptsPageState}                            onStateHandled={handleClearPromptsPageState} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
@@ -410,17 +453,18 @@ const AppContent: React.FC = () => {
             case 'comfy_studio': return <LocalGenerationStudioPage key="comfy_studio" backendId="comfy" showGlobalFeedback={showGlobalFeedback} />;
             case 'a1111_studio': return <LocalGenerationStudioPage key="a1111_studio" backendId="a1111" showGlobalFeedback={showGlobalFeedback} />;
             case 'image_editor': return <ImageEditorPage key="image_editor" openPayload={editorOpenPayload} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            default: return <Dashboard key="default" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'video_editor': return (
+                <React.Suspense key="video_editor" fallback={<div className="flex items-center justify-center w-full h-full"><LoadingSpinner text="LOADING" /></div>}>
+                    <VideoEditorPage openPayload={videoEditorOpenPayload} showGlobalFeedback={showGlobalFeedback} isExiting={false} />
+                </React.Suspense>
+            );
+            default: return <Dashboard key="default" onNavigate={handleNavigate} onOpenSettings={openSettings} isExiting={false} />;
         }
     };
 
 
 
     // --- Inline-callbacks that add audio-service side-effects on top of shell state ---
-    const handleToggleLlmPanel = useCallback(() => {
-        audioService.playClick();
-        setIsLlmPanelOpen(prev => !prev);
-    }, [setIsLlmPanelOpen]);
     const handleCloseAboutModal = useCallback(() => {
         audioService.playModalClose();
         setIsAboutModalOpen(false);
@@ -432,13 +476,14 @@ const AppContent: React.FC = () => {
     if (showWelcome) return <OnboardingFlow onSetupComplete={initializeApp} />;
 
     return (
+        <MotionConfig reducedMotion="user">
         <LiveAssistantProvider>
         {/* Avatar store bridge — headless; feeds the floating widget, the
             Document PiP pop-out and the extension side panel. */}
         <AssistantAvatarBridge />
         <div className="h-full w-full overflow-hidden relative font-sans">
             {isLoading && (
-                <div ref={loaderRef} className="fixed inset-0 z-[1000]">
+                <div ref={loaderRef} className="fixed inset-0 z-system">
                     <InitialLoader status={initStatus} progress={initProgress} onContinue={handleInitContinue} />
                 </div>
             )}
@@ -491,7 +536,7 @@ const AppContent: React.FC = () => {
                                 <button
                                     onClick={() => {
                                         hasInitializedRef.current = false;
-                                        initializeApp(); 
+                                        void initializeApp();
                                     }}
                                     className="form-btn form-btn-primary h-10"
                                 >
@@ -527,7 +572,7 @@ const AppContent: React.FC = () => {
                 <>
                     <div
                         ref={apertureRef}
-                        className="fixed inset-4 md:inset-6 z-[900] pointer-events-none"
+                        className="fixed inset-4 md:inset-6 z-overlay pointer-events-none"
                         style={{ visibility: 'hidden' }}
                     >
                         <div ref={blindsRef} className="absolute inset-0 flex flex-row">
@@ -544,7 +589,8 @@ const AppContent: React.FC = () => {
                         ref={appWrapperRef}
                         className="w-full h-full flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none p-4 md:p-6"
                     >
-                        <div className="app-header flex-shrink-0">
+                        {/* relative z-20: Header's absolute submenu row must paint above <main> (z-10) */}
+                        <div className="app-header flex-shrink-0 relative z-20">
                             <Header
                                 onNavigate={handleNavigate}
                                 activeTab={activeTab}
@@ -556,6 +602,7 @@ const AppContent: React.FC = () => {
                                 onToggleActivityPanel={handleToggleActivityPanel}
                                 onStandbyClick={goIdle}
                                 clippedIdeasCount={clippedIdeas.length + notesCount + filesCount}
+                                onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
                             />
                         </div>
 
@@ -565,19 +612,12 @@ const AppContent: React.FC = () => {
                                 <TransitionOverlay ref={transitionOverlayHandleRef} />
 
                                 <div ref={contentRef} className="h-full w-full z-10 relative">
-                                    <AnimatePresence mode="wait" custom={pageFxKind}>
-                                        <motion.div
-                                            key={['crafter', 'refiner', 'prompt_analyzer', 'media_analyzer', 'prompts'].includes(activeTab) ? 'prompts_group' : activeTab}
-                                            custom={pageFxKind}
-                                            variants={shellVariants}
-                                            initial="hidden"
-                                            animate="visible"
-                                            exit="exit"
-                                            className="h-full w-full"
-                                        >
-                                            {renderContent()}
-                                        </motion.div>
-                                    </AnimatePresence>
+                                    <div
+                                        key={['crafter', 'refiner', 'prompt_analyzer', 'media_analyzer', 'prompts'].includes(activeTab) ? 'prompts_group' : activeTab}
+                                        className="h-full w-full"
+                                    >
+                                        {renderContent()}
+                                    </div>
 
                                     <ClippingPanel
                                         isOpen={isClippingPanelOpen}
@@ -688,6 +728,7 @@ const AppContent: React.FC = () => {
             </div>
         </div>
         </LiveAssistantProvider>
+        </MotionConfig>
     );
 };
 

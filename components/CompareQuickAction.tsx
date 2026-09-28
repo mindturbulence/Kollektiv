@@ -41,7 +41,7 @@ const CompareQuickAction: React.FC<CompareQuickActionProps> = ({
     <button
       onClick={handleCompare}
       onMouseEnter={() => audioService.playHover()}
-      className="btn btn-sm btn-ghost flex-1 rounded-none tracking-wider uppercase font-mono text-[10px] border border-accent/30 text-accent/80 hover:text-accent hover:border-accent/60 btn-snake"
+      className="btn btn-sm btn-ghost flex-1 rounded-none tracking-wider uppercase font-mono text-2xs border border-accent/30 text-accent/80 hover:text-accent hover:border-accent/60 btn-snake"
     >
       <span /><span /><span /><span />
       COMPARE

@@ -63,7 +63,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
 
   const modalContent = (
     <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in"
+      className="fixed inset-0 bg-black/40 backdrop-blur-xl z-modal flex items-center justify-center p-4 animate-fade-in"
       onClick={handleClose}
       role="dialog"
       aria-modal="true"
@@ -77,9 +77,9 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
           <header className="px-8 py-4 bg-transparent relative flex-shrink-0">
               <h3 id="migration-title" className="text-xl font-black tracking-tighter text-primary leading-none uppercase">
                 {isPush ? 'MIGRATION' : 'PULL SYNC'}
-                <span className="text-base-content/20">.</span>
+                <span className="text-base-content/60">.</span>
               </h3>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/40 mt-1.5 font-mono">
+              <p className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/60 mt-1.5 font-mono">
                 {isPush ? 'LOCAL TO GOOGLE DRIVE' : 'GOOGLE DRIVE TO LOCAL'}
               </p>
           </header>
@@ -99,26 +99,26 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                   <div className="w-full flex flex-col gap-4 animate-fade-in text-left border border-warning/10 p-5 bg-warning/5 rounded-none">
                       <div className="flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-warning animate-ping" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-warning font-mono">CONFLICT_RESOLVER</span>
+                          <span className="text-2xs font-black uppercase tracking-[0.2em] text-warning font-mono">CONFLICT_RESOLVER</span>
                       </div>
                       <span className="text-xs font-bold font-mono text-warning/80 uppercase tracking-wider">Duplicate File Detected:</span>
                       <h4 className="text-xs font-bold font-mono text-base-content/90 truncate bg-black/20 p-3 select-all border border-white/5">
                           {duplicateFile}
                       </h4>
-                      <p className="text-[11px] uppercase tracking-normal leading-relaxed text-base-content/50 font-mono">
+                      <p className="text-2xs uppercase tracking-normal leading-relaxed text-base-content/60 font-mono">
                           This file already exists in your target Google Drive folder. Please specify the desired resolution:
                       </p>
                       
                       <div className="flex gap-2.5 mt-2">
                           <button
                             onClick={() => onResolveDuplicate?.('replace')}
-                            className="flex-1 py-3 px-4 border border-primary/20 bg-primary/15 hover:bg-primary/25 text-primary text-xs font-bold uppercase transition-all font-mono"
+                            className="flex-1 py-3 px-4 border border-primary/20 bg-primary/15 hover:bg-primary/25 text-primary text-xs font-bold uppercase transition-colors font-mono"
                           >
                             Replace Existing
                           </button>
                           <button
                             onClick={() => onResolveDuplicate?.('copy')}
-                            className="flex-1 py-3 px-4 border border-secondary/20 bg-secondary/15 hover:bg-secondary/25 text-secondary text-xs font-bold uppercase transition-all font-mono"
+                            className="flex-1 py-3 px-4 border border-secondary/20 bg-secondary/15 hover:bg-secondary/25 text-secondary text-xs font-bold uppercase transition-colors font-mono"
                           >
                             Keep Both (Copy)
                           </button>
@@ -131,7 +131,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                           
                           {/* Phase 1: Converting / Prepping Progress */}
                           <div className="flex flex-col gap-2 p-4 border border-white/5 bg-black/10 rounded-none">
-                              <div className="flex justify-between items-center text-[10px] font-mono tracking-widest uppercase">
+                              <div className="flex justify-between items-center text-2xs font-mono tracking-widest uppercase">
                                   <span className="font-extrabold text-[#00ffa3]">
                                       {isPush ? 'PHASE 1: CONVERTING GALLERY TO JPG' : 'PHASE 1: READING CLOUD MANIFEST'}
                                   </span>
@@ -139,7 +139,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                                       {phase === 'converting' ? `${Math.round(convertingProgress)}%` : (phase === 'idle' ? '0%' : '100%')}
                                   </span>
                               </div>
-                              <p className="text-[10px] text-base-content/50 font-mono truncate h-4">
+                              <p className="text-2xs text-base-content/60 font-mono truncate h-4">
                                   {phase === 'converting' 
                                     ? convertingMessage 
                                     : (phase === 'idle' 
@@ -149,7 +149,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                               </p>
                               <div className="h-1.5 w-full bg-base-300 rounded overflow-hidden">
                                   <div 
-                                      className="h-full bg-[#00ffa3] transition-all duration-300 ease-out" 
+                                      className="h-full bg-[#00ffa3] transition-[width] duration-300 ease-out" 
                                       style={{ 
                                           width: `${phase === 'converting' ? convertingProgress : (phase === 'idle' ? 0 : 100)}%` 
                                       }} 
@@ -159,7 +159,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
 
                           {/* Phase 2: Uploading / Downloading Progress */}
                           <div className="flex flex-col gap-2 p-4 border border-white/5 bg-black/10 rounded-none">
-                              <div className="flex justify-between items-center text-[10px] font-mono tracking-widest uppercase">
+                              <div className="flex justify-between items-center text-2xs font-mono tracking-widest uppercase">
                                   <span className="font-extrabold text-secondary">
                                       {isPush ? 'PHASE 2: UPLOADING TO GOOGLE DRIVE' : 'PHASE 2: DOWNLOADING TO LOCAL'}
                                   </span>
@@ -167,7 +167,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                                       {phase === 'uploading' ? `${Math.round(uploadingProgress)}%` : (phase === 'complete' ? '100%' : '0%')}
                                   </span>
                               </div>
-                              <p className="text-[10px] text-base-content/50 font-mono truncate h-4">
+                              <p className="text-2xs text-base-content/60 font-mono truncate h-4">
                                   {phase === 'uploading' 
                                     ? uploadingMessage 
                                     : (phase === 'complete' 
@@ -177,7 +177,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                               </p>
                               <div className="h-1.5 w-full bg-base-300 rounded overflow-hidden">
                                   <div 
-                                      className="h-full bg-secondary transition-all duration-300 ease-out" 
+                                      className="h-full bg-secondary transition-[width] duration-300 ease-out" 
                                       style={{ 
                                           width: `${phase === 'uploading' ? uploadingProgress : (phase === 'complete' ? 100 : 0)}%` 
                                       }} 
@@ -196,11 +196,11 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                               </div>
                               <div className="h-2.5 w-full bg-base-300 rounded overflow-hidden">
                                   <div 
-                                      className="h-full bg-primary transition-all duration-300 ease-out" 
+                                      className="h-full bg-primary transition-[width] duration-300 ease-out" 
                                       style={{ width: `${progress}%` }} 
                                   />
                               </div>
-                              <p className="text-[9px] text-primary/70 font-mono uppercase tracking-wider text-center mt-1">
+                              <p className="text-2xs text-primary/70 font-mono uppercase tracking-wider text-center mt-1">
                                   {phase === 'converting' 
                                     ? (isPush ? 'Converting gallery images first...' : 'Reading manifest from Google Drive...') 
                                     : (phase === 'uploading' 
@@ -215,14 +215,14 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                               {isPaused ? (
                                   <button
                                       onClick={onResume}
-                                      className="px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold uppercase tracking-wider transition-all flex items-center gap-1.5"
+                                      className="px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400 text-2xs font-mono font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5"
                                   >
                                       <span>▶</span> RESUME_MIGRATION
                                   </button>
                               ) : (
                                   <button
                                       onClick={onPause}
-                                      className="px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 text-amber-400 text-[10px] font-mono font-bold uppercase tracking-wider transition-all flex items-center gap-1.5"
+                                      className="px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 text-amber-400 text-2xs font-mono font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5"
                                   >
                                       <span>⏸</span> PAUSE_MIGRATION
                                   </button>

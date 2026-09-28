@@ -24,7 +24,7 @@ export const ResearchProjectBrowser: React.FC = () => {
     }
   }, [fm]);
 
-  useEffect(() => { loadProjects(); }, [loadProjects]);
+  useEffect(() => { void loadProjects(); }, [loadProjects]);
 
   const handleCreate = async () => {
     if (!fm || !newTitle.trim()) return;
@@ -85,7 +85,7 @@ export const ResearchProjectBrowser: React.FC = () => {
               onChange={e => setNewTitle(e.target.value)}
               placeholder="Project title"
               className="w-full bg-base-300/50 border border-white/10 rounded px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-primary/50 transition-colors"
-              onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }}
+              onKeyDown={e => { if (e.key === 'Enter') void handleCreate(); }}
               autoFocus
             />
             {error && <p className="text-xs text-error">{error}</p>}
@@ -103,7 +103,7 @@ export const ResearchProjectBrowser: React.FC = () => {
             onClick={() => setIsCreating(true)}
             className="w-full border-2 border-dashed border-white/10 hover:border-primary/30 rounded-lg py-6 flex flex-col items-center gap-2 transition-colors group cursor-pointer"
           >
-            <PlusIcon className="w-5 h-5 text-primary/50 group-hover:text-primary/80 transition-colors" />
+            <PlusIcon className="w-5 h-5 text-primary/60 group-hover:text-primary/80 transition-colors" />
             <span className="text-xs font-mono uppercase tracking-wider opacity-40 group-hover:opacity-70 transition-colors">
               New Project
             </span>
@@ -120,7 +120,7 @@ export const ResearchProjectBrowser: React.FC = () => {
               <div
                 key={p.slug}
                 onClick={() => openProject(p.slug)}
-                className="group bg-base-200/20 border border-white/5 hover:border-primary/30 rounded-lg px-4 py-3.5 cursor-pointer transition-all flex items-center justify-between"
+                className="group bg-base-200/20 border border-white/5 hover:border-primary/30 rounded-lg px-4 py-3.5 cursor-pointer transition-colors flex items-center justify-between"
               >
                 <div className="min-w-0">
                   <h3 className="text-sm font-mono text-base-content/80 truncate">{p.title}</h3>
@@ -130,7 +130,7 @@ export const ResearchProjectBrowser: React.FC = () => {
                 </div>
                 <button
                   onClick={(e) => handleDelete(p.slug, e)}
-                  className="opacity-0 group-hover:opacity-100 p-1.5 text-error/40 hover:text-error transition-all shrink-0 ml-2"
+                  className="opacity-0 group-hover:opacity-100 p-1.5 text-error/40 hover:text-error transition-[opacity,color] shrink-0 ml-2"
                   aria-label="Delete project"
                 >
                   <DeleteIcon className="w-3.5 h-3.5" />

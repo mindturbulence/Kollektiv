@@ -7,6 +7,7 @@ import React, { useEffect, useRef } from 'react';
 import { TypeTool } from '../core/text/TypeTool';
 import { docToCanvas } from '../core/transform/TransformEngine';
 import { getSnapshot } from '../core/store';
+import { findLayerById } from '../core/layers/layerTree';
 
 interface TypeInputProps {
   /** Canvas element reference — used to compute CSS position. */
@@ -30,6 +31,14 @@ const TypeInput: React.FC<TypeInputProps> = ({ canvasEl, onDone }) => {
 
   const rect  = canvasEl.getBoundingClientRect();
   const cssPos = docToCanvas(docX, docY, viewport, rect.width, rect.height, doc?.width ?? 1, doc?.height ?? 1);
+
+  // Re-edit (M5 leftover): prefill the box with the layer's current text so a
+  // double-click edits in place instead of starting empty.
+  const existingId  = TypeTool.existingLayerId;
+  const existing    = existingId && doc
+    ? findLayerById(doc.layers, existingId)
+    : undefined;
+  const initialText = existing?.type === 'text' ? existing.text : '';
 
   // Scale font size to canvas zoom
   const scaledFont = Math.max(8, s.fontSize * viewport.zoom);
@@ -61,7 +70,7 @@ const TypeInput: React.FC<TypeInputProps> = ({ canvasEl, onDone }) => {
         overflow:        'hidden',
         zIndex:          50,
       }}
-      defaultValue=""
+      defaultValue={initialText}
       onBlur={commit}
       onKeyDown={(e) => {
         if (e.key === 'Escape') { TypeTool.cancel(); onDone(); }

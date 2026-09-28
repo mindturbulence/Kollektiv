@@ -26,6 +26,8 @@ export default tseslint.config(
     },
     rules: {
       'react-hooks/exhaustive-deps': 'warn',
+      // JSX event handlers are void-context by convention; async handlers are standard React pattern
+      '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }],
     },
   },
   { ignores: ['dist/', '.playwright-mcp/', '.pi/', '*.cjs', 'node_modules/'] },

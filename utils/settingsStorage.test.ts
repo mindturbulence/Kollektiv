@@ -149,6 +149,15 @@ describe('loadLLMSettings — legacy migrations', () => {
     expect(loaded.darkTheme).toBe('arwes');
   });
 
+  it('resets a pruned theme to the default', () => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+      darkTheme: 'cupcake',
+    }));
+
+    const loaded = loadLLMSettings();
+    expect(loaded.darkTheme).toBe('Kollektiv');
+  });
+
   it('coerces null mcpServers to empty array', () => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({
       mcpServers: null,

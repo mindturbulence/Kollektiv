@@ -22,6 +22,7 @@ const CustomCursor: React.FC = () => {
         gsap.set(inner, { scale: 1 });
 
         const moveCursor = (e: MouseEvent) => {
+            if (!Number.isFinite(e.clientX) || !Number.isFinite(e.clientY)) return;
             setCoords({ x: e.clientX, y: e.clientY });
             
             gsap.to(cursor, {
@@ -103,13 +104,13 @@ const CustomCursor: React.FC = () => {
     return (
         <div
             ref={cursorRef}
-            className="fixed top-1 left-1 pointer-events-none z-[9999] opacity-0 flex items-center text-primary"
+            className="fixed top-1 left-1 pointer-events-none z-system opacity-0 flex items-center text-primary"
             style={{ width: 'auto', height: '40px' }}
         >
             <div className={`relative flex items-center justify-center transition-opacity duration-300 ${isBusy ? 'opacity-0' : 'opacity-100'}`}>
                 <div 
                     ref={innerRef}
-                    className={`w-5 h-5 border rounded-full flex items-center justify-center overflow-hidden cursor-inner transition-all duration-300 ease-out border-primary text-primary ${isHovering ? 'scale-[1.8] bg-primary/20 border-opacity-100' : 'scale-100 bg-transparent border-opacity-60'}`}
+                    className={`w-5 h-5 border rounded-full flex items-center justify-center overflow-hidden cursor-inner transition-[transform,background-color,border-color] duration-300 ease-out border-primary text-primary ${isHovering ? 'scale-[1.8] bg-primary/20 border-opacity-100' : 'scale-100 bg-transparent border-opacity-60'}`}
                     style={{ borderRadius: '50%', borderStyle: 'solid' }}
                 >
                     {/* Rotating Half-Circle */}

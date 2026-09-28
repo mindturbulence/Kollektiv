@@ -128,31 +128,33 @@ export const loadGalleryItems = async (): Promise<GalleryItem[]> => {
     const { data: manifest, safeToSave } = await getManifest();
     
     // Background self-healing
-    setTimeout(async () => {
-        if (!safeToSave) return;
-        try {
-            const healedUrls = new Map<string, string[]>();
-            for (const item of manifest.galleryItems) {
-                if (item && Array.isArray(item.urls) && await healItemUrls(item, manifest.categories)) {
-                    healedUrls.set(item.id, item.urls);
+    setTimeout(() => {
+        void (async () => {
+            if (!safeToSave) return;
+            try {
+                const healedUrls = new Map<string, string[]>();
+                for (const item of manifest.galleryItems) {
+                    if (item && Array.isArray(item.urls) && await healItemUrls(item, manifest.categories)) {
+                        healedUrls.set(item.id, item.urls);
+                    }
                 }
+                if (healedUrls.size === 0) return;
+                // Re-read fresh so concurrent adds/deletes are not clobbered
+                const fresh = await getManifest();
+                if (!fresh.safeToSave) return;
+                let changed = false;
+                for (const item of fresh.data.galleryItems) {
+                    const urls = healedUrls.get(item.id);
+                    if (urls) { item.urls = urls; changed = true; }
+                }
+                if (changed) {
+                    await saveManifest(fresh.data);
+                    window.dispatchEvent(new CustomEvent('gallery-manifest-healed'));
+                }
+            } catch (e) {
+                console.error("Background loading heal error:", e);
             }
-            if (healedUrls.size === 0) return;
-            // Re-read fresh so concurrent adds/deletes are not clobbered
-            const fresh = await getManifest();
-            if (!fresh.safeToSave) return;
-            let changed = false;
-            for (const item of fresh.data.galleryItems) {
-                const urls = healedUrls.get(item.id);
-                if (urls) { item.urls = urls; changed = true; }
-            }
-            if (changed) {
-                await saveManifest(fresh.data);
-                window.dispatchEvent(new CustomEvent('gallery-manifest-healed'));
-            }
-        } catch (e) {
-            console.error("Background loading heal error:", e);
-        }
+        })();
     }, 100);
 
     return manifest.galleryItems
