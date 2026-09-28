@@ -185,9 +185,7 @@ export async function exportToBlob(
   const painter = new LayerPainter(false);
   try {
     // document.layers: index 0 = topmost — composite bottom-to-top.
-    for (let i = document.layers.length - 1; i >= 0; i--) {
-      painter.drawLayer(painterCtx, document.layers[i]);
-    }
+    painter.drawLayers(painterCtx, document.layers);
   } finally {
     painter.dispose();
   }

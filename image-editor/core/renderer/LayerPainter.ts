@@ -4,12 +4,15 @@
 // transformed) and FileIO.exportToBlob (offscreen, document-space) so export is
 // guaranteed to match what the user sees.
 
-import type { ImageLayer, Layer, TextLayer, ShapeLayer } from '../types';
+import type { ImageLayer, Layer, TextLayer, ShapeLayer, LookLayer } from '../types';
 import { NATIVE_BLEND_MODES } from '../types';
 import { AdjustmentEngine } from '../adjust/AdjustmentEngine';
 import { BlendCompositor, MANUAL_BLEND_MODES, type ManualBlendMode } from './BlendCompositor';
 import { BrushEngine } from '../paint/BrushEngine';
 import { CloneStampTool } from '../paint/CloneStampTool';
+import { LookRenderer } from '../looks/LookRenderer';
+import { lutRegistryVersion } from '../looks/lutRegistry';
+import { getSnapshot } from '../store';
 
 /** Renders `layers` (index 0 = topmost, drawn bottom-up) into a width×height
  *  document-space canvas with committed pixels only (no adjustment previews).
@@ -20,9 +23,7 @@ export function rasterizeLayersToCanvas(layers: Layer[], width: number, height: 
   if (!ctx) return null;
   const painter = new LayerPainter(false);
   try {
-    for (let i = layers.length - 1; i >= 0; i--) {
-      painter.drawLayer(ctx as unknown as CanvasRenderingContext2D, layers[i]);
-    }
+    painter.drawLayers(ctx as unknown as CanvasRenderingContext2D, layers);
   } finally {
     painter.dispose();
   }
@@ -39,6 +40,14 @@ export class LayerPainter {
   private soloScratch: OffscreenCanvas = new OffscreenCanvas(1, 1);
   private blendCompositor: BlendCompositor | null = null;
 
+  // Looks: renderer created on first use (undefined = not tried, null = no WebGL2).
+  private lookRenderer: LookRenderer | null | undefined;
+  // On-screen look cache (plan §3.4): the composite up to and including the
+  // topmost look, reused while nothing below it changes — painting ABOVE a
+  // look then costs one drawImage instead of a full re-shade every repaint.
+  private lookCache: OffscreenCanvas | null = null;
+  private lookCacheKey: unknown[] | null = null;
+
   /** @param showAdjustmentPreviews on-screen only — export must flatten committed
    *  pixels, never an adjustment panel's unapplied live preview. */
   constructor(private readonly showAdjustmentPreviews = true) {}
@@ -46,6 +55,94 @@ export class LayerPainter {
   dispose(): void {
     this.blendCompositor?.dispose();
     this.blendCompositor = null;
+    this.lookRenderer?.dispose();
+    this.lookRenderer = undefined;
+    this.lookCache = null;
+    this.lookCacheKey = null;
+  }
+
+  /** Draws `layers` (index 0 = topmost) bottom-up. The on-screen painter
+   *  (showAdjustmentPreviews) caches the result up to the topmost look. */
+  drawLayers(ctx: CanvasRenderingContext2D, layers: Layer[]): void {
+    let top = -1; // index of the topmost visible look (smallest index)
+    if (this.showAdjustmentPreviews) {
+      for (let i = 0; i < layers.length; i++) {
+        if (layers[i].type === 'look' && layers[i].visible) { top = i; break; }
+      }
+    }
+    if (top < 0) {
+      for (let i = layers.length - 1; i >= 0; i--) this.drawLayer(ctx, layers[i]);
+      return;
+    }
+
+    const w = ctx.canvas.width, h = ctx.canvas.height;
+    const key = this.lookKey(ctx, layers.slice(top));
+    if (key && this.lookCache && this.lookCacheKey && sameKey(key, this.lookCacheKey)) {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalCompositeOperation = 'copy';
+      ctx.drawImage(this.lookCache, 0, 0);
+      ctx.restore();
+    } else {
+      for (let i = layers.length - 1; i >= top; i--) this.drawLayer(ctx, layers[i]);
+      if (key) {
+        if (!this.lookCache || this.lookCache.width !== w || this.lookCache.height !== h) this.lookCache = new OffscreenCanvas(w, h);
+        const cctx = this.lookCache.getContext('2d');
+        if (cctx) {
+          cctx.globalCompositeOperation = 'copy';
+          cctx.drawImage(ctx.canvas, 0, 0);
+        }
+      }
+      this.lookCacheKey = key;
+    }
+    for (let i = top - 1; i >= 0; i--) this.drawLayer(ctx, layers[i]);
+  }
+
+  /** Everything that decides the composite up to the topmost look, by identity
+   *  (store layers are immutable), or null when it can't be cached: a live
+   *  brush/clone stroke on a layer below repaints pixels without changing its
+   *  layer object. */
+  private lookKey(ctx: CanvasRenderingContext2D, stack: Layer[]): unknown[] | null {
+    const t = ctx.getTransform();
+    const key: unknown[] = [ctx.canvas.width, ctx.canvas.height, t.a, t.b, t.c, t.d, t.e, t.f, lutRegistryVersion()];
+    const walk = (list: Layer[]): boolean => {
+      for (const l of list) {
+        key.push(l);
+        if (l.type === 'group' && !walk(l.children)) return false;
+        if (l.type === 'image') {
+          if ((BrushEngine.isStroking && BrushEngine.activeLayerId === l.id) ||
+              (CloneStampTool.isStroking && CloneStampTool.activeLayerId === l.id)) return false;
+          key.push(AdjustmentEngine.getPreviewBitmap(l.id));
+        }
+      }
+      return true;
+    };
+    return walk(stack) ? key : null;
+  }
+
+  /** Shades everything already drawn on ctx.canvas with the layer's recipe
+   *  (strength = opacity) and writes the result back — the same
+   *  read/shade/copy pattern as drawWithManualBlend. */
+  private drawLookLayer(ctx: CanvasRenderingContext2D, layer: LookLayer): void {
+    const canvasEl = ctx.canvas;
+    const w = canvasEl.width, h = canvasEl.height;
+    if (w === 0 || h === 0 || layer.opacity <= 0 || layer.recipe.components.every(c => !c.enabled)) return;
+    if (this.lookRenderer === undefined) {
+      try { this.lookRenderer = new LookRenderer(); } catch { this.lookRenderer = null; }
+    }
+    if (!this.lookRenderer) return; // no WebGL2: the look is skipped, never faked
+    const doc = getSnapshot().document;
+    const inv = ctx.getTransform().inverse();
+    const result = this.lookRenderer.render(
+      canvasEl, w, h, layer.recipe, layer.opacity / 100,
+      [inv.a, inv.b, inv.c, inv.d, inv.e, inv.f], doc?.width ?? w, doc?.height ?? h,
+    );
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'copy';
+    ctx.globalAlpha = 1;
+    ctx.drawImage(result, 0, 0);
+    ctx.restore();
   }
 
   drawLayer(ctx: CanvasRenderingContext2D, layer: Layer): void {
@@ -55,6 +152,11 @@ export class LayerPainter {
       for (let i = layer.children.length - 1; i >= 0; i--) {
         this.drawLayer(ctx, layer.children[i]);
       }
+      return;
+    }
+
+    if (layer.type === 'look') {
+      this.drawLookLayer(ctx, layer);
       return;
     }
 
@@ -260,4 +362,8 @@ export class LayerPainter {
 
     ctx.restore();
   }
+}
+
+function sameKey(a: unknown[], b: unknown[]): boolean {
+  return a.length === b.length && a.every((v, i) => v === b[i]);
 }

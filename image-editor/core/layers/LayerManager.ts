@@ -8,7 +8,8 @@
 import { dispatch, getSnapshot } from '../store';
 import { pushCommand } from '../history/HistoryManager';
 import { findLayerById, findLayerLocation } from './layerTree';
-import type { BlendMode, HistoryCommand, ImageLayer, Layer, LayerMask, TextLayer, ShapeLayer, Rect } from '../types';
+import type { BlendMode, HistoryCommand, ImageLayer, Layer, LayerMask, LookLayer, TextLayer, ShapeLayer, Rect } from '../types';
+import type { LookRecipe } from '../looks/recipe';
 import { rasterizeLayersToCanvas } from '../renderer/LayerPainter';
 import { resampleBitmap } from '../io/FileIO';
 import { selectionClipInBitmapSpace } from '../geometry/selectionClip';
@@ -52,6 +53,32 @@ export function addLayer(layer: Layer): void {
     undo: () => dispatch({ type: 'REMOVE_LAYER', layerId: layer.id }),
   };
   pushCommand(cmd);
+}
+
+/** Adds a Look layer (film grade, grain, …) over the whole stack. Looks shade
+ *  the composite beneath them, so they live at the top level, placed at the
+ *  top so they grade every layer by default; one undo step. */
+export function addLookLayer(recipe: LookRecipe): string | null {
+  const { document: doc } = getSnapshot();
+  if (!doc) return null;
+  const layer: LookLayer = {
+    id: crypto.randomUUID(),
+    name: recipe.name,
+    type: 'look',
+    recipe,
+    transform: { origin: { x: 0, y: 0 }, size: { width: doc.width, height: doc.height }, rotation: 0, flipH: false, flipV: false },
+    opacity: 100,
+    blendMode: 'normal',
+    visible: true,
+  };
+  pushCommand({
+    id: crypto.randomUUID(),
+    label: `Add look "${recipe.name}"`,
+    timestamp: Date.now(),
+    do: () => dispatch({ type: 'ADD_LAYER', layer, insertAfterIndex: 0 }), // also makes it active
+    undo: () => dispatch({ type: 'REMOVE_LAYER', layerId: layer.id }),
+  });
+  return layer.id;
 }
 
 /** Removes the given layer from wherever it lives in the tree (top-level or
@@ -266,7 +293,9 @@ export async function mergeDown(): Promise<boolean> {
   if (!loc || loc.parentId !== null) return false;
   // loc.index counts from the TOP of the array (index 0 = topmost).
   const below = doc.layers[loc.index + 1];
-  if (!below || below.type === 'group') return false; // nothing mergeable beneath
+  // Nothing mergeable beneath; merging INTO a look would drop the look (it
+  // shades an empty canvas). Merging a look DOWN bakes it into the layer below.
+  if (!below || below.type === 'group' || below.type === 'look') return false;
   const upper = loc.layer;
 
   const merged = await rasterizeLayers([upper, below]);
@@ -562,7 +591,9 @@ export async function deleteInSelection(): Promise<boolean> {
 export function groupLayers(layerIds: string[]): void {
   const { document: doc } = getSnapshot();
   if (!doc || layerIds.length === 0) return;
-  const idSet = new Set(layerIds);
+  // Looks stay top-level: a group isn't composited as a unit, so a look inside
+  // one would still grade everything beneath the group.
+  const idSet = new Set(layerIds.filter(id => doc.layers.find(l => l.id === id)?.type !== 'look'));
   const selected = doc.layers.filter(l => idSet.has(l.id));
   if (selected.length === 0) return;
 

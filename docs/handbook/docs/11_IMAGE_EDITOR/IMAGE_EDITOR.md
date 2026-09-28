@@ -24,6 +24,8 @@ image-editor/
     transform/, text/, shape/, gradient/   tools
     io/FileIO.ts        import (MAX_DIM 8192), export via LayerPainter, mask export, resample
     io/psdImport.ts     PSD → layered document via ag-psd (MIT, lazy chunk)
+    looks/              Look recipes (JSON), .cube parser, LUT registry, LookRenderer (fused WebGL2 look pass), built-in looks
+  looks/lab/            #looks-lab Phase 0 diagnostics page (GPU caps, LUT accuracy, pass timings, RAW decode)
     autosave/           IndexedDB 'kollektiv-editor-autosave' v2 (PNG blobs + masks, formatVersion 2)
     thumbnails/         per-layer thumbnail cache
   ui/                   ImageEditorPage, EditorToolbar (Image/Select/Adjust menus), ToolRail, ToolHeader, CanvasViewport,
@@ -33,6 +35,7 @@ image-editor/
 
 Key rules:
 
+- **Look layers** (`type: 'look'`) shade the composite beneath them: `LayerPainter.drawLookLayer` reads `ctx.canvas`, runs `LookRenderer` (one fused pass; grain/vignette in document space via the inverse canvas transform) and copies the result back; opacity is the look's strength. `drawLayers` caches the composite up to the topmost look for the on-screen painter, keyed on the identity of every layer below (+ transform, canvas size, LUT registry version); a live brush/clone stroke or adjustment preview below disables/refreshes it. Looks are top-level only, can't be merged into, merge-down/flatten bake them. No WebGL2 → the look is skipped, never faked.
 - **One compositor.** `LayerPainter` draws every layer kind (image/text/shape, groups, masks, 16 native + 9 WebGL2 manual blend modes). The viewport, export, merge down, flatten and the magic wand (`rasterizeLayersToCanvas`) all go through it, so none can diverge from what the user sees. Don't write another.
 - **Doc space vs bitmap space.** Pointer input is document space; pixel tools stamp into a layer's bitmap, which is drawn through its transform. Always map with `geometry/docToLayer` / `docToBitmapMatrix` — painting doc coordinates directly lands in the wrong place on moved/scaled/rotated/flipped/cropped layers.
 - **Selections are document-space**, raster (wand) masks are document-sized. Paint tools rasterize the selection into bitmap space once per stroke and composite a stroke buffer through it once per pointer event (`composeStroke`); per-dab `clip()` on a wand path was ~15 s per stroke on a noisy photo. Fill, delete, gradient and adjustments use the exact per-row clip path.

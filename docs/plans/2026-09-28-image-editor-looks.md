@@ -1,6 +1,8 @@
 # Image Editor — Looks (Textures // Overlays // Filters), Quick-Edit mode, RAW import
 
-Status: **Phase 0 in progress** — measurement page built (`#looks-lab`, `image-editor/looks/lab/`); waiting for results from the owner's real GPU and a RAW file. Date: 2026-09-28.
+Status: **Phase 1 core landed; Phase 0 measurements pending** — `#looks-lab` is built and waits for results from the owner's real GPU and a RAW file (they only choose fallbacks). Date: 2026-09-28.
+
+**Phase 1 progress (2026-09-28):** `LookLayer` type + `drawLayer` branch; `LookRenderer` fused pass (develop, 3D LUT, curve, split tone, fade, vignette, grain — linear-light exposure/WB/grain, document-space grain and vignette, one quantize); on-screen render cache in `LayerPainter.drawLayers` keyed on the identity of the layers below (skips live strokes and adjustment previews); export/flatten/wand share the uncached path; recipe JSON (`core/looks/recipe.ts`, validated by `parseRecipe`) and `.cube` parser (`core/looks/cube.ts`) with tests; autosave serializes look layers (additive, no format bump); looks are top-level only, can't be merged into, and merge-down bakes them. Temporary entry: Adjust → Look: Warm Fade / Soft Matte / Grainy Mono. **Not yet:** wiring the dormant AdjustmentLayer through the same branch, bundled LUT assets, the Looks panel (Phase 2).
 Inputs: 4 research reports (product, pipeline, frontend UX, React), a 3-way design debate
 (architecture reviewer, product skeptic, graphics engineer), a RAW/DNG research pass, and the
 owner's decisions below. Brainstorm artefacts were not committed; this file is the record.

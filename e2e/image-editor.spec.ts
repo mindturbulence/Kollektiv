@@ -323,3 +323,71 @@ test('opens a layered PSD as a layered document', async ({ page }) => {
     await expect(rows.nth(0)).toContainText('Patch'); // top of the stack
     await expect(rows.nth(1)).toContainText('Base');
 });
+
+test('a look layer grades what is below it, not what is above; strength and undo work', async ({ page }) => {
+    await bootToAppShell(page, 'image_editor');
+    // 400×300: blue left, red right (docToClient assumes a 400×300 document).
+    const png = Buffer.from((await page.evaluate(() => {
+        const c = document.createElement('canvas'); c.width = 400; c.height = 300;
+        const x = c.getContext('2d')!;
+        x.fillStyle = '#2040c0'; x.fillRect(0, 0, 200, 300);
+        x.fillStyle = '#c03030'; x.fillRect(200, 0, 200, 300);
+        return c.toDataURL('image/png');
+    })).split(',')[1], 'base64');
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
+    await (await chooser).setFiles({ name: 'look.png', mimeType: 'image/png', buffer: png });
+    await expect(page.getByText('400 × 300px')).toBeVisible({ timeout: 15_000 });
+    await waitForFit(page);
+    const spread = (p: number[]) => Math.max(...p) - Math.min(...p);
+
+    // Grainy Mono: saturation −1 → the red half turns grey.
+    await page.getByRole('button', { name: 'Adjust', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Look: Grainy Mono' }).click();
+    await expect(page.locator('[draggable]').first()).toContainText('Grainy Mono');
+    await expect.poll(async () => spread(await pixelAt(page, 300, 150)), { timeout: 5_000 }).toBeLessThan(40);
+
+    // Strength = layer opacity: 0 shows the original red.
+    const slider = page.locator('input[type=range]').first();
+    await slider.fill('0');
+    await expect.poll(async () => (await pixelAt(page, 300, 150))[0], { timeout: 5_000 }).toBeGreaterThan(150);
+    await slider.fill('100');
+    await expect.poll(async () => spread(await pixelAt(page, 300, 150)), { timeout: 5_000 }).toBeLessThan(40);
+
+    // Red foreground (via the Shape tool's fill input), then the brush.
+    // Tool-rail clicks, not shortcuts: focus is still in the opacity slider, where keys are ignored.
+    await page.getByRole('button', { name: /^Shape/ }).first().click();
+    await page.locator('input[type=color]').first().fill('#ff2020');
+    const draw = async (x0: number, x1: number, y: number) => {
+        const a = await docToClient(page, x0, y);
+        const b = await docToClient(page, x1, y);
+        await page.mouse.move(a.x, a.y); await page.mouse.down();
+        for (let i = 1; i <= 25; i++) await page.mouse.move(a.x + (b.x - a.x) * i / 25, a.y);
+        await page.mouse.up();
+    };
+
+    // Paint ABOVE the look (a new top layer): the red stroke stays saturated.
+    await page.getByRole('button', { name: 'New blank layer' }).click();
+    await page.getByRole('button', { name: /^Brush/ }).first().click();
+    await draw(220, 380, 60);
+    await expect.poll(async () => spread(await pixelAt(page, 300, 60)), { timeout: 5_000 }).toBeGreaterThan(120);
+
+    // Paint BELOW the look (Background, blue half): the pixel changes but stays grey —
+    // the look's cache was invalidated and the new stroke is graded.
+    const before = await pixelAt(page, 100, 240);
+    await page.locator('[draggable]').last().click();
+    await draw(20, 180, 240);
+    await expect.poll(async () => Math.abs((await pixelAt(page, 100, 240))[0] - before[0]), { timeout: 5_000 }).toBeGreaterThan(10);
+    expect(spread(await pixelAt(page, 100, 240))).toBeLessThan(40);
+
+    // Flatten bakes the look (the uncached export/flatten path shades the same way).
+    await page.getByRole('button', { name: 'Flatten image' }).click();
+    await expect(page.locator('[draggable]')).toHaveCount(1);
+    expect(spread(await pixelAt(page, 300, 150))).toBeLessThan(40);
+    expect(spread(await pixelAt(page, 300, 60))).toBeGreaterThan(120); // the red stroke above the look stays red
+
+    // Undo back past the look: colour returns.
+    await page.getByRole('tab', { name: 'History' }).click();
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await expect.poll(async () => (await pixelAt(page, 300, 150))[0], { timeout: 5_000 }).toBeGreaterThan(150);
+});

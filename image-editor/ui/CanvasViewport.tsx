@@ -320,7 +320,7 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
       // Gizmo works for every layer type — text and shape transform like image
       // layers (review H9; the old image-only guard made them immovable).
       const layer = findLayerById(doc.layers, activeLayerId);
-      if (layer) {
+      if (layer && layer.type !== 'look') { // a look covers the document; nothing to move
         const canvas = editorCanvasRef.current!;
         const { width: cssW, height: cssH } = canvas.getBoundingClientRect();
         const handles = getGizmoHandles(layer.transform, viewport, cssW, cssH, doc.width, doc.height);

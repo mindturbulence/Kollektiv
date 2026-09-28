@@ -378,7 +378,7 @@ export class CanvasRenderer {
       // Gizmo renders for every layer type (review H9 — text and shape layers
       // were excluded, leaving them immovable).
       const layer = findLayerById(doc.layers, state.activeLayerId);
-      if (layer) {
+      if (layer && layer.type !== 'look') { // looks cover the document; no gizmo
         const handles = getGizmoHandles(layer.transform, viewport, W, H, docW, docH);
 
         // Bounding box
@@ -517,10 +517,8 @@ export class CanvasRenderer {
     ctx.rect(0, 0, document.width, document.height);
     ctx.clip();
 
-    // index 0 = topmost → draw last.
-    for (let i = document.layers.length - 1; i >= 0; i--) {
-      this.painter.drawLayer(ctx, document.layers[i]);
-    }
+    // index 0 = topmost → drawn last; looks shade what's below them (cached).
+    this.painter.drawLayers(ctx, document.layers);
 
     ctx.restore();
 

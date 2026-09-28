@@ -361,7 +361,9 @@ const LayersPanel: React.FC = () => {
   const activeTopLevelIndex = activeLayerId ? layers.findIndex(l => l.id === activeLayerId) : -1;
   const canMergeDown = activeTopLevelIndex >= 0 &&
     activeTopLevelIndex < layers.length - 1 &&
-    layers[activeTopLevelIndex + 1].type !== 'group';
+    layers[activeTopLevelIndex + 1].type !== 'group' &&
+    layers[activeTopLevelIndex + 1].type !== 'look';
+  const activeIsLook = activeLayer?.type === 'look';
 
   // The drop splices the dragged layer into the target's index, so dragging
   // down lands BELOW the target and dragging up lands ABOVE it.
@@ -406,8 +408,8 @@ const LayersPanel: React.FC = () => {
             <select
               className="select select-sm select-bordered rounded-none w-full text-xs font-mono"
               value={activeLayer?.blendMode ?? 'normal'}
-              disabled={!activeLayer || activeLayerIsGroup}
-              title={activeLayerIsGroup ? 'Group blend mode is not composited yet — applies per-child' : undefined}
+              disabled={!activeLayer || activeLayerIsGroup || activeIsLook}
+              title={activeLayerIsGroup ? 'Group blend mode is not composited yet — applies per-child' : activeIsLook ? 'A look grades the layers beneath it; opacity is its strength' : undefined}
               onChange={(e) =>
                 activeLayerId &&
                 LayerManager.setLayerBlendMode(activeLayerId, e.target.value as BlendMode)

@@ -9,7 +9,8 @@ import { dispatch, getSnapshot, subscribe } from '../core/store';
 import * as HistoryManager from '../core/history/HistoryManager';
 import { ZOOM_STOPS, type AdjustmentPanel } from '../core/types';
 import { findLayerById } from '../core/layers/layerTree';
-import { fillSelection, deleteInSelection } from '../core/layers/LayerManager';
+import { fillSelection, deleteInSelection, addLookLayer } from '../core/layers/LayerManager';
+import { BUILTIN_LOOKS } from '../core/looks/builtins';
 import { SelectionEngine } from '../core/selection/SelectionEngine';
 import {
   DocumentIcon, UndoIcon, RedoIcon, ChevronDownIcon,
@@ -280,13 +281,22 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         />
         <ToolbarMenu
           label="Adjust"
-          items={ADJUSTMENTS.map(({ panel, label, shortcut }) => ({
-            label,
-            shortcut,
-            disabled: !activeIsImage,
-            reason: 'Select an image layer to adjust',
-            onSelect: () => dispatch({ type: 'OPEN_ADJUSTMENT', panel }),
-          }))}
+          items={[
+            ...ADJUSTMENTS.map(({ panel, label, shortcut }) => ({
+              label,
+              shortcut,
+              disabled: !activeIsImage,
+              reason: 'Select an image layer to adjust',
+              onSelect: () => dispatch({ type: 'OPEN_ADJUSTMENT', panel }),
+            })),
+            // Phase 1 entry for looks; the Looks panel (Quick mode) replaces this.
+            ...BUILTIN_LOOKS.map((look) => ({
+              label: `Look: ${look.name}`,
+              disabled: !hasDoc,
+              reason: noDoc,
+              onSelect: () => void addLookLayer(look.build()),
+            })),
+          ]}
         />
       </div>
 

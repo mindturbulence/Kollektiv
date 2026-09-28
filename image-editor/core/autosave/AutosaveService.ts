@@ -16,11 +16,13 @@ import type {
   AdjustmentLayer,
   ShapeLayer,
   TextLayer,
+  LookLayer,
   Layer,
   LayerMask,
   LayerTransform,
 } from '../types';
 import { getSnapshot, subscribe } from '../store';
+import { parseRecipe, makeRecipe, type LookRecipe } from '../looks/recipe';
 
 const DB_NAME = 'kollektiv-editor-autosave';
 const DB_VERSION = 2; // v2: PNG blobs + serialized masks (was JPEG, no masks)
@@ -79,6 +81,13 @@ interface SerializedShapeLayer extends SerializedLayerBase {
   stroke?: { color: string; width: number };
 }
 
+/** Recipes are plain JSON; restore re-validates them with parseRecipe. Adding
+ *  this type was additive (old records have none), so no format bump. */
+interface SerializedLookLayer extends SerializedLayerBase {
+  type: 'look';
+  recipe: LookRecipe;
+}
+
 interface SerializedTextLayer extends SerializedLayerBase {
   type: 'text';
   text: string;
@@ -91,7 +100,8 @@ type SerializedLayer =
   | SerializedGroupLayer
   | SerializedAdjustmentLayer
   | SerializedShapeLayer
-  | SerializedTextLayer;
+  | SerializedTextLayer
+  | SerializedLookLayer;
 
 type AutosaveMetadata = Omit<EditorDocument, 'layers'>;
 
@@ -176,6 +186,8 @@ async function serializeLayer(layer: Layer, blobs: Record<string, ArrayBuffer>):
       };
     case 'text':
       return { ...base, type: 'text', text: layer.text, font: layer.font, color: layer.color };
+    case 'look':
+      return { ...base, type: 'look', recipe: layer.recipe };
   }
 }
 
@@ -233,6 +245,11 @@ async function deserializeLayer(meta: SerializedLayer, blobs: Record<string, Arr
     }
     case 'text': {
       const layer: TextLayer = { ...base, type: 'text', text: meta.text, font: meta.font, color: meta.color };
+      return layer;
+    }
+    case 'look': {
+      // A recipe from an incompatible build restores as an empty look (the layer is kept).
+      const layer: LookLayer = { ...base, type: 'look', recipe: parseRecipe(meta.recipe) ?? makeRecipe(meta.name, []) };
       return layer;
     }
   }

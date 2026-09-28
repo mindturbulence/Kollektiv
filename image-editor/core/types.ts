@@ -2,6 +2,8 @@
 // All types in this file are plain JSON-compatible (except ImageBitmap refs).
 // ImageBitmap refs are NOT serialized to IDB — only the encoded blob bytes are.
 
+import type { LookRecipe } from './looks/recipe';
+
 // ─── Geometry ───────────────────────────────────────────────────────────────
 
 export interface Rect {
@@ -59,7 +61,7 @@ export interface LayerMask {
 
 // ─── Layers ─────────────────────────────────────────────────────────────────
 
-export type LayerType = 'image' | 'group' | 'adjustment' | 'shape' | 'text';
+export type LayerType = 'image' | 'group' | 'adjustment' | 'shape' | 'text' | 'look';
 
 interface LayerBase {
   id: string;
@@ -105,7 +107,15 @@ export interface TextLayer extends LayerBase {
   color: string;
 }
 
-export type Layer = ImageLayer | GroupLayer | AdjustmentLayer | ShapeLayer | TextLayer;
+/** A Look (film grade, grain, …) applied to the composite beneath it. Its
+ *  opacity is the look's strength. Top-level only (groups don't composite as a
+ *  unit). See core/looks/ and the Looks plan. */
+export interface LookLayer extends LayerBase {
+  type: 'look';
+  recipe: LookRecipe;
+}
+
+export type Layer = ImageLayer | GroupLayer | AdjustmentLayer | ShapeLayer | TextLayer | LookLayer;
 
 // ─── Adjustments ────────────────────────────────────────────────────────────
 
