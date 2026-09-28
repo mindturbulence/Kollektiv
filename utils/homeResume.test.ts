@@ -20,7 +20,7 @@ describe('resolveRecentTools', () => {
     expect(resolveRecentTools(['prompts', 'crafter', 'converter', 'discovery', 'settings'])).toEqual([
       { tab: 'crafter', label: 'Crafter', group: 'Workbench' },
       { tab: 'converter', label: 'Converter', group: 'Utilities' },
-      { tab: 'discovery', label: 'Discovery', group: 'Discovery' },
+      { tab: 'discovery', label: 'Discovery', group: 'Workbench' },
     ]);
   });
 });
