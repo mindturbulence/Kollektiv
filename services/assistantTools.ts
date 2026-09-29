@@ -1269,6 +1269,45 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         },
     },
     {
+        name: 'convert_file',
+        description: "Convert an image, audio or video file from the user's vault to another format (the Converter's engines: ImageMagick for images, ffmpeg for audio/video, all in the browser). Pass a vault path (e.g. 'gallery/photos/x.png') or a gallery item id. The result is saved to 'gallery/converted/' in the vault and its path is returned. Targets: webp, avif, png, jpeg, gif, tiff, bmp, mp3, wav, flac, ogg, m4a, aac, mp4, webm.",
+        parameters: {
+            type: 'object',
+            properties: {
+                path: { type: 'string', description: 'Vault-relative path of the source file. Use this or gallery_item_id.' },
+                gallery_item_id: { type: 'string', description: 'Gallery item id (from search_gallery); its first media file is converted.' },
+                target: { type: 'string', description: 'Target format id.', enum: ['webp', 'avif', 'png', 'jpeg', 'gif', 'tiff', 'bmp', 'mp3', 'wav', 'flac', 'ogg', 'm4a', 'aac', 'mp4', 'webm'] },
+                quality: { type: 'number', description: 'Optional quality 1-100 (default 80; for MP3/OGG/M4A/AAC 40 = 128 kbps).' },
+                max_edge: { type: 'number', description: 'Optional longest side in px for images/video; only shrinks.' },
+            },
+            required: ['target'],
+        },
+        execute: async ({ path, gallery_item_id, target, quality, max_edge }) => {
+            const { fileSystemManager } = await import('../utils/fileUtils');
+            if (!fileSystemManager.isDirectorySelected()) return 'Error: no vault folder is connected.';
+            let source = path ? String(path) : '';
+            if (!source && gallery_item_id) {
+                const item = (await loadGalleryItems()).find(i => i.id === String(gallery_item_id));
+                if (!item) return `Error: no gallery item with id "${gallery_item_id}". Use search_gallery to find current items.`;
+                source = item.urls[0] ?? '';
+            }
+            if (!source) return 'Error: pass a vault path or a gallery_item_id.';
+            const blob = await fileSystemManager.getFileAsBlob(source);
+            if (!blob) return `Error: "${source}" was not found in the vault.`;
+            const { convertVaultFile } = await import('./convert/convertFile');
+            try {
+                const out = await convertVaultFile(blob, source, String(target), {
+                    quality: typeof quality === 'number' ? quality : undefined,
+                    maxEdge: typeof max_edge === 'number' ? max_edge : undefined,
+                });
+                await fileSystemManager.saveFile(out.path, out.blob);
+                return `Converted "${source}" to ${String(target).toUpperCase()}: saved as ${out.path} (${Math.round(out.blob.size / 1024)} KB).`;
+            } catch (e: any) {
+                return `Error converting "${source}": ${e?.message || e}`;
+            }
+        },
+    },
+    {
         name: 'gallery_stats',
         description: 'Get analytics and statistics about the full gallery. Returns JSON with total counts, tag frequency, category distribution, model usage breakdown, source distribution, generation timeline, and top prompt words. Useful before search_gallery to understand what\'s in the gallery.',
         parameters: { type: 'object', properties: {} },

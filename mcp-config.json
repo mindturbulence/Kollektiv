@@ -734,6 +734,26 @@
       "category": "gallery"
     },
     {
+      "name": "convert_file",
+      "description": "Convert a vault image, audio or video file to another format with the in-browser Converter engines; saves to gallery/converted/.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "Vault-relative path of the source file." },
+          "gallery_item_id": { "type": "string", "description": "Gallery item id; its first media file is converted." },
+          "target": { "type": "string", "description": "Target format id.", "enum": ["webp", "avif", "png", "jpeg", "gif", "tiff", "bmp", "mp3", "wav", "flac", "ogg", "m4a", "aac", "mp4", "webm"] },
+          "quality": { "type": "number", "description": "Optional quality 1-100." },
+          "max_edge": { "type": "number", "description": "Optional longest side in px; only shrinks." }
+        },
+        "required": ["target"]
+      },
+      "executionKind": "browser-context",
+      "filePath": "services/assistantTools.ts",
+      "sourceModule": "ASSISTANT_TOOLS",
+      "permissions": ["vault:write"],
+      "category": "media"
+    },
+    {
       "name": "capability_search",
       "description": "Search registered capabilities by keyword against id, name, description, and tags.",
       "parameters": {

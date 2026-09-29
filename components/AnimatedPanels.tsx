@@ -19,7 +19,7 @@ export const TerminalText = ({ text, delay = 0, className = "", centered = false
 
     useEffect(() => {
         if (!started || !text) return;
-        if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
             setDisplayedText(text);
             setIsComplete(true);
             return;

@@ -76,7 +76,7 @@ Boundary: Assets Manager = external multi-root browser; Vault gallery = ingested
 
 ## 6. Converter (deferred ideas)
 
-- [ ] `convert_file` assistant/MCP tool on the capability registry. **S**
+- [x] `convert_file` assistant/MCP tool — vault path or gallery item → any Converter target (quality, max size), saved to `gallery/converted/`; auto-registered as a capability; manifest entry in `mcp-config.json`. (2026-09-29)
 - [x] Export presets — Web image, Social post, Archive, Print, Web video, Social clip, Podcast, Broadcast audio; Max size (shrink only) for images and video; audio bitrate now 32–320 kbps (was capped at 100). (2026-09-29)
 - [x] Auto-convert on gallery save — the existing opt-in toggles now convert to JPG / WebP / AVIF (default JPG, unchanged); WebP/AVIF via the converter worker, noting the prompt isn't embedded in those files (Jev: format choice 0.73; metadata note 0.69 → Claude's call). (2026-09-29)
 - [ ] Long-form / >60 s 1080p video: server-side ffmpeg via `server.ts` (single-thread wasm is impractical). **L**
