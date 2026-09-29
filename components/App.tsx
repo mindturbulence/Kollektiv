@@ -613,7 +613,11 @@ const AppContent: React.FC = () => {
                         </div>
 
                         <div className={`flex-1 flex flex-col overflow-hidden relative ${activeTab === 'prompts' ? 'pt-0' : 'pt-0'} p-0 bg-transparent min-h-0 gap-0`}>
-                            <main className="flex-grow min-w-0 relative overflow-hidden rounded-none bg-transparent border-none shadow-none backdrop-blur-none z-10 py-6 px-7">
+                            <main className="flex-grow min-w-0 relative overflow-hidden rounded-none bg-transparent border-none shadow-none backdrop-blur-none z-10 py-6 px-7"
+                                // The closed side panels park off-screen inside <main>, so it has horizontal
+                                // overflow that focus/scroll-into-view can scroll to, shoving the page left.
+                                // Nothing should ever scroll it sideways (overflow: clip broke pointer holds).
+                                onScroll={e => { if (e.currentTarget.scrollLeft) e.currentTarget.scrollLeft = 0; }}>
                                 {/* Context Shift Engine — futuristic OS transition overlay */}
                                 <TransitionOverlay ref={transitionOverlayHandleRef} />
 

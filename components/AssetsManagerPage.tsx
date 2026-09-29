@@ -1,32 +1,60 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import { useObjectUrls } from '../utils/useObjectUrls';
-import { listRoots, addRoot, addRootFromHandle, removeRoot, requestRootPermission } from '../services/assets/assetRootManager';
+import { listRoots, addRoot, addRootFromHandle, removeRoot, requestRootPermission, ensureWritable } from '../services/assets/assetRootManager';
 import { scanDirectoryTree, listFolderFiles } from '../services/assets/directoryScanner';
-import { moveFilesToFolder } from '../services/assets/fileOps';
+import { transferFiles, resolveDir, resolveFile, moveOne, type ConflictPolicy, type Transferred } from '../services/assets/fileOps';
+import { indexFiles, RAW_EXTS, relocateCachedFacts, type AssetFacts } from '../services/assets/assetFacts';
+import {
+  getLibrary, getLibraryStatus, subscribeLibrary, loadLibrary, updateMeta, relocate, copyMeta, deleteCollection,
+  type ColorLabel, type FilterCriteria, type AssetMeta,
+} from '../services/assets/assetLibrary';
+import { matches, sortEntries, type AssetEntry, type SortKey } from '../services/assets/assetFilter';
+import { groupDuplicates } from '../services/assets/duplicates';
+import { canWriteMetadata, readXmpFields, sameMeta, writeMetadata } from '../services/assets/metadataWriter';
+import { latestOp, onJournalChanged, recordOp, undoOp, type JournalEntry } from '../services/assets/undoJournal';
+import type { RenamePlanItem } from '../services/assets/batchRename';
+import { saveToVault, vaultGalleryHandle } from '../services/assets/vaultBridge';
 import type { AssetFile, AssetRootState, DirectoryNode, ScanProgress } from '../services/assets/types';
 import { IMAGE_SOURCE_EXTS, SUPPORTED_SOURCE_EXTS } from '../constants/converterFormats';
 import { downloadZip } from '../utils/zipDownload';
 import { appEventBus } from '../utils/eventBus';
+import { largestEmbeddedJpeg } from '../utils/jpegScan';
+import { setPendingFiles, type HandoffTarget } from '../utils/pendingHandoff';
 import { openInVideoEditor } from '../video-editor/bridge/openInVideoEditor';
 import { FolderClosedIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon, CloseIcon, ChevronLeftIcon, CenterIcon, DownloadIcon, CheckIcon, EditIcon, RefreshIcon, FilmIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
+import FilterBar, { LABEL_COLORS } from './assets/FilterBar';
+import AssetInspector from './assets/AssetInspector';
+import { BatchRenameModal, CopyMoveModal, DuplicatesModal, VaultSaveModal } from './assets/AssetDialogs';
 
 // ── Constants ─────────────────────────────────────────────────────────
 
-const IMAGE_EXT_SET = new Set(IMAGE_SOURCE_EXTS);
+// Browser-decodable images plus camera RAWs (thumbnails from embedded JPEGs).
+const LISTED_EXT_SET = new Set<string>([...IMAGE_SOURCE_EXTS, ...RAW_EXTS]);
+const RAW_EXT_SET = new Set<string>(RAW_EXTS);
+// What an <img> can show when a file has no cached thumbnail (yet, or ever).
+const BROWSER_SHOWS = new Set(['png', 'jpg', 'jpeg', 'webp', 'avif', 'gif', 'bmp']);
 // Video, image and audio — everything the converter can already read.
 const VIDEO_EDITOR_EXT_SET = new Set(SUPPORTED_SOURCE_EXTS);
 // ponytail: page cap keeps 10k+ image folders from choking the grid; bump if
 // virtualization is ever needed instead.
 const PAGE_SIZE = 200;
+// Bridge keys: 1–5 rate, 0 clears; 6–9 red/yellow/green/blue.
+const LABEL_KEYS: Record<string, ColorLabel> = { '6': 'red', '7': 'yellow', '8': 'green', '9': 'blue' };
+
+const parentOf = (path: string) => (path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '');
+const joinPath = (dir: string, name: string) => (dir ? `${dir}/${name}` : name);
+const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 interface AssetsManagerPageProps {
   isExiting?: boolean;
   showGlobalFeedback?: (msg: string) => void;
 }
+
+type View = { kind: 'folder' } | { kind: 'collection'; id: string };
 
 // ── Component ─────────────────────────────────────────────────────────
 
@@ -36,6 +64,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   const [selectedRootId, setSelectedRootId] = useState<string | null>(null);
   const [tree, setTree] = useState<DirectoryNode | null>(null);
   const [selectedFolderPath, setSelectedFolderPath] = useState<string>('');
+  const [view, setView] = useState<View>({ kind: 'folder' });
   const [folderFiles, setFolderFiles] = useState<AssetFile[]>([]);
   const [isScanningTree, setIsScanningTree] = useState(false);
   const [isListingFolder, setIsListingFolder] = useState(false);
@@ -43,16 +72,27 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   const [refreshTick, setRefreshTick] = useState(0);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [objectUrls, setObjectUrls] = useState<Map<string, string>>(new Map());
+  const [facts, setFacts] = useState<Map<string, AssetFacts>>(new Map());
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const [currentDirHandle, setCurrentDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<{ id: string; url: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBusy, setIsBusy] = useState(false);
   const [dragOverPath, setDragOverPath] = useState<string | null>(null);
   const [isDraggingRootDrop, setIsDraggingRootDrop] = useState(false);
+  const [criteria, setCriteria] = useState<FilterCriteria>({});
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [descending, setDescending] = useState(false);
+  const [expandedStacks, setExpandedStacks] = useState<Set<string>>(new Set());
+  const [dialog, setDialog] = useState<null | 'rename' | 'copymove' | 'duplicates' | 'vault'>(null);
+  const [undoEntry, setUndoEntry] = useState<JournalEntry | null>(null);
+  const [missingInCollection, setMissingInCollection] = useState(0);
+
+  const library = useSyncExternalStore(subscribeLibrary, getLibrary);
+  const libStatus = useSyncExternalStore(subscribeLibrary, getLibraryStatus);
 
   const { track, revoke } = useObjectUrls();
-  // Generation counter guards against stale async getFile() resolutions
-  // landing after the user has already switched folders/roots.
+  // Generation counter guards against stale async resolutions (listing,
+  // indexing, URL creation) landing after the user switched folders/roots.
   const generationRef = useRef(0);
   const objectUrlsRef = useRef<Map<string, string>>(new Map());
   objectUrlsRef.current = objectUrls;
@@ -62,6 +102,14 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   const draggedFileIdsRef = useRef<string[]>([]);
 
   const selectedRoot = useMemo(() => roots.find(r => r.id === selectedRootId) ?? null, [roots, selectedRootId]);
+  const rootById = useCallback((id: string) => roots.find(r => r.id === id && r.status === 'granted') ?? null, [roots]);
+
+  // ── Library + undo journal ───────────────────────────────────────────
+
+  useEffect(() => { void loadLibrary(); }, []);
+
+  const refreshUndo = useCallback(() => { latestOp().then(e => setUndoEntry(e ?? null), () => setUndoEntry(null)); }, []);
+  useEffect(() => { refreshUndo(); return onJournalChanged(refreshUndo); }, [refreshUndo]);
 
   // ── Roots ───────────────────────────────────────────────────────────
 
@@ -85,9 +133,20 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       if (!added) return; // user cancelled the picker
       await refreshRoots();
       setSelectedRootId(added.id);
+      setView({ kind: 'folder' });
     } catch (e) {
       showGlobalFeedback?.(e instanceof Error ? e.message : 'Could not add folder.');
     }
+  }, [refreshRoots, showGlobalFeedback]);
+
+  /** The local vault's gallery folder as a root (plan Task 24). */
+  const handleAddVaultRoot = useCallback(async () => {
+    const handle = await vaultGalleryHandle();
+    if (!handle) { showGlobalFeedback?.('The vault is not a local folder (or not connected) — there is nothing to browse here.'); return; }
+    const added = await addRootFromHandle(handle);
+    await refreshRoots();
+    setSelectedRootId(added.id);
+    setView({ kind: 'folder' });
   }, [refreshRoots, showGlobalFeedback]);
 
   const handleRemoveRoot = useCallback(
@@ -132,7 +191,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
     };
   }, [selectedRoot]);
 
-  // ── Folder listing + object URL lifecycle ────────────────────────────
+  // ── Folder / collection listing + object URL lifecycle ───────────────
 
   const revokeAllTracked = useCallback(() => {
     objectUrlsRef.current.forEach(url => revoke(url));
@@ -141,30 +200,54 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   }, [revoke]);
 
   useEffect(() => {
-    // New folder/root: invalidate any in-flight getFile() loads and drop
-    // every previously created object URL for the folder we're leaving.
+    // New folder/root/collection: invalidate in-flight loads and drop every
+    // object URL made for what we're leaving.
     generationRef.current += 1;
     const myGeneration = generationRef.current;
     revokeAllTracked();
+    setFacts(new Map());
     setVisibleCount(PAGE_SIZE);
     setLightboxIndex(null);
     setSelectedIds(new Set());
     lastClickedIndexRef.current = null;
 
+    if (view.kind === 'collection') {
+      // A collection spans folders and roots: resolve each member by path.
+      const collection = library.collections.find(c => c.id === view.id);
+      if (!collection) { setFolderFiles([]); return; }
+      setIsListingFolder(true);
+      void (async () => {
+        const files: AssetFile[] = [];
+        let missing = 0;
+        for (const id of collection.ids) {
+          const sep = id.indexOf(':');
+          const root = rootById(id.slice(0, sep));
+          const path = id.slice(sep + 1);
+          try {
+            if (!root) throw new Error('root not connected');
+            const { handle, name } = await resolveFile(root.handle, path);
+            const dot = name.lastIndexOf('.');
+            files.push({ id, rootId: root.id, path, name, ext: dot > 0 ? name.slice(dot + 1).toLowerCase() : '', handle });
+          } catch { missing++; }
+        }
+        if (myGeneration !== generationRef.current) return;
+        setFolderFiles(files);
+        setMissingInCollection(missing);
+        setIsListingFolder(false);
+      })();
+      return;
+    }
+
     if (!selectedRoot || selectedRoot.status !== 'granted' || !tree) {
       setFolderFiles([]);
-      setCurrentDirHandle(null);
       return;
     }
 
     const targetNode = findNodeByPath(tree, selectedFolderPath);
     if (!targetNode) {
       setFolderFiles([]);
-      setCurrentDirHandle(null);
       return;
     }
-    setCurrentDirHandle(targetNode.handle);
-
     setIsListingFolder(true);
     setListProgress(null);
     void listFolderFiles(selectedRoot.id, targetNode.handle, selectedFolderPath, progress => {
@@ -172,41 +255,125 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       setListProgress(progress);
     }).then(({ files, truncated }) => {
       if (myGeneration !== generationRef.current) return;
-      const images = files.filter(f => IMAGE_EXT_SET.has(f.ext));
-      setFolderFiles(images);
+      setFolderFiles(files.filter(f => LISTED_EXT_SET.has(f.ext)));
       setIsListingFolder(false);
       setListProgress(null);
       if (truncated) showGlobalFeedback?.('Folder listing stopped early — permission or read error.');
     });
+    // Collection membership changes re-list only when that collection is open.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRoot, tree, selectedFolderPath, refreshTick]);
+  }, [selectedRoot, tree, selectedFolderPath, refreshTick, view, view.kind === 'collection' ? library.collections : null]);
 
-  const visibleFiles = folderFiles.slice(0, visibleCount);
-  const loadedThumbCount = visibleFiles.filter(f => objectUrls.has(f.id)).length;
-  const isDecodingThumbs = !isListingFolder && visibleFiles.length > 0 && loadedThumbCount < visibleFiles.length;
-  const decodePercent = visibleFiles.length > 0 ? Math.round((loadedThumbCount / visibleFiles.length) * 100) : 0;
-
-  // Lazily decode object URLs only for the currently visible slice.
+  // Index the listed files (plan Tasks 5/6): cached facts resolve at once,
+  // new/changed files decode once for dimensions, thumbnail and dHash.
   useEffect(() => {
     const myGeneration = generationRef.current;
+    let buffer = new Map<string, AssetFacts>();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const flush = () => {
+      timer = undefined;
+      if (myGeneration !== generationRef.current || buffer.size === 0) return;
+      const batch = buffer;
+      buffer = new Map();
+      setFacts(prev => { const next = new Map(prev); batch.forEach((v, k) => next.set(k, v)); return next; });
+    };
+    void indexFiles(folderFiles, (id, f) => {
+      buffer.set(id, f);
+      timer ??= setTimeout(flush, 120);
+    }, () => myGeneration !== generationRef.current).then(flush);
+    return () => { if (timer) clearTimeout(timer); };
+  }, [folderFiles]);
+
+  // ── Entries: facts + metadata, stacks collapsed, filtered and sorted ──
+
+  const entries = useMemo<AssetEntry[]>(
+    () => folderFiles.map(file => ({ file, facts: facts.get(file.id), meta: library.assets[file.id] })),
+    [folderFiles, facts, library.assets],
+  );
+  const entryById = useMemo(() => new Map(entries.map(e => [e.file.id, e])), [entries]);
+
+  const { shownEntries, stackInfo } = useMemo(() => {
+    const present = new Set(folderFiles.map(f => f.id));
+    const hidden = new Set<string>();
+    const info = new Map<string, { stackId: string; count: number; expanded: boolean }>();
+    for (const s of library.stacks) {
+      const members = s.ids.filter(id => present.has(id));
+      if (members.length < 2) continue;
+      const expanded = expandedStacks.has(s.id);
+      info.set(members[0], { stackId: s.id, count: members.length, expanded });
+      if (!expanded) members.slice(1).forEach(id => hidden.add(id));
+    }
+    const list = sortEntries(entries.filter(e => !hidden.has(e.file.id) && matches(e, criteria)), sortKey, descending);
+    return { shownEntries: list, stackInfo: info };
+  }, [entries, folderFiles, library.stacks, expandedStacks, criteria, sortKey, descending]);
+
+  const visibleFiles = useMemo(() => shownEntries.slice(0, visibleCount).map(e => e.file), [shownEntries, visibleCount]);
+  const loadedThumbCount = visibleFiles.filter(f => objectUrls.has(f.id) || (facts.has(f.id) && !facts.get(f.id)!.thumb && !BROWSER_SHOWS.has(f.ext))).length;
+  const isDecodingThumbs = !isListingFolder && visibleFiles.length > 0 && loadedThumbCount < visibleFiles.length;
+  const decodePercent = visibleFiles.length > 0 ? Math.round((loadedThumbCount / visibleFiles.length) * 100) : 0;
+  const folderExts = useMemo(() => [...new Set(folderFiles.map(f => f.ext))].sort(), [folderFiles]);
+  const vocabulary = useMemo(() => [...new Set(Object.values(library.assets).flatMap(m => m.tags ?? []))].sort(), [library.assets]);
+
+  // Card images for the visible slice: the cached thumbnail when there is one,
+  // else (facts known, no thumbnail) the file itself if the browser can show it.
+  useEffect(() => {
+    const myGeneration = generationRef.current;
+    const add = (id: string, url: string) => setObjectUrls(prev => { const next = new Map(prev); next.set(id, url); return next; });
     visibleFiles.forEach(file => {
       if (objectUrlsRef.current.has(file.id)) return;
-      void file.handle.getFile().then(blob => {
-        if (myGeneration !== generationRef.current) return; // stale — folder switched under us
-        const url = track(URL.createObjectURL(blob));
-        setObjectUrls(prev => {
-          const next = new Map(prev);
-          next.set(file.id, url);
-          return next;
-        });
-      }).catch(() => { /* unreadable file — card shows broken-image fallback */ });
+      const f = facts.get(file.id);
+      if (!f) return;
+      if (f.thumb) {
+        const url = track(URL.createObjectURL(f.thumb));
+        objectUrlsRef.current.set(file.id, url);
+        add(file.id, url);
+      } else if (BROWSER_SHOWS.has(file.ext)) {
+        objectUrlsRef.current.set(file.id, '');
+        void file.handle.getFile().then(blob => {
+          if (myGeneration !== generationRef.current) return; // stale — folder switched under us
+          const url = track(URL.createObjectURL(blob));
+          objectUrlsRef.current.set(file.id, url);
+          add(file.id, url);
+        }).catch(() => { /* unreadable file — card shows its type badge */ });
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleFiles.map(f => f.id).join(',')]);
+  }, [visibleFiles, facts]);
 
   // Unmount teardown — useObjectUrls already revokes tracked URLs, this just
   // clears local bookkeeping.
   useEffect(() => () => { objectUrlsRef.current = new Map(); }, []);
+
+  // Full-resolution image for the lightbox (RAW: its embedded preview).
+  useEffect(() => {
+    const file = lightboxIndex === null ? undefined : visibleFiles[lightboxIndex];
+    if (!file) { setLightboxUrl(null); return; }
+    let cancelled = false;
+    let made: string | null = null;
+    void (async () => {
+      const blob = await file.handle.getFile();
+      let src: Blob = blob;
+      if (RAW_EXT_SET.has(file.ext)) {
+        const bmp = await largestEmbeddedJpeg(new Uint8Array(await blob.arrayBuffer()));
+        if (!bmp) return;
+        const c = new OffscreenCanvas(bmp.width, bmp.height);
+        c.getContext('2d')!.drawImage(bmp, 0, 0);
+        bmp.close();
+        src = await c.convertToBlob({ type: 'image/jpeg', quality: 0.92 });
+      }
+      if (cancelled) return;
+      made = track(URL.createObjectURL(src));
+      setLightboxUrl({ id: file.id, url: made });
+    })().catch(() => { /* keep the thumbnail */ });
+    return () => { cancelled = true; if (made) revoke(made); };
+  }, [lightboxIndex, visibleFiles, track, revoke]);
+
+  const lightboxUrls = useMemo(() => {
+    if (!lightboxUrl) return objectUrls;
+    const m = new Map(objectUrls);
+    m.set(lightboxUrl.id, lightboxUrl.url);
+    return m;
+  }, [objectUrls, lightboxUrl]);
 
   // ── Selection ──────────────────────────────────────────────────────
 
@@ -248,6 +415,180 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   }, [visibleFiles, selectedIds]);
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+  const selectedEntries = useMemo(() => entries.filter(e => selectedIds.has(e.file.id)), [entries, selectedIds]);
+
+  // Keyboard (plan Tasks 10, 25): rate/label the selection, select all, clear.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+      if (lightboxIndex !== null || dialog) return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && visibleFiles.length) {
+        e.preventDefault();
+        setSelectedIds(new Set(visibleFiles.map(f => f.id)));
+        return;
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey || selectedIds.size === 0) return;
+      const ids = [...selectedIds];
+      if (/^[0-5]$/.test(e.key)) updateMeta(ids, { rating: Number(e.key) || undefined });
+      else if (LABEL_KEYS[e.key]) updateMeta(ids, m => ({ ...m, label: ids.length === 1 && m.label === LABEL_KEYS[e.key] ? undefined : LABEL_KEYS[e.key] }));
+      else if (e.key === 'Escape') clearSelection();
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedIds, visibleFiles, lightboxIndex, dialog, clearSelection]);
+
+  // ── File operations (rename / copy / move / write-back / undo) ─────────
+  // Each starts with the write-permission request, before any other await,
+  // so the click's user gesture is still live when the browser asks.
+
+  const needWrite = useCallback(async (rootIds: string[]): Promise<boolean> => {
+    for (const id of [...new Set(rootIds)]) {
+      const root = rootById(id);
+      if (!root || !(await ensureWritable(root.handle))) {
+        showGlobalFeedback?.(`Write access to "${root?.name ?? 'a folder root'}" wasn't granted — nothing was changed.`);
+        return false;
+      }
+    }
+    return true;
+  }, [rootById, showGlobalFeedback]);
+
+  const applyTransfers = useCallback((done: Transferred[], mode: 'move' | 'copy') => {
+    for (const d of done) {
+      if (mode === 'move') { relocate(d.fromId, d.toId); void relocateCachedFacts(d.fromId, d.toId); }
+      else copyMeta(d.fromId, d.toId);
+    }
+  }, []);
+
+  const finishOp = useCallback((summary: string) => {
+    showGlobalFeedback?.(summary);
+    setSelectedIds(new Set());
+    setDialog(null);
+    setRefreshTick(t => t + 1);
+  }, [showGlobalFeedback]);
+
+  const runTransfer = useCallback(async (
+    files: AssetFile[], dest: { rootId: string; path: string; handle: FileSystemDirectoryHandle }, mode: 'move' | 'copy', policy: ConflictPolicy, destName: string,
+  ) => {
+    if (!(await needWrite([dest.rootId, ...(mode === 'move' ? files.map(f => f.rootId) : [])]))) return;
+    setIsBusy(true);
+    try {
+      const items = await Promise.all(files.map(async file => ({ file, srcDir: await resolveDir(rootById(file.rootId)!.handle, parentOf(file.path)) })));
+      const res = await transferFiles(items, dest, mode, policy);
+      applyTransfers(res.done, mode);
+      await recordOp({ kind: 'transfer', mode, label: `${mode === 'move' ? 'Move' : 'Copy'} ${res.done.length} to "${destName}"`, items: res.done }).catch(() => {});
+      const verb = mode === 'move' ? 'Moved' : 'Copied';
+      finishOp([
+        `${verb} ${res.done.length} file${res.done.length === 1 ? '' : 's'} to "${destName}".`,
+        res.skipped.length ? `Skipped ${res.skipped.length} (same name exists).` : '',
+        res.failed.length ? `Failed ${res.failed.length}: ${res.failed[0].error}` : '',
+      ].filter(Boolean).join(' '));
+    } catch (e) {
+      showGlobalFeedback?.(`${mode === 'move' ? 'Move' : 'Copy'} failed: ${errText(e)}`);
+    } finally {
+      setIsBusy(false);
+    }
+  }, [needWrite, rootById, applyTransfers, finishOp, showGlobalFeedback]);
+
+  const handleRename = useCallback(async (plan: RenamePlanItem[]) => {
+    const root = selectedRoot;
+    if (!root || !(await needWrite([root.id]))) return;
+    setIsBusy(true);
+    const changing = plan.filter(p => p.newName !== p.entry.file.name);
+    const stamp = Date.now();
+    const parked: { p: RenamePlanItem; temp: string }[] = [];
+    const done: Transferred[] = [];
+    try {
+      const dir = await resolveDir(root.handle, selectedFolderPath);
+      // Two phases (temporary names first) so names swapping within the batch can't collide.
+      for (const [i, p] of changing.entries()) {
+        const temp = `.kollektiv-rename-${stamp}-${i}`;
+        await moveOne(p.entry.file.handle, dir, p.entry.file.name, dir, temp);
+        parked.push({ p, temp });
+      }
+      while (parked.length) {
+        const { p, temp } = parked[0];
+        await moveOne(await dir.getFileHandle(temp), dir, temp, dir, p.newName);
+        parked.shift();
+        const toPath = joinPath(selectedFolderPath, p.newName);
+        done.push({ fromId: p.entry.file.id, toId: `${root.id}:${toPath}`, fromRootId: root.id, fromPath: p.entry.file.path, toRootId: root.id, toPath });
+      }
+    } catch (e) {
+      // Put any file still parked under a temporary name back where it was.
+      const dir = await resolveDir(root.handle, selectedFolderPath).catch(() => null);
+      for (const { p, temp } of parked) {
+        if (dir) await moveOne(await dir.getFileHandle(temp), dir, temp, dir, p.entry.file.name).catch(() => {});
+      }
+      showGlobalFeedback?.(`Rename stopped: ${errText(e)}`);
+    } finally {
+      applyTransfers(done, 'move');
+      await recordOp({ kind: 'transfer', mode: 'move', label: `Rename ${done.length}`, items: done }).catch(() => {});
+      setIsBusy(false);
+      if (done.length) finishOp(`Renamed ${done.length} file${done.length === 1 ? '' : 's'}.`);
+    }
+  }, [selectedRoot, selectedFolderPath, needWrite, applyTransfers, finishOp, showGlobalFeedback]);
+
+  const handleWriteMetadata = useCallback(async () => {
+    const targets = selectedEntries.filter(e => canWriteMetadata(e.file.ext));
+    if (!targets.length || !(await needWrite(targets.map(e => e.file.rootId)))) return;
+    setIsBusy(true);
+    const originals: { rootId: string; path: string; original: Blob }[] = [];
+    const failed: string[] = [];
+    for (const e of targets) {
+      try {
+        const original = await e.file.handle.getFile();
+        const meta = library.assets[e.file.id] ?? {};
+        const out = writeMetadata(new Uint8Array(await original.arrayBuffer()), e.file.ext, meta);
+        const w = await e.file.handle.createWritable(); // atomic: the file is swapped on close
+        await w.write(out as Uint8Array<ArrayBuffer>);
+        await w.close();
+        const back = readXmpFields(new Uint8Array(await (await e.file.handle.getFile()).arrayBuffer()), e.file.ext);
+        if (!back || !sameMeta(back, meta)) {
+          const r = await e.file.handle.createWritable();
+          await r.write(original);
+          await r.close();
+          throw new Error('read-back did not match; the original was restored');
+        }
+        originals.push({ rootId: e.file.rootId, path: e.file.path, original });
+      } catch (err) {
+        failed.push(`${e.file.name}: ${errText(err)}`);
+      }
+    }
+    await recordOp({ kind: 'write', label: `Write metadata to ${originals.length}`, files: originals }).catch(() => {});
+    setIsBusy(false);
+    const skipped = selectedEntries.length - targets.length;
+    showGlobalFeedback?.([
+      `Wrote metadata into ${originals.length} file${originals.length === 1 ? '' : 's'}.`,
+      skipped ? `${skipped} stay index-only (not JPEG/PNG).` : '',
+      failed.length ? `Failed: ${failed[0]}` : '',
+    ].filter(Boolean).join(' '));
+    setRefreshTick(t => t + 1);
+  }, [selectedEntries, library.assets, needWrite, showGlobalFeedback]);
+
+  const handleUndo = useCallback(async () => {
+    const entry = undoEntry;
+    if (!entry) return;
+    const op = entry.op;
+    const rootIds = op.kind === 'write' ? op.files.map(f => f.rootId) : op.items.flatMap(i => [i.fromRootId, i.toRootId]);
+    if (!(await needWrite(rootIds))) return;
+    setIsBusy(true);
+    try {
+      const res = await undoOp(entry, id => rootById(id)?.handle ?? null);
+      res.relocations.forEach(r => { relocate(r.from, r.to); void relocateCachedFacts(r.from, r.to); });
+      if (res.removed.length) updateMeta(res.removed, () => ({}));
+      showGlobalFeedback?.(res.failed.length
+        ? `Undo of "${op.label}" was partial — ${res.failed.length} item(s) couldn't be reversed: ${res.failed[0].error}`
+        : `Undid "${op.label}".`);
+      refreshUndo();
+      setRefreshTick(t => t + 1);
+    } catch (e) {
+      showGlobalFeedback?.(`Undo failed: ${errText(e)}`);
+    } finally {
+      setIsBusy(false);
+    }
+  }, [undoEntry, needWrite, rootById, refreshUndo, showGlobalFeedback]);
 
   // ── Drag-and-drop: move selected assets into a sidebar folder ────────
 
@@ -263,27 +604,12 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
     setDragOverPath(null);
     const ids = draggedFileIdsRef.current;
     draggedFileIdsRef.current = [];
-    if (ids.length === 0 || !currentDirHandle) return;
-    if (targetNode.path === selectedFolderPath) return; // dropped on the folder they're already in
+    if (ids.length === 0 || !selectedRoot) return;
+    if (view.kind === 'folder' && targetNode.path === selectedFolderPath) return; // dropped on the folder they're already in
     const filesToMove = folderFiles.filter(f => ids.includes(f.id));
     if (filesToMove.length === 0) return;
-
-    setIsBusy(true);
-    try {
-      const result = await moveFilesToFolder(filesToMove, currentDirHandle, targetNode.handle);
-      if (result.moved.length > 0) {
-        setSelectedIds(new Set());
-        setRefreshTick(t => t + 1);
-      }
-      if (result.failed.length > 0) {
-        showGlobalFeedback?.(`Moved ${result.moved.length}, failed ${result.failed.length}: ${result.failed[0].error}`);
-      } else if (result.moved.length > 0) {
-        showGlobalFeedback?.(`Moved ${result.moved.length} file${result.moved.length === 1 ? '' : 's'} to "${targetNode.name}".`);
-      }
-    } finally {
-      setIsBusy(false);
-    }
-  }, [currentDirHandle, selectedFolderPath, folderFiles, showGlobalFeedback]);
+    await runTransfer(filesToMove, { rootId: selectedRoot.id, path: targetNode.path, handle: targetNode.handle }, 'move', 'keep-both', targetNode.name);
+  }, [selectedRoot, view.kind, selectedFolderPath, folderFiles, runTransfer]);
 
   // ── Drag-and-drop: drop an OS folder onto the roots panel to add it ──
 
@@ -331,8 +657,8 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       } else {
-        const entries = await Promise.all(files.map(async f => ({ name: f.path, content: await f.handle.getFile() })));
-        await downloadZip(entries, `assets-export-${Date.now()}.zip`);
+        const entries_ = await Promise.all(files.map(async f => ({ name: f.path, content: await f.handle.getFile() })));
+        await downloadZip(entries_, `assets-export-${Date.now()}.zip`);
       }
     } catch (e) {
       showGlobalFeedback?.(e instanceof Error ? e.message : 'Export failed.');
@@ -383,6 +709,54 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
     }
   }, [getSelectedFiles, showGlobalFeedback]);
 
+  /** Resizer / Media Analyzer handoff (plan Task 23): park the files, navigate. */
+  const handleSendTo = useCallback(async (target: HandoffTarget) => {
+    const files = getSelectedFiles().filter(f => !RAW_EXT_SET.has(f.ext));
+    if (files.length === 0) { showGlobalFeedback?.('RAW files can\'t go there — develop them in the Image Editor first.'); return; }
+    setIsBusy(true);
+    try {
+      setPendingFiles(target, await Promise.all(files.map(f => f.handle.getFile())));
+      appEventBus.emit('navigate', target);
+    } catch (e) {
+      showGlobalFeedback?.(`Could not hand the files over: ${errText(e)}`);
+    } finally {
+      setIsBusy(false);
+    }
+  }, [getSelectedFiles, showGlobalFeedback]);
+
+  const handleSaveToVault = useCallback(async (categoryId: string | undefined) => {
+    setIsBusy(true);
+    setDialog(null);
+    try {
+      const res = await saveToVault(selectedEntries.map(e => ({ file: e.file, meta: e.meta })), categoryId);
+      showGlobalFeedback?.([
+        `Saved ${res.saved} to the gallery.`,
+        res.skipped.length ? `Skipped ${res.skipped.length}: ${res.skipped[0].reason}.` : '',
+        res.failed.length ? `Failed ${res.failed.length}: ${res.failed[0].error}` : '',
+      ].filter(Boolean).join(' '));
+    } catch (e) {
+      showGlobalFeedback?.(errText(e));
+    } finally {
+      setIsBusy(false);
+    }
+  }, [selectedEntries, showGlobalFeedback]);
+
+  const duplicateGroups = useMemo(() => {
+    if (dialog !== 'duplicates') return [];
+    const hashed = shownEntries.filter(e => e.facts?.dhash).map(e => ({ id: e.file.id, dhash: e.facts!.dhash! }));
+    const px = (e: AssetEntry) => (e.facts?.width ?? 0) * (e.facts?.height ?? 0);
+    return groupDuplicates(hashed).map(g => g.map(id => entryById.get(id)!).sort((a, b) => px(b) - px(a)));
+  }, [dialog, shownEntries, entryById]);
+
+  const activeCollection = view.kind === 'collection' ? library.collections.find(c => c.id === view.id) : undefined;
+  const headerTitle = activeCollection ? `COLLECTION · ${activeCollection.name}` : (selectedFolderPath || (selectedRoot ? selectedRoot.name : 'NO FOLDER SELECTED'));
+  const folderNames = useMemo(() => folderFiles.map(f => f.name), [folderFiles]);
+  const renameEntries = useMemo(() => shownEntries.filter(e => selectedIds.has(e.file.id)), [shownEntries, selectedIds]);
+  const renameOthers = useMemo(() => {
+    const renaming = new Set(renameEntries.map(e => e.file.name));
+    return folderNames.filter(n => !renaming.has(n));
+  }, [folderNames, renameEntries]);
+
   // ── Render ──────────────────────────────────────────────────────────
 
   if (rootsLoaded && roots.length === 0) {
@@ -392,7 +766,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   return (
     <div className="h-full w-full flex flex-col relative overflow-hidden">
       <div className="flex-grow flex min-h-0 px-6 py-4 gap-4">
-        {/* SIDEBAR: roots + folder tree */}
+        {/* SIDEBAR: roots + folder tree + collections */}
         <motion.aside
           variants={panelVariants}
           initial="hidden"
@@ -404,9 +778,14 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
           <div className="flex flex-col h-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
             <div className="p-4 bg-base-100/10 flex justify-between items-center">
               <TerminalText text="ASSET ROOTS" delay={0.6} className="text-xs font-black uppercase text-primary" />
-              <button className="form-btn h-7 px-2 text-2xs" onClick={() => void handleAddRoot()} aria-label="Add folder root">
-                + ADD
-              </button>
+              <div className="flex gap-1">
+                <button className="form-btn h-7 px-2 text-2xs" onClick={() => void handleAddVaultRoot()} aria-label="Add the vault gallery as a root" title="Browse the Vault gallery folder here">
+                  + VAULT
+                </button>
+                <button className="form-btn h-7 px-2 text-2xs" onClick={() => void handleAddRoot()} aria-label="Add folder root">
+                  + ADD
+                </button>
+              </div>
             </div>
             <div
               className={`overflow-y-auto p-2 border-b flex flex-col gap-1 transition-colors ${isDraggingRootDrop ? 'border-primary bg-primary/5' : 'border-base-content/10'}`}
@@ -419,8 +798,8 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                 <RootRow
                   key={root.id}
                   root={root}
-                  selected={root.id === selectedRootId}
-                  onSelect={() => root.status === 'granted' && setSelectedRootId(root.id)}
+                  selected={root.id === selectedRootId && view.kind === 'folder'}
+                  onSelect={() => { if (root.status === 'granted') { setSelectedRootId(root.id); setView({ kind: 'folder' }); } }}
                   onReconnect={() => void handleReconnect(root)}
                   onRemove={() => void handleRemoveRoot(root.id)}
                 />
@@ -439,8 +818,8 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
               {tree && (
                 <FolderTreeNode
                   node={tree}
-                  selectedPath={selectedFolderPath}
-                  onSelect={setSelectedFolderPath}
+                  selectedPath={view.kind === 'folder' ? selectedFolderPath : null}
+                  onSelect={path => { setSelectedFolderPath(path); setView({ kind: 'folder' }); }}
                   depth={0}
                   dragOverPath={dragOverPath}
                   onDragOverNode={setDragOverPath}
@@ -451,6 +830,22 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                 <p className="text-2xs font-mono uppercase text-base-content/60 p-2">Select a root to browse.</p>
               )}
             </div>
+            {library.collections.length > 0 && (
+              <div className="border-t border-base-content/10 p-2 flex flex-col gap-0.5 max-h-48 overflow-y-auto" aria-label="Collections">
+                <span className="text-2xs font-mono font-black uppercase text-primary px-1 pb-1">Collections</span>
+                {library.collections.map(c => (
+                  <div key={c.id}
+                    className={`group flex items-center gap-2 px-2 py-1 rounded text-xs font-mono cursor-pointer ${view.kind === 'collection' && view.id === c.id ? 'bg-primary/15 text-primary' : 'hover:bg-base-200/50 text-base-content/70'}`}
+                    onClick={() => setView({ kind: 'collection', id: c.id })}>
+                    <span className="truncate flex-grow">{c.name}</span>
+                    <span className="text-2xs text-base-content/50">{c.ids.length}</span>
+                    <button type="button" aria-label={`Delete collection ${c.name}`} title="Delete the collection (files are untouched)"
+                      className="opacity-0 group-hover:opacity-100 text-base-content/60 hover:text-error"
+                      onClick={e => { e.stopPropagation(); deleteCollection(c.id); if (view.kind === 'collection' && view.id === c.id) setView({ kind: 'folder' }); }}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </motion.aside>
 
@@ -466,54 +861,98 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
           <PanelLine position="left" delay={0.7} />
           <PanelLine position="right" delay={0.8} />
           <ScanLine delay={3.5} />
-          <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-            <motion.header variants={sectionWipeVariants} custom={1.2} initial="hidden" animate="visible" className="p-4 bg-base-100/10 flex justify-between items-center">
-              <TerminalText text={selectedFolderPath || (selectedRoot ? selectedRoot.name : 'NO FOLDER SELECTED')} delay={0.8} className="text-2xs font-black uppercase text-primary truncate" />
-              <span className="text-2xs font-mono font-bold text-base-content/60 uppercase flex-shrink-0">
-                {folderFiles.length} IMAGE{folderFiles.length === 1 ? '' : 'S'}
-              </span>
-            </motion.header>
-            <motion.div variants={contentVariants} custom={2.2} initial="hidden" animate="visible" className="flex-grow overflow-y-auto p-3" aria-live="polite">
-              {isListingFolder ? (
-                <div className="h-full min-h-[240px]" />
-              ) : folderFiles.length === 0 ? (
-                <div className="h-full min-h-[240px] flex flex-col items-center justify-center text-center opacity-30">
-                  <p className="text-xs font-black uppercase tracking-[0.4em]">No Images Here</p>
-                  <p className="text-2xs font-mono uppercase tracking-widest mt-2">
-                    {selectedRoot ? 'Pick another folder in the sidebar' : 'Select a root to begin'}
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-2" data-testid="asset-grid">
-                    {visibleFiles.map((file, idx) => (
-                      <AssetCard
-                        key={file.id}
-                        file={file}
-                        url={objectUrls.get(file.id)}
-                        selected={selectedIds.has(file.id)}
-                        hasSelection={selectedIds.size > 0}
-                        onClick={e => handleCardClick(file, idx, e)}
-                        onToggleSelect={() => setSelectedIds(prev => {
-                          const next = new Set(prev);
-                          if (next.has(file.id)) next.delete(file.id);
-                          else next.add(file.id);
-                          return next;
-                        })}
-                        onDragStart={e => handleCardDragStart(file, e)}
-                      />
-                    ))}
-                  </div>
-                  {visibleCount < folderFiles.length && (
-                    <div className="flex justify-center py-4">
-                      <button className="form-btn h-9 px-6 text-2xs" onClick={() => setVisibleCount(v => v + PAGE_SIZE)}>
-                        LOAD MORE ({folderFiles.length - visibleCount} remaining)
-                      </button>
-                    </div>
+          <div className="flex h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+            <div className="flex flex-col flex-grow min-w-0">
+              <motion.header variants={sectionWipeVariants} custom={1.2} initial="hidden" animate="visible" className="p-4 bg-base-100/10 flex justify-between items-center gap-3">
+                <TerminalText text={headerTitle} delay={0.8} className="text-2xs font-black uppercase text-primary truncate" />
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {undoEntry && (
+                    <button type="button" disabled={isBusy} className="form-btn h-7 px-2 text-2xs" title="Undo the last file operation (survives restarts)" onClick={() => void handleUndo()}>
+                      UNDO: {undoEntry.op.label}
+                    </button>
                   )}
-                </>
+                  <button type="button" disabled={!shownEntries.some(e => e.facts?.dhash)} className="form-btn h-7 px-2 text-2xs" onClick={() => setDialog('duplicates')}>
+                    DUPLICATES
+                  </button>
+                  <span className="text-2xs font-mono font-bold text-base-content/60 uppercase">
+                    {folderFiles.length} IMAGE{folderFiles.length === 1 ? '' : 'S'}
+                  </span>
+                </div>
+              </motion.header>
+              {libStatus.kind !== 'saved' && (
+                <p role="status" className="px-4 py-1.5 text-2xs font-mono uppercase text-warning border-b border-base-content/10">
+                  {libStatus.kind === 'no-vault'
+                    ? 'Ratings, tags and collections are kept for this session only — connect a vault to save them.'
+                    : libStatus.reason}
+                </p>
               )}
-            </motion.div>
+              {missingInCollection > 0 && view.kind === 'collection' && (
+                <p className="px-4 py-1.5 text-2xs font-mono uppercase text-warning border-b border-base-content/10">
+                  {missingInCollection} item{missingInCollection === 1 ? '' : 's'} of this collection can't be found (moved outside the manager, or its root isn't connected).
+                </p>
+              )}
+              <FilterBar criteria={criteria} onChange={c => { setCriteria(c); setVisibleCount(PAGE_SIZE); }} sort={sortKey} descending={descending}
+                onSort={(k, d) => { setSortKey(k); setDescending(d); }} exts={folderExts} saved={library.filters}
+                shown={shownEntries.length} total={folderFiles.length} />
+              <motion.div variants={contentVariants} custom={2.2} initial="hidden" animate="visible" className="flex-grow overflow-y-auto p-3" aria-live="polite">
+                {isListingFolder ? (
+                  <div className="h-full min-h-[240px]" />
+                ) : shownEntries.length === 0 ? (
+                  <div className="h-full min-h-[240px] flex flex-col items-center justify-center text-center opacity-30">
+                    <p className="text-xs font-black uppercase tracking-[0.4em]">{folderFiles.length ? 'Nothing Matches' : 'No Images Here'}</p>
+                    <p className="text-2xs font-mono uppercase tracking-widest mt-2">
+                      {folderFiles.length ? 'Loosen or clear the filters' : selectedRoot ? 'Pick another folder in the sidebar' : 'Select a root to begin'}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-2" data-testid="asset-grid">
+                      {visibleFiles.map((file, idx) => (
+                        <AssetCard
+                          key={file.id}
+                          file={file}
+                          url={objectUrls.get(file.id) || undefined}
+                          noPreview={facts.has(file.id) && !facts.get(file.id)!.thumb && !BROWSER_SHOWS.has(file.ext)}
+                          meta={library.assets[file.id]}
+                          stack={stackInfo.get(file.id)}
+                          onToggleStack={id => setExpandedStacks(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
+                          selected={selectedIds.has(file.id)}
+                          hasSelection={selectedIds.size > 0}
+                          onClick={e => handleCardClick(file, idx, e)}
+                          onToggleSelect={() => setSelectedIds(prev => {
+                            const next = new Set(prev);
+                            if (next.has(file.id)) next.delete(file.id);
+                            else next.add(file.id);
+                            return next;
+                          })}
+                          onDragStart={e => handleCardDragStart(file, e)}
+                        />
+                      ))}
+                    </div>
+                    {visibleCount < shownEntries.length && (
+                      <div className="flex justify-center py-4">
+                        <button className="form-btn h-9 px-6 text-2xs" onClick={() => setVisibleCount(v => v + PAGE_SIZE)}>
+                          LOAD MORE ({shownEntries.length - visibleCount} remaining)
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </motion.div>
+            </div>
+            {selectedEntries.length > 0 && (
+              <AssetInspector
+                entries={selectedEntries}
+                library={library}
+                vocabulary={vocabulary}
+                canRename={view.kind === 'folder'}
+                busy={isBusy}
+                onRename={() => setDialog('rename')}
+                onCopyMove={() => setDialog('copymove')}
+                onWriteMetadata={() => void handleWriteMetadata()}
+                onClose={clearSelection}
+              />
+            )}
             <AnimatePresence>
               {(isListingFolder || isDecodingThumbs) && (
                 <motion.div
@@ -553,6 +992,9 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
             onConvert={() => void handleSendToConverter()}
             onEdit={selectedIds.size === 1 ? () => void handleEditInImageEditor() : undefined}
             onOpenInVideoEditor={getSelectedFiles().every(f => VIDEO_EDITOR_EXT_SET.has(f.ext)) ? () => void handleOpenInVideoEditor() : undefined}
+            onResize={() => void handleSendTo('resizer')}
+            onAnalyze={selectedIds.size === 1 ? () => void handleSendTo('media_analyzer') : undefined}
+            onSaveToVault={() => setDialog('vault')}
             onDeselect={clearSelection}
           />
         )}
@@ -562,13 +1004,23 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
         {lightboxIndex !== null && (
           <Lightbox
             files={visibleFiles}
-            urls={objectUrls}
+            urls={lightboxUrls}
             index={lightboxIndex}
             onClose={() => setLightboxIndex(null)}
             onIndexChange={setLightboxIndex}
           />
         )}
       </AnimatePresence>
+
+      <BatchRenameModal isOpen={dialog === 'rename'} entries={renameEntries} otherNames={renameOthers} busy={isBusy}
+        onClose={() => setDialog(null)} onApply={plan => void handleRename(plan)} />
+      <CopyMoveModal isOpen={dialog === 'copymove'} count={selectedIds.size} roots={roots} initialRootId={selectedRootId} busy={isBusy}
+        onClose={() => setDialog(null)}
+        onApply={(dest, mode, policy) => void runTransfer(getSelectedFiles(), { rootId: dest.root.id, path: dest.node.path, handle: dest.node.handle }, mode, policy, dest.node.name)} />
+      <VaultSaveModal isOpen={dialog === 'vault'} count={selectedIds.size} busy={isBusy} onClose={() => setDialog(null)}
+        onSave={categoryId => void handleSaveToVault(categoryId)} />
+      <DuplicatesModal isOpen={dialog === 'duplicates'} groups={duplicateGroups} thumbUrl={id => objectUrls.get(id) || undefined}
+        onClose={() => setDialog(null)} onSelectExtras={ids => { setSelectedIds(new Set(ids)); setDialog(null); }} />
     </div>
   );
 };
@@ -638,7 +1090,7 @@ const RootRow: React.FC<{
 
 const FolderTreeNode: React.FC<{
   node: DirectoryNode;
-  selectedPath: string;
+  selectedPath: string | null;
   onSelect: (path: string) => void;
   depth: number;
   dragOverPath: string | null;
@@ -699,12 +1151,17 @@ const FolderTreeNode: React.FC<{
 const AssetCard: React.FC<{
   file: AssetFile;
   url: string | undefined;
+  /** Facts are in and there's no preview the browser can show (TIFF/HEIC/…). */
+  noPreview: boolean;
+  meta: AssetMeta | undefined;
+  stack: { stackId: string; count: number; expanded: boolean } | undefined;
+  onToggleStack: (stackId: string) => void;
   selected: boolean;
   hasSelection: boolean;
   onClick: (e: React.MouseEvent) => void;
   onToggleSelect: () => void;
   onDragStart: (e: React.DragEvent) => void;
-}> = ({ file, url, selected, hasSelection, onClick, onToggleSelect, onDragStart }) => (
+}> = ({ file, url, noPreview, meta, stack, onToggleStack, selected, hasSelection, onClick, onToggleSelect, onDragStart }) => (
   <button
     onClick={onClick}
     draggable
@@ -717,6 +1174,8 @@ const AssetCard: React.FC<{
   >
     {url ? (
       <img src={url} alt={file.name} className="w-full h-auto object-cover" loading="lazy" draggable={false} />
+    ) : noPreview ? (
+      <div className="w-full aspect-square flex items-center justify-center text-sm font-mono font-black uppercase text-base-content/40">.{file.ext}</div>
     ) : (
       <div className="w-full aspect-square flex items-center justify-center">
         <LoadingSpinner size={16} className="opacity-40" />
@@ -735,6 +1194,24 @@ const AssetCard: React.FC<{
     >
       {selected && <CheckIcon className="w-3.5 h-3.5 text-primary-content" />}
     </div>
+    {(meta?.label || stack || RAW_EXT_SET.has(file.ext)) && (
+      <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+        {RAW_EXT_SET.has(file.ext) && <span className="px-1 text-2xs font-mono font-black bg-black/60 text-white">RAW</span>}
+        {stack && (
+          <span role="button" tabIndex={0} aria-label={stack.expanded ? 'Collapse stack' : `Expand stack of ${stack.count}`}
+            title={stack.expanded ? 'Collapse stack' : 'Show the stacked images'}
+            className="px-1.5 h-5 flex items-center text-2xs font-mono font-black bg-primary text-primary-content rounded"
+            onClick={e => { e.stopPropagation(); onToggleStack(stack.stackId); }}
+            onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); onToggleStack(stack.stackId); } }}>
+            {stack.expanded ? '−' : stack.count}
+          </span>
+        )}
+        {meta?.label && <span className="w-3 h-3 rounded-full border border-black/40" style={{ background: LABEL_COLORS[meta.label] }} aria-label={`${meta.label} label`} />}
+      </div>
+    )}
+    {meta?.rating ? (
+      <span className="absolute bottom-1.5 left-1.5 px-1 text-2xs text-warning bg-black/55 rounded" aria-label={`${meta.rating} stars`}>{'★'.repeat(meta.rating)}</span>
+    ) : null}
     <div className="absolute inset-0 flex flex-col justify-end p-2 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
       <p className="text-2xs font-mono truncate text-white text-left" title={file.name}>{file.name}</p>
     </div>
@@ -922,14 +1399,17 @@ const SelectionToolbar: React.FC<{
   onConvert: () => void;
   onEdit: (() => void) | undefined;
   onOpenInVideoEditor: (() => void) | undefined;
+  onResize: () => void;
+  onAnalyze: (() => void) | undefined;
+  onSaveToVault: () => void;
   onDeselect: () => void;
-}> = ({ count, busy, onExport, onConvert, onEdit, onOpenInVideoEditor, onDeselect }) => {
+}> = ({ count, busy, onExport, onConvert, onEdit, onOpenInVideoEditor, onResize, onAnalyze, onSaveToVault, onDeselect }) => {
   const content = (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-overlay flex items-center gap-3 bg-base-300/95 backdrop-blur-xl border border-base-content/10 rounded-full px-4 py-2 shadow-xl"
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-overlay flex flex-wrap items-center justify-center gap-x-1 gap-y-1 max-w-[calc(100vw-3rem)] bg-base-300/95 backdrop-blur-xl border border-base-content/10 rounded-3xl px-4 py-2 shadow-xl"
       role="toolbar"
       aria-label="Selection actions"
     >
@@ -956,6 +1436,17 @@ const SelectionToolbar: React.FC<{
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40"
       >
         <FilmIcon className="w-4 h-4" /> Video Editor
+      </button>
+      <button disabled={busy} onClick={onResize} className="px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40">
+        Resize
+      </button>
+      <button disabled={busy || !onAnalyze} onClick={onAnalyze} title={onAnalyze ? undefined : 'Select exactly one image to analyze'}
+        className="px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40">
+        Analyze
+      </button>
+      <button disabled={busy} onClick={onSaveToVault} title="Save into the Vault gallery with tags and caption"
+        className="px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40">
+        To Vault
       </button>
       <div className="w-px h-5 bg-base-content/10" />
       <button onClick={onDeselect} className="p-1.5 text-base-content/60 hover:text-error transition-colors" aria-label="Deselect all">

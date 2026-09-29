@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { audioService } from '../services/audioService';
 import { useSettings } from '../contexts/SettingsContext';
@@ -10,6 +10,7 @@ import type { EnhancementResult } from '../types';
 import { PROMPT_DETAIL_LEVELS } from '../constants';
 import { PhotoIcon, CloseIcon, SparklesIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
+import { takePendingFiles } from '../utils/pendingHandoff';
 import { SuggestionItem } from './SuggestionItem';
 import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 
@@ -74,6 +75,13 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
             setError('Unsupported format. Please use an image or video file.');
         }
     };
+
+    // A file handed over from the Assets Manager (plan Task 23), taken once on mount.
+    useEffect(() => {
+        const [file] = takePendingFiles('media_analyzer');
+        if (file) handleFileSelect(file);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();

@@ -94,3 +94,17 @@ export async function removeRoot(rootId: string): Promise<void> {
   const roots = await loadRoots();
   await persistRoots(roots.filter(r => r.id !== rootId));
 }
+
+/**
+ * Asks for write access to a root (rename, move, copy, metadata write-back).
+ * Call it first thing in the click handler, before any other await, so the
+ * user gesture is still live; already-granted roots resolve without a prompt.
+ */
+export async function ensureWritable(handle: FileSystemDirectoryHandle): Promise<boolean> {
+  try {
+    return (await asPermissionCapable(handle).requestPermission({ mode: 'readwrite' })) === 'granted';
+  } catch (e) {
+    console.warn('[assets] write permission request failed:', e);
+    return false;
+  }
+}

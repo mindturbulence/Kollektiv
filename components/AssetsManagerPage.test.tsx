@@ -88,11 +88,16 @@ vi.mock('../services/assets/assetRootManager', () => ({
   addRootFromHandle: (h: unknown) => addRootFromHandleMock(h),
   removeRoot: (rootId: string) => removeRootMock(rootId),
   requestRootPermission: (root: unknown) => requestRootPermissionMock(root),
+  ensureWritable: async () => true,
 }));
 
-const moveFilesToFolderMock = vi.fn(async (..._args: unknown[]) => ({ moved: [], failed: [] as { path: string; error: string }[] }));
+// Drag-to-folder moves go through the journaled transfer (plan Tasks 14/16).
+const transferFilesMock = vi.fn(async (..._args: unknown[]) => ({ done: [], skipped: [], failed: [] as { path: string; error: string }[] }));
 vi.mock('../services/assets/fileOps', () => ({
-  moveFilesToFolder: (...args: unknown[]) => moveFilesToFolderMock(...args),
+  transferFiles: (...args: unknown[]) => transferFilesMock(...args),
+  resolveDir: async () => ({}),
+  resolveFile: async () => { throw new Error('not in tests'); },
+  moveOne: async () => {},
 }));
 
 const downloadZipMock = vi.fn(async (..._args: unknown[]) => 'blob:zip');
@@ -132,7 +137,7 @@ beforeEach(() => {
   requestRootPermissionMock.mockClear();
   scanDirectoryTreeMock.mockClear();
   listFolderFilesMock.mockClear();
-  moveFilesToFolderMock.mockClear();
+  transferFilesMock.mockClear();
   downloadZipMock.mockClear();
   emitMock.mockClear();
 });
@@ -296,8 +301,10 @@ describe('AssetsManagerPage', () => {
     fireEvent.dragOver(screen.getByText('sub'), { dataTransfer });
     fireEvent.drop(screen.getByText('sub'), { dataTransfer });
 
-    await waitFor(() => expect(moveFilesToFolderMock).toHaveBeenCalledTimes(1));
-    const movedFiles = moveFilesToFolderMock.mock.calls[0]![0] as { name: string }[];
-    expect(movedFiles.map(f => f.name)).toEqual(['a.png']);
+    await waitFor(() => expect(transferFilesMock).toHaveBeenCalledTimes(1));
+    const [items, dest, mode, policy] = transferFilesMock.mock.calls[0]! as [{ file: { name: string } }[], { path: string }, string, string];
+    expect(items.map(i => i.file.name)).toEqual(['a.png']);
+    expect(dest.path).toBe('sub');
+    expect([mode, policy]).toEqual(['move', 'keep-both']);
   });
 });

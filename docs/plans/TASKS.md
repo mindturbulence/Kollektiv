@@ -29,29 +29,30 @@ via `loadManifestSafe` + `stampSchemaVersion`; AI only through the server Gemini
 port ImageGallery's `geminiService.ts`); use the shared `Modal`, never `window.confirm`.
 Boundary: Assets Manager = external multi-root browser; Vault gallery = ingested assets.
 
-- [ ] Human review of the Foundation phase.
-- [ ] **T5 Asset indexer** — path/name/ext/MIME/size/mtime/dimensions + EXIF (`utils/piexif.js`, `utils/imageFormatTools.ts`); incremental rescan by path+mtime; `ManifestWriteBlockedError` → read-only session. `services/assets/assetIndexer.ts`. **M**
-- [ ] **T6 Thumbnails** — 256 px, IDB `thumbnails` store; canvas for jpg/png/webp/gif, magick worker for tiff/bmp. **M** (after T5)
-- [ ] **T7 Filter panel + sort + smart collections** (AND-composed filters, saved filters in the manifest). **M** (after T5)
-- [ ] **T8 Metadata side panel** (EXIF/IPTC display; editable caption/keywords/copyright/rating into the index). **M**
-- [ ] **T10 Ratings + colour labels** (0–5, Bridge 6 colours; grid overlay; filterable). **S**
-- [ ] **T11 Tags & keywords** (autocomplete from `constants/modifiers.ts`; `autoTagService` batch). **M**
-- [ ] **T12 Collections + stacks** (manifest-persisted; survive rescan/restart). **M**
-- [ ] **T13 Batch rename** (tokens `{name} {index} {date} {width} {height} {rating} {label}`, preview table, index update, undoable). **M**
-- [ ] **T14 remainder** — conflict policy (skip/rename) UI and cross-root copy. **S**
-- [ ] **T15 Delete + safety** — soft-delete to `.kollektiv-trash/` per root (restorable, excluded from scans), hard delete double-confirmed, trash restore/empty. **M**
-- [ ] **T16 Undo journal** — IDB operation journal (rename/move/copy/delete), survives restart, honest degradation on permission loss. **M**
-- [ ] **T17 remainder** — save-to-vault export target. **S**
-- [ ] **T18 AI captions** (batch queue, resumable, no key → manual workflow unaffected). **M**
-- [ ] **T19 Auto-tagging** (vision → keywords, dedupe merge). **M**
-- [ ] **T20 Duplicate detection** (dHash during indexing, hamming grouping, review UI, soft-delete resolve). **M**
-- [ ] **T21 Find similar** (local phash nearest-neighbour v1; embeddings optional). **M**
-- [ ] **T22 XMP/IPTC write-back** — JPEG (piexif + APP1 XMP), PNG tEXt/iTXt, WebP best-effort, unsupported → visible "index-only" badge; atomic `createWritable` swap, re-read verify, undo journal. **M–L**
-- [ ] **T23 remainder** — Resizer and Analyzer handoffs. **S**
-- [ ] **T24 Vault bridge** — save-to-gallery with metadata, vault folder as root, push picks into gallery categories. **M**
-- [ ] **T25 View modes + keyboard** — grid size slider, list view, slideshow, shortcuts overlay. **M**
-- [ ] **RAW files** — list RAW (dng/cr2/cr3/nef/arw/…) with embedded-JPEG thumbnails; the editor handoff already routes RAW Files through the RAW importer. **S–M**
-- [ ] **T26 States + docs + e2e** — degraded states, `e2e/assets-manager.spec.ts` smoke, handbook entry. **S–M**
+- [ ] Human review of the Foundation phase — **owner**. (Built on anyway at the owner's request, 2026-09-29.)
+- [ ] Destructive-op UX review after T13–T16 (plan checkpoint) — **owner**.
+- [x] **T5 Asset indexer** — facts (size/mtime/dimensions/EXIF) cached in IndexedDB by `size:mtime`, incremental; user data in `kollektiv_assets_index.json`, in-memory with a notice without a vault, read-only on `ManifestWriteBlockedError`. (2026-09-29)
+- [x] **T6 Thumbnails** — 256 px WebP from the same decode (IndexedDB); undecodable formats (TIFF/HEIC) show a type badge instead of a magick-worker render. (2026-09-29)
+- [x] **T7 Filter panel + sort + saved filters** (AND-composed; saved filters in the manifest). (2026-09-29)
+- [x] **T8 Metadata side panel** (facts + EXIF; editable caption/tags/copyright/rating/label). (2026-09-29)
+- [x] **T10 Ratings + colour labels** (keys 0–5, 6–9; grid overlay; filterable). (2026-09-29)
+- [x] **T11 Tags & keywords** (datalist autocomplete from the user's own tags; bulk add/remove on a selection). Batch *AI* auto-tag is T19. (2026-09-29)
+- [x] **T12 Collections + stacks** (manifest-persisted, survive rescan/restart; collection view spans roots). (2026-09-29)
+- [x] **T13 Batch rename** (tokens, validated preview, two-phase apply, index follows, undoable). (2026-09-29)
+- [x] **T14** — conflict policy (skip / keep both) and cross-root copy/move. (2026-09-29)
+- [ ] **T15 Delete + safety** — soft-delete to `.kollektiv-trash/` per root, restore/empty. **M** — waits on the owner: soft-delete as the default?
+- [x] **T16 Undo journal** — IndexedDB, survives restart (e2e), per-item honest failures. (2026-09-29)
+- [x] **T17** — save-to-vault export target (via T24). (2026-09-29)
+- [ ] **T18 AI captions** (batch queue, resumable, no key → manual workflow unaffected). **M** — needs a live AI key to build/verify.
+- [ ] **T19 Auto-tagging** (vision → keywords, dedupe merge). **M** — needs a live AI key.
+- [x] **T20 Duplicate detection** (dHash from indexing, single-link groups, review + "select extras"; no delete — that's T15). (2026-09-29)
+- [ ] **T21 Find similar** — waits on the owner: phash-first or embeddings?
+- [x] **T22 XMP/IPTC write-back** — JPEG (XMP APP1 + EXIF) and PNG (iTXt XMP), atomic write, read-back verify (restores on mismatch), undoable; other formats index-only with a badge. (2026-09-29)
+- [x] **T23** — Resizer and Media Analyzer handoffs (`utils/pendingHandoff`). (2026-09-29)
+- [x] **T24 Vault bridge** — save to the gallery (category, tags, caption) and the local vault's gallery folder as a root. (2026-09-29)
+- [ ] **T25 View modes + keyboard** — grid size, list view, slideshow, shortcuts overlay. **M** — waits on the owner: slideshow wanted? (Rating/label/select-all keys are in.)
+- [x] **RAW files** — listed with embedded-JPEG thumbnails and a RAW badge; the editor handoff routes them to the RAW importer. (2026-09-29)
+- [x] **T26 States + docs + e2e** — no-vault/read-only/missing-collection notices, `e2e/assets-manager.spec.ts` (3 flows), handbook Feature Modules entry. (2026-09-29)
 - Open questions: soft-delete as the default? phash-first find-similar? slideshow in T25? index manifest in the vault?
 
 ## 3. App-wide (from the 2026-09-24 whole-app review)

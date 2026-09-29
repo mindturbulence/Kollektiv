@@ -521,6 +521,12 @@ class LocalFileSystemManager implements IFileSystemManager {
         return false;
     }
 
+    /** The vault's local folder, for features that browse it directly (the
+     *  Assets Manager's "vault as root"); null on Google Drive or before init. */
+    public getLocalDirectoryHandle(): FileSystemDirectoryHandle | null {
+        return this.storageProvider === 'drive' || !this.isInitialized ? null : this.appDirHandle;
+    }
+
     public isDirectorySelected(): boolean {
         if (this.storageProvider === 'drive') {
             return this.isInitialized && !!this.rootFolderId;

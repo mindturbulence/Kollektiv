@@ -4,6 +4,7 @@ import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, 
 import { downloadZip, makeUniqueName } from '../utils/zipDownload';
 import { UploadIcon, CropIcon, LinkIcon, LinkOffIcon } from './icons';
 import { COMPOSER_PRESETS } from '../constants';
+import { takePendingFiles } from '../utils/pendingHandoff';
 
 type ImageStatus = 'pending' | 'processing' | 'done' | 'error';
 type CropData = { x: number; y: number; width: number; height: number; };
@@ -545,6 +546,12 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
             setImages(prev => [...prev, ...processedItems]);
         });
     }, [settings.enableCropping, settings.width, settings.height, calculateCrop]);
+
+    // Files handed over from the Assets Manager (plan Task 23).
+    useEffect(() => {
+        const files = takePendingFiles('resizer');
+        if (files.length) handleAddFiles(files);
+    }, [handleAddFiles]);
 
     const handleSettingsChange = <K extends keyof ProcessSettings>(key: K, value: ProcessSettings[K]) => {
         setSettings(s => ({ ...s, [key]: value }));

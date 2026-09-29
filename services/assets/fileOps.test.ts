@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { moveFilesToFolder } from './fileOps';
+import { keepBothName, moveOne, transferFiles } from './fileOps';
 import type { AssetFile } from './types';
 
 function mockFile(name: string, path: string, content = 'x'): AssetFile {
@@ -9,64 +9,76 @@ function mockFile(name: string, path: string, content = 'x'): AssetFile {
     path,
     name,
     ext: name.split('.').pop() ?? '',
-    handle: {
-      getFile: async () => new File([content], name),
-    } as unknown as FileSystemFileHandle,
+    handle: { getFile: async () => new File([content], name) } as unknown as FileSystemFileHandle,
   };
 }
 
-function mockDestDir(getFileHandle = vi.fn(), createWritable = vi.fn()) {
-  return {
-    getFileHandle,
-    createWritable,
-  } as unknown as FileSystemDirectoryHandle;
+/** A folder with the given file names; writes are recorded. */
+function mockDir(names: string[] = []) {
+  const files = new Set(names);
+  const written: string[] = [];
+  const dir = {
+    getFileHandle: vi.fn(async (n: string, opts?: { create?: boolean }) => {
+      if (!files.has(n) && !opts?.create) throw Object.assign(new Error('NotFound'), { name: 'NotFoundError' });
+      files.add(n);
+      return { createWritable: async () => ({ write: vi.fn(), close: async () => { written.push(n); } }) };
+    }),
+    getDirectoryHandle: vi.fn(async () => { throw new Error('NotFound'); }),
+    removeEntry: vi.fn(async (n: string) => { files.delete(n); }),
+  };
+  return { dir: dir as unknown as FileSystemDirectoryHandle, files, written, raw: dir };
 }
 
-describe('moveFilesToFolder', () => {
-  it('uses handle.move() when available, without falling back to copy+delete', async () => {
+describe('moveOne', () => {
+  it('uses handle.move() when available, without copy+delete', async () => {
     const move = vi.fn().mockResolvedValue(undefined);
-    const file: AssetFile = { ...mockFile('a.png', 'a.png'), handle: { move } as unknown as FileSystemFileHandle };
-    const sourceDir = { removeEntry: vi.fn() } as unknown as FileSystemDirectoryHandle;
-    const destDir = mockDestDir();
-
-    const result = await moveFilesToFolder([file], sourceDir, destDir);
-
-    expect(move).toHaveBeenCalledWith(destDir, 'a.png');
-    expect(result.moved).toEqual(['a.png']);
-    expect(result.failed).toEqual([]);
-    expect((sourceDir as any).removeEntry).not.toHaveBeenCalled();
+    const src = mockDir(['a.png']), dest = mockDir();
+    await moveOne({ move } as unknown as FileSystemFileHandle, src.dir, 'a.png', dest.dir, 'a.png');
+    expect(move).toHaveBeenCalledWith(dest.dir, 'a.png');
+    expect(src.raw.removeEntry).not.toHaveBeenCalled();
   });
 
-  it('falls back to copy+delete when move() is unavailable', async () => {
-    const file = mockFile('b.png', 'sub/b.png');
-    const writable = { write: vi.fn(), close: vi.fn() };
-    const getFileHandle = vi.fn().mockResolvedValue({ createWritable: async () => writable });
-    const removeEntry = vi.fn();
-    const sourceDir = { removeEntry } as unknown as FileSystemDirectoryHandle;
-    const destDir = mockDestDir(getFileHandle);
+  it('falls back to copy + delete when move() is unavailable', async () => {
+    const src = mockDir(['b.png']), dest = mockDir();
+    await moveOne(mockFile('b.png', 'sub/b.png').handle, src.dir, 'b.png', dest.dir, 'c.png');
+    expect(dest.written).toEqual(['c.png']);
+    expect(src.raw.removeEntry).toHaveBeenCalledWith('b.png');
+  });
+});
 
-    const result = await moveFilesToFolder([file], sourceDir, destDir);
+describe('transferFiles', () => {
+  const dest = (d: FileSystemDirectoryHandle) => ({ rootId: 'r2', path: 'out', handle: d });
 
-    expect(getFileHandle).toHaveBeenCalledWith('b.png', { create: true });
-    expect(writable.write).toHaveBeenCalled();
-    expect(writable.close).toHaveBeenCalled();
-    expect(removeEntry).toHaveBeenCalledWith('b.png');
-    expect(result.moved).toEqual(['sub/b.png']);
+  it('copies with keep-both: a same-named file gets a number, ids follow', async () => {
+    const src = mockDir(['a.png']), out = mockDir(['a.png', 'a (2).png']);
+    const res = await transferFiles([{ file: mockFile('a.png', 'in/a.png'), srcDir: src.dir }], dest(out.dir), 'copy', 'keep-both');
+    expect(out.written).toEqual(['a (3).png']);
+    expect(res.done).toEqual([{ fromId: 'r1:in/a.png', toId: 'r2:out/a (3).png', fromRootId: 'r1', fromPath: 'in/a.png', toRootId: 'r2', toPath: 'out/a (3).png' }]);
+    expect(src.raw.removeEntry).not.toHaveBeenCalled();
   });
 
-  it('reports a per-file failure without aborting the rest of the batch', async () => {
-    const ok = mockFile('ok.png', 'ok.png');
-    const bad: AssetFile = {
-      ...mockFile('bad.png', 'bad.png'),
-      handle: { getFile: async () => { throw new Error('locked'); } } as unknown as FileSystemFileHandle,
-    };
-    const sourceDir = { removeEntry: vi.fn() } as unknown as FileSystemDirectoryHandle;
-    const writable = { write: vi.fn(), close: vi.fn() };
-    const destDir = mockDestDir(vi.fn().mockResolvedValue({ createWritable: async () => writable }));
+  it('skip leaves conflicts alone; a per-file error does not stop the batch', async () => {
+    const src = mockDir(['a.png', 'b.png', 'c.png']), out = mockDir(['a.png']);
+    const bad: AssetFile = { ...mockFile('c.png', 'c.png'), handle: { getFile: async () => { throw new Error('locked'); } } as unknown as FileSystemFileHandle };
+    const res = await transferFiles([
+      { file: mockFile('a.png', 'a.png'), srcDir: src.dir },
+      { file: mockFile('b.png', 'b.png'), srcDir: src.dir },
+      { file: bad, srcDir: src.dir },
+    ], dest(out.dir), 'move', 'skip');
+    expect(res.skipped).toEqual(['a.png']);
+    expect(res.done.map(d => d.toPath)).toEqual(['out/b.png']);
+    expect(res.failed).toEqual([{ path: 'c.png', error: 'locked' }]);
+  });
 
-    const result = await moveFilesToFolder([ok, bad], sourceDir, destDir);
+  it('moving into the folder a file is already in is a no-op', async () => {
+    const d = mockDir(['a.png']);
+    const res = await transferFiles([{ file: { ...mockFile('a.png', 'out/a.png'), rootId: 'r2', id: 'r2:out/a.png' }, srcDir: d.dir }], dest(d.dir), 'move', 'keep-both');
+    expect(res.skipped).toEqual(['out/a.png']);
+    expect(d.written).toEqual([]);
+  });
 
-    expect(result.moved).toEqual(['ok.png']);
-    expect(result.failed).toEqual([{ path: 'bad.png', error: 'locked' }]);
+  it('keepBothName finds the first free number', async () => {
+    expect(await keepBothName(mockDir(['x.jpg', 'x (2).jpg']).dir, 'x.jpg')).toBe('x (3).jpg');
+    expect(await keepBothName(mockDir([]).dir, 'noext')).toBe('noext (2)');
   });
 });

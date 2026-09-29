@@ -13,6 +13,8 @@ import { COMPONENT_DEFAULTS, makeRecipe, type LookComponent } from '../looks/rec
 import { LookRenderer } from '../looks/LookRenderer';
 import { bitmapToLayer, MAX_DIM, resampleBitmap } from './FileIO';
 import type { ImageLayer } from '../types';
+import { largestEmbeddedJpeg } from '../../../utils/jpegScan';
+export { jpegStarts } from '../../../utils/jpegScan';
 
 export type DevelopSettings = Extract<LookComponent, { kind: 'develop' }>;
 
@@ -57,15 +59,6 @@ export function decodeRaw(bytes: Uint8Array): Promise<DecodedRaw> {
   });
 }
 
-/** Offsets of plausible JPEG starts (FF D8 FF + a marker byte). */
-export function jpegStarts(bytes: Uint8Array, limit = 8): number[] {
-  const out: number[] = [];
-  for (let i = 0; i + 3 < bytes.length && out.length < limit; i++) {
-    if (bytes[i] === 0xff && bytes[i + 1] === 0xd8 && bytes[i + 2] === 0xff && bytes[i + 3] >= 0xc0) out.push(i);
-  }
-  return out;
-}
-
 /** The largest embedded JPEG. LibRaw's thumbnail first; if LibRaw can't open the
  *  file, decode each JPEG start in the bytes (the browser stops at its EOI). */
 export async function embeddedPreview(bytes: Uint8Array<ArrayBuffer>): Promise<ImageBitmap | null> {
@@ -73,13 +66,7 @@ export async function embeddedPreview(bytes: Uint8Array<ArrayBuffer>): Promise<I
     const thumb = await withLibRaw(async (raw) => { await raw.open(bytes.slice(), {}); return raw.thumbnailData(); });
     if (thumb?.format === 'jpeg') return await createImageBitmap(new Blob([new Uint8Array(thumb.data)], { type: 'image/jpeg' }));
   } catch { /* fall through to the byte scan */ }
-  let best: ImageBitmap | null = null;
-  for (const start of jpegStarts(bytes)) {
-    const bmp = await createImageBitmap(new Blob([bytes.subarray(start)], { type: 'image/jpeg' })).catch(() => null);
-    if (!bmp) continue;
-    if (!best || bmp.width * bmp.height > best.width * best.height) { best?.close(); best = bmp; } else bmp.close();
-  }
-  return best;
+  return largestEmbeddedJpeg(bytes);
 }
 
 /** Auto exposure (Claude's call over Jev 0.30): the brightest ~1% of pixels
