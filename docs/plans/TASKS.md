@@ -59,7 +59,7 @@ Boundary: Assets Manager = external multi-root browser; Vault gallery = ingested
 
 - [ ] **D2** — migrate the remaining ~37 hand-rolled `fixed inset-0` overlays to `components/Modal.tsx`. **L**
 - [ ] **T2** — ESLint to zero (300 errors, 72 warnings: `no-unnecessary-type-assertion`, `unbound-method`, `no-unused-vars`), then make the CI step blocking. **M**
-- [ ] Page content visible at t=0: 22 `TerminalText` delays of 1.0–2.9 s → ≤150 ms or skip after first visit. **S**
+- [x] Page content visible at t=0: `TerminalText` start delays capped at 150 ms in the component (all 22 call sites); the decrypt effect stays. (2026-09-29)
 - [ ] Motion leftovers: ChromaticText still rAF; InitialLoader 3.2 s delay / 1 s timeout; AboutModal `scale: 0`; ScanLine animates `top`; `.animate-fade-in` on `--duration-slow`; CustomCursor has no `quickTo`; boot blinds `backdrop-blur-md`. **M**
 - [ ] Light theme (`sanrita`) polish: ~200 hard-coded `white`/`black`; dark dashboard artwork reads as grey haze. **M**
 - [ ] V12 phone width (390 px) — deferred by design (desktop-first). **L**
@@ -71,7 +71,7 @@ Boundary: Assets Manager = external multi-root browser; Vault gallery = ingested
 
 ## 5. Video Editor
 
-- [ ] Make WebGPU the preview renderer after a check on a real GPU (deferred, Jev 0.93). **M**
+- [ ] Make WebGPU the preview renderer — **waits until a GPU-only effect or transition is exposed in the UI**. Checked 2026-09-29: the UI only offers color grade, chroma key and crossfade, which the WebGPU renderer runs on the same CPU/Canvas2D paths, so switching adds readbacks and risk for no visible gain (Jev: defer 0.97). **M**
 - [ ] Background media GC sweep (today GC runs only on project delete). **S**
 
 ## 6. Converter (deferred ideas)

@@ -9,9 +9,11 @@ export const TerminalText = ({ text, delay = 0, className = "", centered = false
     const [isComplete, setIsComplete] = useState(false);
 
     useEffect(() => {
+        // Content must be readable at once: callers' choreography delays (up to
+        // ~3 s) are capped at 150 ms; the decrypt/type effect itself stays.
         const timeout = setTimeout(() => {
             setStarted(true);
-        }, delay * 1000);
+        }, Math.min(delay, 0.15) * 1000);
         return () => clearTimeout(timeout);
     }, [delay]);
 
