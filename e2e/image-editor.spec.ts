@@ -712,6 +712,12 @@ test('My Looks: save, .cube import, .klook export and re-import, texture, brush 
     await page.getByLabel('Import look file').setInputFiles({ name: 'invert.klook', mimeType: 'application/json', buffer: klook });
     await expect(status).toContainText('Added "invert"');
     await expect(page.getByRole('option', { name: /invert/ })).toHaveCount(1);
+    await page.getByRole('button', { name: 'Rename invert' }).click();
+    const nameInput = page.getByLabel('New name for invert');
+    await nameInput.fill('Negative');
+    await nameInput.press('Enter');
+    await expect(status).toContainText('Renamed to "Negative"');
+    await expect(page.getByRole('option', { name: /Negative/ })).toHaveCount(1);
 
     // A texture component: a black texture overlaid darkens the (inverted) grey further.
     const before = await red(100, 150);
@@ -733,4 +739,45 @@ test('My Looks: save, .cube import, .klook export and re-import, texture, brush 
     await page.mouse.up();
     await expect.poll(() => red(200, 150), { timeout: 10_000 }).toBeLessThan(80);
     expect(await red(200, 40)).toBeGreaterThan(180);
+});
+
+test('a lost WebGL context is rebuilt: the look renders again after the GPU drops it', async ({ page }) => {
+    // Test-side capture of every WebGL2 context the app creates (no app hook).
+    await page.addInitScript(() => {
+        const orig = OffscreenCanvas.prototype.getContext;
+        (window as any).__gl = [];
+        OffscreenCanvas.prototype.getContext = function (this: OffscreenCanvas, type: string, opts?: unknown) {
+            const ctx = (orig as any).call(this, type, opts);
+            if (type === 'webgl2' && ctx) (window as any).__gl.push(ctx);
+            return ctx;
+        } as typeof orig;
+    });
+    await bootToAppShell(page, 'image_editor');
+    const png = Buffer.from((await page.evaluate(() => {
+        const c = document.createElement('canvas'); c.width = 400; c.height = 300;
+        const x = c.getContext('2d')!; x.fillStyle = '#c03030'; x.fillRect(0, 0, 400, 300);
+        return c.toDataURL('image/png');
+    })).split(',')[1], 'base64');
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
+    await (await chooser).setFiles({ name: 'red.png', mimeType: 'image/png', buffer: png });
+    await expect(page.getByText('400 × 300px')).toBeVisible({ timeout: 15_000 });
+    await waitForFit(page);
+    const spread = (p: number[]) => Math.max(...p) - Math.min(...p);
+
+    await page.getByRole('option', { name: /Grainy Mono/ }).click();
+    await expect.poll(async () => spread(await pixelAt(page, 200, 150)), { timeout: 5_000 }).toBeLessThan(40);
+
+    // The GPU drops every context; then the strength changes force fresh renders.
+    const before = await page.evaluate(() => (window as any).__gl.length as number);
+    await page.evaluate(() => (window as any).__gl.forEach((gl: WebGL2RenderingContext) => gl.getExtension('WEBGL_lose_context')?.loseContext()));
+    const slider = page.getByLabel('Look strength');
+    await slider.fill('0');
+    await expect.poll(async () => spread(await pixelAt(page, 200, 150)), { timeout: 5_000 }).toBeGreaterThan(100);
+    await slider.fill('100');
+    await expect.poll(async () => {
+        const p = await pixelAt(page, 200, 150);
+        return spread(p) < 40 && Math.max(...p) > 30; // graded grey, not the black of a dead context
+    }, { timeout: 5_000 }).toBe(true);
+    expect(await page.evaluate(() => (window as any).__gl.length as number)).toBeGreaterThan(before);
 });

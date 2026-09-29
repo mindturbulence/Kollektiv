@@ -16,7 +16,7 @@ import { varyRecipe } from '../../core/looks/randomize';
 import { useFavourites, toggleFavourite } from './favourites';
 import RawDevelop, { DEVELOP_SLIDERS } from './RawDevelop';
 import { COMPONENT_DEFAULTS, HSL_BAND_HUES, TEXTURE_BLENDS, type FrameStyle, type HslBand, type LookComponent, type LookComponentKind, type LookRecipe, type TextureBlend } from '../../core/looks/recipe';
-import { deleteMyLook, exportKlook, getMyLooks, importCubeAsLook, importKlook, importTexture, loadMyLooks, onMyLooksChanged, saveMyLook } from '../../core/looks/userLibrary';
+import { deleteMyLook, exportKlook, getMyLooks, importCubeAsLook, importKlook, importTexture, loadMyLooks, onMyLooksChanged, renameMyLook, saveMyLook } from '../../core/looks/userLibrary';
 import type { ImageLayer, Layer, LookLayer } from '../../core/types';
 
 /** Only the non-look layers decide what the thumbnails look like. */
@@ -174,6 +174,32 @@ const LooksPanel: React.FC = () => {
   const myLooks = useSyncExternalStore(onMyLooksChanged, getMyLooks);
   const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
   const importInput = useRef<HTMLInputElement>(null);
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
+  // Tiles on screen render first: an observer on the gallery's scroll box keeps
+  // the visible entry indices; tiles register through a callback ref.
+  const onScreen = useRef(new Set<number>());
+  const tiles = useRef(new Set<HTMLElement>());
+  const observer = useRef<IntersectionObserver | null>(null);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const io = new IntersectionObserver(entries => entries.forEach(e => {
+      const i = Number((e.target as HTMLElement).dataset.index);
+      if (e.isIntersecting) onScreen.current.add(i); else onScreen.current.delete(i);
+    }), { root: galleryRef.current });
+    tiles.current.forEach(el => io.observe(el));
+    observer.current = io;
+    return () => { io.disconnect(); observer.current = null; };
+  }, []);
+  const tileRef = (el: HTMLDivElement | null) => {
+    if (!el) return;
+    tiles.current.add(el);
+    observer.current?.observe(el);
+    return () => { // React 19 ref cleanup: the tile unmounted or re-rendered
+      tiles.current.delete(el);
+      observer.current?.unobserve(el);
+      onScreen.current.delete(Number(el.dataset.index));
+    };
+  };
   const favourites = useFavourites();
   const randomSeed = useRef(1);
   const [thumbs, setThumbs] = useState<(ImageBitmap | undefined)[]>([]);
@@ -218,7 +244,7 @@ const LooksPanel: React.FC = () => {
         if (cancelled) { bmp.close(); return; }
         next[i] = bmp;
         setThumbs([...next]);
-      }).then(ok => {
+      }, i => onScreen.current.has(i)).then(ok => {
         if (cancelled) return;
         setGpuOk(ok);
         rendered.current = { base, lutTick, recipes }; // only a finished run counts as rendered
@@ -269,7 +295,7 @@ const LooksPanel: React.FC = () => {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0 p-2">
+      <div ref={galleryRef} className="flex-1 overflow-y-auto min-h-0 p-2">
         {category === 'favourites' && visible.length === 0 && (
           <p className="text-xs font-mono text-base-content/60 p-2">Star a look (☆ on its preview) to keep it here.</p>
         )}
@@ -290,7 +316,7 @@ const LooksPanel: React.FC = () => {
             const selected = activeLook?.recipe.name === l.name;
             const fav = favourites.has(l.key);
             return (
-              <div key={l.key} className="relative">
+              <div key={l.key} ref={tileRef} data-index={i} className="relative">
                 <button type="button" role="option" aria-selected={selected}
                   title={`${l.name} — click to apply, Shift+click to stack as a new look`}
                   className={`w-full flex flex-col gap-1 p-1 text-left normal-case tracking-normal font-normal border ${selected ? 'border-primary' : 'border-transparent hover:border-base-content/30'}`}
@@ -303,6 +329,27 @@ const LooksPanel: React.FC = () => {
                   onClick={() => toggleFavourite(l.key)}>
                   {fav ? '★' : '☆'}
                 </button>
+                {l.myId && (
+                  <button type="button" aria-label={`Rename ${l.name}`} title="Rename"
+                    className="absolute top-2 left-9 w-6 h-6 flex items-center justify-center bg-black/45 text-sm text-white/70 hover:text-white normal-case tracking-normal font-normal"
+                    onClick={() => setRenaming({ id: l.myId!, name: l.name })}>
+                    ✎
+                  </button>
+                )}
+                {l.myId && renaming?.id === l.myId && (
+                  <input autoFocus aria-label={`New name for ${l.name}`} value={renaming.name} maxLength={80}
+                    className="absolute left-1 right-1 bottom-1 h-6 px-1 text-xs bg-base-200 border border-primary outline-none"
+                    onChange={e => setRenaming({ id: l.myId!, name: e.target.value })}
+                    onKeyDown={e => {
+                      if (e.key === 'Escape') setRenaming(null);
+                      if (e.key === 'Enter') e.currentTarget.blur();
+                    }}
+                    onBlur={() => {
+                      const name = renaming.name.trim();
+                      setRenaming(null);
+                      if (name && name !== l.name) void run(async () => { await renameMyLook(l.myId!, name); return `Renamed to "${name}".`; });
+                    }} />
+                )}
                 {l.myId && (
                   <button type="button" aria-label={`Delete ${l.name}`} title="Delete from My Looks"
                     className="absolute top-2 left-2 w-6 h-6 flex items-center justify-center bg-black/45 text-sm text-white/70 hover:text-error normal-case tracking-normal font-normal"

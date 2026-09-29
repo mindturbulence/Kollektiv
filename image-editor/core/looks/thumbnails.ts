@@ -36,15 +36,29 @@ export function renderProxy(doc: EditorDocument): OffscreenCanvas | null {
   return oc;
 }
 
+/** The next thumbnail to render: the first unrendered one on screen, else the
+ *  first unrendered one; -1 when all are done. Asked before every render, so
+ *  scrolling mid-run reprioritises. */
+export function nextThumbIndex(count: number, done: ReadonlySet<number>, isVisible?: (i: number) => boolean): number {
+  let first = -1;
+  for (let i = 0; i < count; i++) {
+    if (done.has(i)) continue;
+    if (isVisible?.(i)) return i;
+    if (first < 0) first = i;
+  }
+  return first;
+}
+
 /**
  * Renders `recipes` over the proxy, calling `onThumb(i, bitmap)` as each is
- * ready (the caller owns and closes the bitmaps). Returns false when WebGL2 is
- * unavailable. A newer call cancels an older one.
+ * ready (the caller owns and closes the bitmaps), visible ones first. Returns
+ * false when WebGL2 is unavailable. A newer call cancels an older one.
  */
 export async function renderThumbnails(
   doc: EditorDocument,
   recipes: LookRecipe[],
   onThumb: (index: number, bitmap: ImageBitmap) => void,
+  isVisible?: (index: number) => boolean,
 ): Promise<boolean> {
   const gen = ++_generation;
   if (_renderer?.lost) _renderer = undefined; // context loss: rebuild
@@ -55,7 +69,9 @@ export async function renderThumbnails(
   const proxy = renderProxy(doc);
   if (!proxy) return false;
   const toDoc = doc.width / proxy.width; // proxy px → document px (uniform scale)
-  for (let i = 0; i < recipes.length; i++) {
+  const done = new Set<number>();
+  for (let i = nextThumbIndex(recipes.length, done, isVisible); i >= 0; i = nextThumbIndex(recipes.length, done, isVisible)) {
+    done.add(i);
     await preloadRecipeLuts(recipes[i]);
     await new Promise(r => setTimeout(r, 0));
     if (gen !== _generation) return true; // superseded
