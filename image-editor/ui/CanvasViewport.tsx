@@ -55,6 +55,16 @@ function findTextLayerAt(layers: Layer[], pt: { x: number; y: number }): TextLay
   return walk(layers);
 }
 
+/** The bitmap space a brush stroke paints into. */
+type PaintSpace = Pick<ImageLayer, 'transform' | 'intrinsicWidth' | 'intrinsicHeight'>;
+
+/** An image layer's own bitmap, or a look layer's mask (painted to choose where the look applies). */
+function paintSpace(layer: Layer | undefined): PaintSpace | null {
+  if (layer?.type === 'image') return layer;
+  if (layer?.type === 'look' && layer.mask) return { transform: layer.transform, intrinsicWidth: layer.mask.bitmap.width, intrinsicHeight: layer.mask.bitmap.height };
+  return null;
+}
+
 const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ onCursorMove }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -74,7 +84,7 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
    *  coords directly lands in the wrong place on any moved/scaled/rotated/
    *  flipped/cropped layer (review C1). Returns null when the pointer is off
    *  the layer; callers skip the stroke instead of painting a distant corner. */
-  const getLayerPoint = (docPt: { x: number; y: number }, layer: ImageLayer): { x: number; y: number } | null =>
+  const getLayerPoint = (docPt: { x: number; y: number }, layer: PaintSpace): { x: number; y: number } | null =>
     docToLayer(docPt.x, docPt.y, {
       transform: layer.transform,
       intrinsicWidth: layer.intrinsicWidth,
@@ -83,7 +93,7 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
 
   /** Scale factor from doc px to layer bitmap px along the layer's local axes
    *  (uniform per axis is assumed — brush radius uses the mean). */
-  const getLayerScale = (layer: ImageLayer): number => {
+  const getLayerScale = (layer: PaintSpace): number => {
     const { size } = layer.transform;
     if (size.width <= 0 || size.height <= 0) return 1;
     return (layer.intrinsicWidth / size.width + layer.intrinsicHeight / size.height) / 2;
@@ -183,10 +193,12 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
     if (activeTool === 'brush' || activeTool === 'eraser') {
       if (activeLayerId) {
         const layer = findLayerById(doc?.layers ?? [], activeLayerId);
-        if (layer?.type === 'image') {
-          const layerPt = getLayerPoint(pt, layer);
+        const space = paintSpace(layer);
+        if (space) {
+          const layerPt = getLayerPoint(pt, space);
           if (layerPt) {
-            BrushEngine.beginStroke(activeLayerId, getSnapshot().paintTarget, getLayerScale(layer));
+            // A look layer is only ever painted through its mask.
+            BrushEngine.beginStroke(activeLayerId, layer?.type === 'look' ? 'mask' : getSnapshot().paintTarget, getLayerScale(space));
             BrushEngine.addPoint(layerPt.x, layerPt.y, e.pressure || 0.5, activeTool === 'eraser');
           }
         }
@@ -344,8 +356,8 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
     // active, and only when the pointer is inside the layer's bounds.
     const layerPointFor = (layerId: string | null): { x: number; y: number } | null => {
       const doc = getSnapshot().document;
-      const layer = doc && layerId ? (findLayerById(doc.layers, layerId) as ImageLayer | undefined) : undefined;
-      return layer?.type === 'image' ? getLayerPoint(pt, layer) : null;
+      const space = paintSpace(doc && layerId ? findLayerById(doc.layers, layerId) : undefined);
+      return space ? getLayerPoint(pt, space) : null;
     };
 
     if (isPanningRef.current && lastPointerIdRef.current === e.pointerId) {

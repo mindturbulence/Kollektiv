@@ -166,7 +166,7 @@ const LayerRow: React.FC<{
         <LayerThumbnail layer={layer} />
       )}
 
-      {layer.type === 'image' && layer.mask && (
+      {(layer.type === 'image' || layer.type === 'look') && layer.mask && (
         <button
           type="button"
           className={`flex-shrink-0 w-6 h-6 border ${paintingMask ? 'border-primary ring-1 ring-primary' : 'border-base-content/20'}`}
@@ -577,8 +577,8 @@ const LayersPanel: React.FC = () => {
               type="button"
               className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
               aria-label="Add layer mask"
-              title={activeLayer?.type === 'image' && activeLayer.mask ? 'This layer already has a mask' : 'Add layer mask'}
-              disabled={activeLayer?.type !== 'image' || !!activeLayer.mask}
+              title={activeLayer?.mask ? 'This layer already has a mask' : 'Add layer mask'}
+              disabled={(activeLayer?.type !== 'image' && activeLayer?.type !== 'look') || !!activeLayer.mask}
               onClick={() => activeLayerId && void LayerManager.addMask(activeLayerId)}
             >
               <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">

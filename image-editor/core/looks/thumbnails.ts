@@ -47,6 +47,7 @@ export async function renderThumbnails(
   onThumb: (index: number, bitmap: ImageBitmap) => void,
 ): Promise<boolean> {
   const gen = ++_generation;
+  if (_renderer?.lost) _renderer = undefined; // context loss: rebuild
   if (_renderer === undefined) {
     try { _renderer = new LookRenderer(); } catch { _renderer = null; }
   }

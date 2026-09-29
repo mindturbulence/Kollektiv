@@ -80,6 +80,7 @@ interface SerializedShapeLayer extends SerializedLayerBase {
 interface SerializedLookLayer extends SerializedLayerBase {
   type: 'look';
   recipe: LookRecipe;
+  mask?: SerializedMask;
 }
 
 interface SerializedTextLayer extends SerializedLayerBase {
@@ -178,8 +179,14 @@ async function serializeLayer(layer: Layer, blobs: Record<string, ArrayBuffer>):
       };
     case 'text':
       return { ...base, type: 'text', text: layer.text, font: layer.font, color: layer.color };
-    case 'look':
-      return { ...base, type: 'look', recipe: layer.recipe };
+    case 'look': {
+      const meta: SerializedLookLayer = { ...base, type: 'look', recipe: layer.recipe };
+      if (layer.mask) {
+        blobs[`${layer.id}::mask`] = await bitmapToLosslessBuffer(layer.mask.bitmap);
+        meta.mask = { enabled: layer.mask.enabled, invert: layer.mask.invert, feather: layer.mask.feather };
+      }
+      return meta;
+    }
   }
 }
 
@@ -239,6 +246,10 @@ async function deserializeLayer(meta: SerializedLayer, blobs: Record<string, Arr
     case 'look': {
       // A recipe from an incompatible build restores as an empty look (the layer is kept).
       const layer: LookLayer = { ...base, type: 'look', recipe: parseRecipe(meta.recipe) ?? makeRecipe(meta.name, []) };
+      const maskBuf = meta.mask && blobs[`${meta.id}::mask`];
+      if (meta.mask && maskBuf) {
+        layer.mask = { ...meta.mask, bitmap: await createImageBitmap(new Blob([maskBuf], { type: 'image/png' })) };
+      }
       return layer;
     }
   }

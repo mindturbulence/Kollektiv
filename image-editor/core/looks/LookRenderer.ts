@@ -16,7 +16,7 @@
 // One context per renderer (the LayerPainter owns one, like BlendCompositor).
 
 import { buildCurvesLUT } from '../adjust/kernels';
-import { getLut, lutRegistryVersion } from './lutRegistry';
+import { getLut, getTexture, lutRegistryVersion } from './lutRegistry';
 import { HSL_BAND_HUES, type LookComponent, type LookRecipe } from './recipe';
 
 const VS = `#version 300 es
@@ -88,6 +88,7 @@ uniform float u_bloomAmt, u_haloAmt;
 uniform bool u_frame; uniform float u_frameW; uniform int u_frameStyle; uniform vec3 u_frameCol;
 uniform float u_paperAmt, u_paperScale;
 uniform float u_dustAmt, u_scratchAmt, u_dustSeed;
+uniform sampler2D u_texTex; uniform bool u_tex; uniform int u_texBlend; uniform float u_texAmt, u_texAspect;
 
 vec3 rgb2hsl(vec3 c) {
   float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b)), l = (mx + mn) * 0.5;
@@ -227,6 +228,18 @@ void main() {
     lin *= 1.0 + (f - 0.5) * u_paperAmt * 0.6;
   }
   if (u_dustAmt > 0.0 || u_scratchAmt > 0.0) lin = mix(lin, vec3(0.92), dust(doc) * 0.85); // light specks, like dust on a print
+  if (u_tex) {                                                  // user texture, cover-fitted, blended in sRGB
+    float da = u_docSize.x / u_docSize.y;
+    vec2 tuv = da > u_texAspect ? vec2(nd.x, 0.5 + (nd.y - 0.5) * u_texAspect / da)
+                                : vec2(0.5 + (nd.x - 0.5) * da / u_texAspect, nd.y);
+    vec4 t = texture(u_texTex, tuv);
+    vec3 b = toSrgb(lin), r;
+    if (u_texBlend == 0) r = mix(2.0 * b * t.rgb, 1.0 - 2.0 * (1.0 - b) * (1.0 - t.rgb), step(0.5, b));   // overlay
+    else if (u_texBlend == 1) r = (1.0 - 2.0 * t.rgb) * b * b + 2.0 * t.rgb * b;                           // soft light
+    else if (u_texBlend == 2) r = 1.0 - (1.0 - b) * (1.0 - t.rgb);                                         // screen
+    else r = b * t.rgb;                                                                                    // multiply
+    lin = toLin(clamp(mix(b, r, u_texAmt * t.a), 0.0, 1.0));
+  }
   vec3 outc = mix(src.rgb, toSrgb(lin), u_strength);
 
   if (u_frame) {                                                // drawn last, never graded
@@ -266,6 +279,8 @@ export class LookRenderer {
   private readonly curveTex: WebGLTexture;
   private readonly floatTargets: boolean;
   private readonly pyramids: [Level[], Level[]] = [[], []]; // bloom, halation
+  private readonly texTex: WebGLTexture;
+  private texKey = '';
   private lutKey = '';
   private curveKey = '';
 
@@ -300,6 +315,9 @@ export class LookRenderer {
     gl.uniform1i(this.u(this.main, 'u_curve'), 2);
     gl.uniform1i(this.u(this.main, 'u_bloomTex'), 3);
     gl.uniform1i(this.u(this.main, 'u_haloTex'), 4);
+    gl.uniform1i(this.u(this.main, 'u_texTex'), 6);  // unit 5 is the glow pyramid
+    this.texTex = this.tex(gl.TEXTURE6, gl.TEXTURE_2D, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
     // Units 3/4 must hold complete textures even when glow is off.
     for (const unit of [gl.TEXTURE3, gl.TEXTURE4]) {
       this.tex(unit, gl.TEXTURE_2D, gl.NEAREST);
@@ -572,6 +590,23 @@ export class LookRenderer {
     gl.uniform1f(u('u_scratchAmt'), dustC?.scratches ?? 0);
     gl.uniform1f(u('u_dustSeed'), dustC?.seed ?? 1);
 
+    const texC = find('texture');
+    const texImg = texC ? getTexture(texC.assetId) : undefined;
+    gl.uniform1i(u('u_tex'), texC && texImg && texC.amount > 0 ? 1 : 0);
+    if (texC && texImg) {
+      const key = `${texC.assetId}@${lutRegistryVersion()}`;
+      if (key !== this.texKey) {
+        gl.activeTexture(gl.TEXTURE6);
+        gl.bindTexture(gl.TEXTURE_2D, this.texTex);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, texImg);
+        this.texKey = key;
+      }
+      gl.uniform1i(u('u_texBlend'), ['overlay', 'soft-light', 'screen', 'multiply'].indexOf(texC.blend));
+      gl.uniform1f(u('u_texAmt'), texC.amount);
+      gl.uniform1f(u('u_texAspect'), texImg.width / Math.max(1, texImg.height));
+    }
+
     const frame = find('frame');
     gl.uniform1i(u('u_frame'), frame && frame.width > 0 ? 1 : 0);
     if (frame) {
@@ -579,6 +614,12 @@ export class LookRenderer {
       gl.uniform1i(u('u_frameStyle'), frame.style === 'polaroid' ? 1 : frame.style === 'rounded' ? 2 : 0);
       gl.uniform3fv(u('u_frameCol'), hexToRgb(frame.color));
     }
+  }
+
+  /** True after the GPU dropped this context (driver reset, memory pressure):
+   *  the owner throws the renderer away and builds a new one. */
+  get lost(): boolean {
+    return this.gl.isContextLost();
   }
 
   dispose(): void {

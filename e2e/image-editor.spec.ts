@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 // Image Editor entry paths. Runs with FULL motion on purpose: headless Chrome
 // defaults to prefers-reduced-motion, where the route director commits the tab
@@ -455,7 +456,7 @@ test('Quick mode: trimmed tools, More menu, Looks gallery, merged browsing undo,
     await expect(page.getByRole('button', { name: /^Brush/ })).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'More', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Adjust', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('tab', { name: 'Looks' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: 'Looks', exact: true })).toHaveAttribute('aria-selected', 'true');
     // Every catalog thumbnail renders on the user's image.
     await expect(page.getByRole('option').locator('canvas')).toHaveCount(30, { timeout: 30_000 });
     await page.screenshot({ path: 'test-results/looks-quick-mode.png' });
@@ -665,4 +666,71 @@ test('a DNG decodes and auto-develops; RAW develop re-renders live and undoes', 
     await page.keyboard.press('Control+z');
     await page.keyboard.press('Control+z');
     await expect.poll(async () => luma(await pixelAt(page, 100, 150)), { timeout: 10_000 }).toBeGreaterThan(leftBefore - 6);
+});
+
+test('My Looks: save, .cube import, .klook export and re-import, texture, brush a look in', async ({ page }) => {
+    test.setTimeout(120_000);
+    await bootToAppShell(page, 'image_editor');
+    const makeFlat = (fill: string) => page.evaluate((f) => {
+        const c = document.createElement('canvas'); c.width = 400; c.height = 300;
+        const x = c.getContext('2d')!; x.fillStyle = f; x.fillRect(0, 0, 400, 300);
+        return c.toDataURL('image/png');
+    }, fill).then(u => Buffer.from(u.split(',')[1], 'base64'));
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
+    await (await chooser).setFiles({ name: 'grey.png', mimeType: 'image/png', buffer: await makeFlat('#c8c8c8') });
+    await expect(page.getByText('400 × 300px')).toBeVisible({ timeout: 15_000 });
+    await waitForFit(page);
+    const red = async (x: number, y: number) => (await pixelAt(page, x, y))[0];
+    const status = page.getByRole('status');
+
+    // Save a built-in (with its current settings) to My Looks.
+    await page.getByRole('option', { name: /Warm Portrait/ }).click();
+    await page.getByRole('button', { name: 'Save to My Looks' }).click();
+    await expect(status).toContainText('Saved "Warm Portrait"');
+    await page.getByRole('tab', { name: 'My Looks' }).click();
+    await expect(page.getByRole('option', { name: /Warm Portrait/ })).toHaveCount(1);
+
+    // Import a .cube (an inverting LUT) — it becomes a My Look.
+    const cube = ['LUT_3D_SIZE 2'];
+    for (let b = 0; b < 2; b++) for (let g = 0; g < 2; g++) for (let r = 0; r < 2; r++) cube.push(`${1 - r} ${1 - g} ${1 - b}`);
+    await page.getByLabel('Import look file').setInputFiles({ name: 'invert.cube', mimeType: 'text/plain', buffer: Buffer.from(cube.join('\n')) });
+    await expect(status).toContainText('Added "invert"');
+    await page.getByRole('option', { name: /invert/ }).click();
+    await expect.poll(() => red(100, 150), { timeout: 10_000 }).toBeLessThan(80);
+
+    // Export it as .klook (the user LUT travels inside), delete it, import it back.
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export look (.klook)' }).click();
+    const klook = readFileSync(await (await download).path());
+    const parsed = JSON.parse(klook.toString());
+    expect(parsed.format).toBe('klook');
+    expect(parsed.assets).toHaveLength(1);
+    expect(parsed.assets[0].cube).toContain('LUT_3D_SIZE 2');
+    await page.getByRole('button', { name: 'Delete invert' }).click();
+    await expect(page.getByRole('option', { name: /invert/ })).toHaveCount(0);
+    await page.getByLabel('Import look file').setInputFiles({ name: 'invert.klook', mimeType: 'application/json', buffer: klook });
+    await expect(status).toContainText('Added "invert"');
+    await expect(page.getByRole('option', { name: /invert/ })).toHaveCount(1);
+
+    // A texture component: a black texture overlaid darkens the (inverted) grey further.
+    const before = await red(100, 150);
+    await page.getByRole('button', { name: /Adjust look/ }).click();
+    const texChooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: '+ Texture' }).click();
+    await (await texChooser).setFiles({ name: 'black.png', mimeType: 'image/png', buffer: await makeFlat('#000000') });
+    await expect(page.getByLabel('Texture blend')).toBeVisible({ timeout: 10_000 });
+    await expect.poll(() => red(100, 150), { timeout: 10_000 }).toBeLessThan(before - 15);
+
+    // Brush in: the look hides, then shows only where it's brushed.
+    await page.getByRole('button', { name: 'Brush in' }).click();
+    await expect.poll(() => red(100, 150), { timeout: 10_000 }).toBeGreaterThan(180);
+    const a = await docToClient(page, 50, 150);
+    const b = await docToClient(page, 350, 150);
+    await page.mouse.move(a.x, a.y);
+    await page.mouse.down();
+    for (let i = 1; i <= 30; i++) await page.mouse.move(a.x + (b.x - a.x) * i / 30, a.y);
+    await page.mouse.up();
+    await expect.poll(() => red(200, 150), { timeout: 10_000 }).toBeLessThan(80);
+    expect(await red(200, 40)).toBeGreaterThan(180);
 });

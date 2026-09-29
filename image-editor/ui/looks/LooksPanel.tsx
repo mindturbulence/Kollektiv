@@ -5,7 +5,7 @@
 // browsing clicks merge into one undo step (Jev-decided, 2026-09-29).
 
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { getSnapshot, subscribe } from '../../core/store';
+import { dispatch, getSnapshot, subscribe } from '../../core/store';
 import { findLayerById } from '../../core/layers/layerTree';
 import * as LayerManager from '../../core/layers/LayerManager';
 import { BUILTIN_LOOKS, LOOK_CATEGORIES, type LookCategory } from '../../core/looks/builtins';
@@ -15,7 +15,8 @@ import { setLookBypass } from '../../core/looks/compare';
 import { varyRecipe } from '../../core/looks/randomize';
 import { useFavourites, toggleFavourite } from './favourites';
 import RawDevelop, { DEVELOP_SLIDERS } from './RawDevelop';
-import { COMPONENT_DEFAULTS, HSL_BAND_HUES, type FrameStyle, type HslBand, type LookComponent, type LookComponentKind, type LookRecipe } from '../../core/looks/recipe';
+import { COMPONENT_DEFAULTS, HSL_BAND_HUES, TEXTURE_BLENDS, type FrameStyle, type HslBand, type LookComponent, type LookComponentKind, type LookRecipe, type TextureBlend } from '../../core/looks/recipe';
+import { deleteMyLook, exportKlook, getMyLooks, importCubeAsLook, importKlook, importTexture, loadMyLooks, onMyLooksChanged, saveMyLook } from '../../core/looks/userLibrary';
 import type { ImageLayer, Layer, LookLayer } from '../../core/types';
 
 /** Only the non-look layers decide what the thumbnails look like. */
@@ -51,11 +52,12 @@ const INSPECTOR: Partial<Record<LookComponentKind, [string, number, number, numb
   frame: [['width', 0, 0.2, 0.005, 'Border']],
   paper: [['amount', 0, 1, 0.05, 'Paper'], ['scale', 1, 40, 0.5, 'Fibre size']],
   dust: [['amount', 0, 1, 0.05, 'Dust'], ['scratches', 0, 1, 0.25, 'Scratches']],
+  texture: [['amount', 0, 1, 0.05, 'Texture']],
 };
-const ADDABLE: LookComponentKind[] = ['develop', 'hsl', 'splitTone', 'fade', 'vignette', 'grain', 'halation', 'bloom', 'lightLeak', 'chromaticAberration', 'paper', 'dust', 'frame'];
+const ADDABLE: LookComponentKind[] = ['develop', 'hsl', 'splitTone', 'fade', 'vignette', 'grain', 'halation', 'bloom', 'lightLeak', 'chromaticAberration', 'paper', 'dust', 'texture', 'frame'];
 const KIND_LABEL: Record<LookComponentKind, string> = {
   develop: 'Develop', lut: 'Film grade', curve: 'Curve', splitTone: 'Split tone', fade: 'Fade', vignette: 'Vignette', grain: 'Grain',
-  chromaticAberration: 'Lens fringe', lightLeak: 'Light leak', halation: 'Halation', bloom: 'Glow', frame: 'Frame', hsl: 'Colour mix', paper: 'Paper', dust: 'Dust & scratches',
+  chromaticAberration: 'Lens fringe', lightLeak: 'Light leak', halation: 'Halation', bloom: 'Glow', frame: 'Frame', hsl: 'Colour mix', paper: 'Paper', dust: 'Dust & scratches', texture: 'Texture',
 };
 const BAND_NAMES = ['Red', 'Orange', 'Yellow', 'Green', 'Aqua', 'Blue', 'Purple', 'Magenta'];
 
@@ -69,8 +71,19 @@ const Inspector: React.FC<{ look: LookLayer }> = ({ look }) => {
     const components = look.recipe.components.map((c, i) => (i === index ? ({ ...c, ...patch } as LookComponent) : c));
     LayerManager.setLookRecipeLive(look.id, { ...look.recipe, components });
   };
-  const add = (kind: LookComponentKind) =>
-    LayerManager.setLookRecipe(look.id, { ...look.recipe, components: [...look.recipe.components, { ...COMPONENT_DEFAULTS[kind] }] });
+  const texInput = useRef<HTMLInputElement>(null);
+  const [texError, setTexError] = useState('');
+  const append = (c: LookComponent) => {
+    const cur = getSnapshot().document && findLayerById(getSnapshot().document!.layers, look.id);
+    if (cur?.type === 'look') LayerManager.setLookRecipe(look.id, { ...cur.recipe, components: [...cur.recipe.components, c] });
+  };
+  // A texture needs an image first (stored in this browser's look library).
+  const add = (kind: LookComponentKind) => (kind === 'texture' ? texInput.current?.click() : append({ ...COMPONENT_DEFAULTS[kind] }));
+  const pickTexture = async (file: File | undefined) => {
+    if (!file) return;
+    try { setTexError(''); append({ ...COMPONENT_DEFAULTS.texture, assetId: await importTexture(file) }); }
+    catch (err) { setTexError(err instanceof Error ? err.message : String(err)); }
+  };
   const present = new Set(look.recipe.components.map(c => c.kind));
 
   return (
@@ -106,6 +119,15 @@ const Inspector: React.FC<{ look: LookLayer }> = ({ look }) => {
               ))}
             </div>
           )}
+          {c.enabled && c.kind === 'texture' && (
+            <label className="flex items-center gap-2 pl-6 text-xs font-mono text-base-content/60">
+              <span className="w-24 shrink-0">Blend</span>
+              <select aria-label="Texture blend" className="select select-xs select-bordered rounded-none flex-1 text-xs" value={c.blend}
+                onChange={e => { update(i, { blend: e.target.value as TextureBlend }); commit(); }}>
+                {TEXTURE_BLENDS.map(b => <option key={b} value={b}>{b === 'soft-light' ? 'Soft light' : b[0].toUpperCase() + b.slice(1)}</option>)}
+              </select>
+            </label>
+          )}
           {c.enabled && c.kind === 'frame' && (
             <label className="flex items-center gap-2 pl-6 text-xs font-mono text-base-content/60">
               <span className="w-24 shrink-0">Style</span>
@@ -137,7 +159,10 @@ const Inspector: React.FC<{ look: LookLayer }> = ({ look }) => {
             + {KIND_LABEL[k]}
           </button>
         ))}
+        <input ref={texInput} type="file" accept="image/*" hidden aria-label="Texture image"
+          onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; void pickTexture(f); }} />
       </div>
+      {texError && <p className="text-xs font-mono text-error">{texError}</p>}
     </div>
   );
 };
@@ -145,7 +170,10 @@ const Inspector: React.FC<{ look: LookLayer }> = ({ look }) => {
 const LooksPanel: React.FC = () => {
   const document = useSyncExternalStore(subscribe, () => getSnapshot().document);
   const activeLayerId = useSyncExternalStore(subscribe, () => getSnapshot().activeLayerId);
-  const [category, setCategory] = useState<LookCategory | 'all' | 'favourites'>('all');
+  const [category, setCategory] = useState<LookCategory | 'all' | 'favourites' | 'mine'>('all');
+  const myLooks = useSyncExternalStore(onMyLooksChanged, getMyLooks);
+  const [note, setNote] = useState<{ text: string; error?: boolean } | null>(null);
+  const importInput = useRef<HTMLInputElement>(null);
   const favourites = useFavourites();
   const randomSeed = useRef(1);
   const [thumbs, setThumbs] = useState<(ImageBitmap | undefined)[]>([]);
@@ -154,8 +182,24 @@ const LooksPanel: React.FC = () => {
   const [lutTick, setLutTick] = useState(0);
   const strengthBefore = useRef<number | null>(null);
 
-  const recipes = useMemo(() => BUILTIN_LOOKS.map(l => l.build()), []);
-  const rendered = useRef<{ base: Layer[]; lutTick: number } | null>(null);
+  // Built-ins first, then My Looks; thumbnails are indexed like this list.
+  const entries = useMemo(() => [
+    ...BUILTIN_LOOKS.map(l => ({ key: l.key, name: l.name, category: l.category as LookCategory | 'mine', recipe: l.build(), myId: null as string | null })),
+    ...myLooks.map(m => ({ key: `my:${m.id}`, name: m.name, category: 'mine' as const, recipe: m.recipe, myId: m.id })),
+  ], [myLooks]);
+  const recipes = useMemo(() => entries.map(e => e.recipe), [entries]);
+  const rendered = useRef<{ base: Layer[]; lutTick: number; recipes: LookRecipe[] } | null>(null);
+
+  useEffect(() => { void loadMyLooks(); }, []);
+  const run = async (task: () => Promise<string>) => {
+    try { setNote({ text: await task() }); } catch (err) { setNote({ text: err instanceof Error ? err.message : String(err), error: true }); }
+  };
+  const importFile = (file: File) => run(async () => {
+    const look = /\.klook$/i.test(file.name) ? await importKlook(file) : /\.cube$/i.test(file.name) ? await importCubeAsLook(file) : null;
+    if (!look) throw new Error(`${file.name}: import a .cube LUT or a .klook look`);
+    setCategory('mine');
+    return `Added "${look.name}" to My Looks.`;
+  });
 
   useEffect(() => onLutsChanged(() => setLutTick(t => t + 1)), []);
 
@@ -166,7 +210,7 @@ const LooksPanel: React.FC = () => {
     if (!doc) return;
     const base = baseLayersKey(doc.layers);
     const last = rendered.current;
-    if (last && last.lutTick === lutTick && sameList(base, last.base)) return;
+    if (last && last.lutTick === lutTick && last.recipes === recipes && sameList(base, last.base)) return;
     let cancelled = false;
     const next: (ImageBitmap | undefined)[] = [];
     const timer = setTimeout(() => {
@@ -177,7 +221,7 @@ const LooksPanel: React.FC = () => {
       }).then(ok => {
         if (cancelled) return;
         setGpuOk(ok);
-        rendered.current = { base, lutTick }; // only a finished run counts as rendered
+        rendered.current = { base, lutTick, recipes }; // only a finished run counts as rendered
       });
     }, 300);
     return () => { cancelled = true; clearTimeout(timer); };
@@ -209,14 +253,14 @@ const LooksPanel: React.FC = () => {
   // The RAW to develop: the active layer if it is one, else the first in the stack.
   const isRaw = (l: Layer | undefined): l is ImageLayer & { raw: NonNullable<ImageLayer['raw']> } => l?.type === 'image' && !!l.raw;
   const rawLayer = isRaw(active) ? active : document.layers.find(isRaw);
-  const visible = BUILTIN_LOOKS.map((l, i) => ({ l, i })).filter(({ l }) =>
+  const visible = entries.map((l, i) => ({ l, i })).filter(({ l }) =>
     category === 'all' || (category === 'favourites' ? favourites.has(l.key) : l.category === category));
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {rawLayer && <RawDevelop key={rawLayer.id} layer={rawLayer} />}
       <div className="flex flex-wrap gap-1 px-2 py-2 border-b border-base-content/5" role="tablist" aria-label="Look categories">
-        {[{ id: 'all' as const, label: 'All' }, { id: 'favourites' as const, label: '★ Favourites' }, ...LOOK_CATEGORIES].map(c => (
+        {[{ id: 'all' as const, label: 'All' }, { id: 'favourites' as const, label: '★ Favourites' }, { id: 'mine' as const, label: 'My Looks' }, ...LOOK_CATEGORIES].map(c => (
           <button key={c.id} type="button" role="tab" aria-selected={category === c.id}
             className={`h-6 px-2 text-xs font-mono normal-case tracking-normal font-normal border ${category === c.id ? 'border-primary text-primary bg-primary/10' : 'border-base-content/15 text-base-content/70 hover:text-base-content'}`}
             onClick={() => setCategory(c.id)}>
@@ -229,6 +273,18 @@ const LooksPanel: React.FC = () => {
         {category === 'favourites' && visible.length === 0 && (
           <p className="text-xs font-mono text-base-content/60 p-2">Star a look (☆ on its preview) to keep it here.</p>
         )}
+        {category === 'mine' && (
+          <div className="flex flex-col gap-1.5 p-1 pb-2">
+            {visible.length === 0 && <p className="text-xs font-mono text-base-content/60">Save a look, or import a .cube LUT or a .klook file, to keep it here.</p>}
+            <button type="button" className="self-start h-6 px-2 text-xs font-mono normal-case tracking-normal font-normal border border-base-content/15 hover:border-primary hover:text-primary"
+              onClick={() => importInput.current?.click()}>
+              Import .cube / .klook…
+            </button>
+            <input ref={importInput} type="file" accept=".cube,.klook" hidden aria-label="Import look file"
+              onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void importFile(f); }} />
+          </div>
+        )}
+        {note && <p role="status" className={`text-xs font-mono p-1 ${note.error ? 'text-error' : 'text-base-content/70'}`}>{note.text}</p>}
         <div className="grid grid-cols-2 gap-2" role="listbox" aria-label="Looks">
           {visible.map(({ l, i }) => {
             const selected = activeLook?.recipe.name === l.name;
@@ -238,7 +294,7 @@ const LooksPanel: React.FC = () => {
                 <button type="button" role="option" aria-selected={selected}
                   title={`${l.name} — click to apply, Shift+click to stack as a new look`}
                   className={`w-full flex flex-col gap-1 p-1 text-left normal-case tracking-normal font-normal border ${selected ? 'border-primary' : 'border-transparent hover:border-base-content/30'}`}
-                  onClick={e => LayerManager.applyLook(l.build(), e.shiftKey)}>
+                  onClick={e => LayerManager.applyLook({ ...l.recipe, id: crypto.randomUUID() }, e.shiftKey)}>
                   <Thumb bitmap={thumbs[i]} label={l.name} />
                   <span className="text-xs truncate">{l.name}</span>
                 </button>
@@ -247,6 +303,13 @@ const LooksPanel: React.FC = () => {
                   onClick={() => toggleFavourite(l.key)}>
                   {fav ? '★' : '☆'}
                 </button>
+                {l.myId && (
+                  <button type="button" aria-label={`Delete ${l.name}`} title="Delete from My Looks"
+                    className="absolute top-2 left-2 w-6 h-6 flex items-center justify-center bg-black/45 text-sm text-white/70 hover:text-error normal-case tracking-normal font-normal"
+                    onClick={() => void run(async () => { await deleteMyLook(l.myId!); return `Deleted "${l.name}".`; })}>
+                    ×
+                  </button>
+                )}
               </div>
             );
           })}
@@ -268,10 +331,43 @@ const LooksPanel: React.FC = () => {
               onClick={() => { randomSeed.current += 1; LayerManager.setLookRecipe(activeLook.id, varyRecipe(activeLook.recipe, Date.now() + randomSeed.current)); }}>
               Randomize
             </button>
+            <button type="button" className="h-6 px-2 text-xs font-mono normal-case tracking-normal font-normal border border-base-content/15 hover:border-primary hover:text-primary"
+              aria-label="Save to My Looks" title="Keep this look (with your adjustments) in My Looks"
+              onClick={() => void run(async () => { const m = await saveMyLook(activeLook.recipe, activeLook.recipe.name); return `Saved "${m.name}" to My Looks.`; })}>
+              Save
+            </button>
+            <button type="button" className="h-6 px-2 text-xs font-mono normal-case tracking-normal font-normal border border-base-content/15 hover:border-primary hover:text-primary"
+              aria-label="Export look (.klook)" title="Download this look as a .klook file to share or move to another browser"
+              onClick={() => void run(async () => {
+                const url = URL.createObjectURL(await exportKlook(activeLook.recipe));
+                const a = window.document.createElement('a');
+                a.href = url; a.download = `${activeLook.recipe.name}.klook`; a.click();
+                URL.revokeObjectURL(url);
+                return `Exported "${activeLook.recipe.name}.klook".`;
+              })}>
+              Export
+            </button>
             <button type="button" className="h-6 px-2 text-xs font-mono normal-case tracking-normal font-normal border border-base-content/15 hover:border-error hover:text-error"
               onClick={() => LayerManager.removeLayer(activeLook.id)}>
               Remove
             </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button type="button" className="h-6 px-2 text-xs font-mono normal-case tracking-normal font-normal border border-base-content/15 hover:border-primary hover:text-primary"
+              title={!activeLook.mask ? 'Hide this look, then brush it in where you want it' : activeLook.mask.invert ? 'The brush adds the look, the eraser takes it away' : 'The brush takes the look away, the eraser brings it back'}
+              onClick={() => void (async () => {
+                if (!activeLook.mask) await LayerManager.addMask(activeLook.id, 'hidden');
+                dispatch({ type: 'SET_PAINT_TARGET', target: 'mask' });
+                dispatch({ type: 'SET_ACTIVE_TOOL', tool: 'brush' });
+              })()}>
+              {activeLook.mask ? 'Brush mask' : 'Brush in'}
+            </button>
+            {activeLook.mask && (
+              <button type="button" className="h-6 px-2 text-xs font-mono normal-case tracking-normal font-normal border border-base-content/15 hover:border-error hover:text-error"
+                onClick={() => LayerManager.removeMask(activeLook.id)}>
+                Remove mask
+              </button>
+            )}
           </div>
           <label className="flex items-center gap-2 text-xs font-mono text-base-content/70">
             Strength

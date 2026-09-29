@@ -35,6 +35,7 @@ export class LayerPainter {
   // Scratch canvas reused across frames for mask alpha-compositing — resized
   // on demand rather than allocated per layer per frame.
   private maskScratch: OffscreenCanvas = new OffscreenCanvas(1, 1);
+  private lookMaskScratch: OffscreenCanvas = new OffscreenCanvas(1, 1);
 
   // Manual (WebGL2) blend modes — lazily created only if a document actually
   // uses one, so documents with only native modes never pay for this.
@@ -110,11 +111,10 @@ export class LayerPainter {
       for (const l of list) {
         key.push(l);
         if (l.type === 'group' && !walk(l.children)) return false;
-        if (l.type === 'image') {
-          if ((BrushEngine.isStroking && BrushEngine.activeLayerId === l.id) ||
-              (CloneStampTool.isStroking && CloneStampTool.activeLayerId === l.id)) return false;
-          key.push(AdjustmentEngine.getPreviewBitmap(l.id));
-        }
+        // Includes a look whose mask is being brushed.
+        if ((BrushEngine.isStroking && BrushEngine.activeLayerId === l.id) ||
+            (CloneStampTool.isStroking && CloneStampTool.activeLayerId === l.id)) return false;
+        if (l.type === 'image') key.push(AdjustmentEngine.getPreviewBitmap(l.id));
       }
       return true;
     };
@@ -129,6 +129,7 @@ export class LayerPainter {
     const w = canvasEl.width, h = canvasEl.height;
     if (w === 0 || h === 0 || layer.opacity <= 0 || layer.recipe.components.every(c => !c.enabled)) return;
     if (this.showAdjustmentPreviews && isLookBypassed()) return; // before/after, on screen only
+    if (this.lookRenderer?.lost) this.lookRenderer = undefined; // context loss: rebuild once
     if (this.lookRenderer === undefined) {
       try { this.lookRenderer = new LookRenderer(); } catch { this.lookRenderer = null; }
     }
@@ -139,11 +140,48 @@ export class LayerPainter {
       canvasEl, w, h, layer.recipe, layer.opacity / 100,
       [inv.a, inv.b, inv.c, inv.d, inv.e, inv.f], doc?.width ?? w, doc?.height ?? h,
     );
+    if (this.lookRenderer.lost) {
+      // Lost mid-render: the result is garbage. On screen, leave the ungraded
+      // pixels (the next frame rebuilds); an export must fail loudly, not ship them.
+      this.lookRenderer = undefined;
+      if (!this.showAdjustmentPreviews) throw new Error('The graphics card reset while rendering a look. Try again.');
+      return;
+    }
+    const mask = layer.mask?.enabled ? layer.mask : undefined;
+    if (!mask) {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalCompositeOperation = 'copy';
+      ctx.globalAlpha = 1;
+      ctx.drawImage(result, 0, 0);
+      ctx.restore();
+      return;
+    }
+    // Masked look: out = graded × m + original × (1 − m). The mask is document
+    // space, drawn through ctx's transform; 'lighter' adds the two premultiplied halves.
+    const m = ctx.getTransform();
+    const t = layer.transform;
+    const liveMask = BrushEngine.isStroking && BrushEngine.activeLayerId === layer.id ? BrushEngine.getScratchBitmap() : null;
+    const drawMask = (c: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D, op: GlobalCompositeOperation) => {
+      c.save();
+      c.setTransform(m);
+      c.globalCompositeOperation = op;
+      c.filter = mask.feather > 0 ? `blur(${mask.feather * Math.hypot(m.a, m.b)}px)` : 'none';
+      c.drawImage(liveMask ?? mask.bitmap, t.origin.x, t.origin.y, t.size.width, t.size.height);
+      c.restore();
+    };
+    if (this.lookMaskScratch.width !== w || this.lookMaskScratch.height !== h) this.lookMaskScratch = new OffscreenCanvas(w, h);
+    const sctx = this.lookMaskScratch.getContext('2d');
+    if (!sctx) return;
+    sctx.globalCompositeOperation = 'copy';
+    sctx.drawImage(result, 0, 0);
+    drawMask(sctx, mask.invert ? 'destination-out' : 'destination-in');
+    drawMask(ctx, mask.invert ? 'destination-in' : 'destination-out');
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.globalCompositeOperation = 'copy';
+    ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = 1;
-    ctx.drawImage(result, 0, 0);
+    ctx.drawImage(this.lookMaskScratch, 0, 0);
     ctx.restore();
   }
 

@@ -369,7 +369,7 @@ export function dispatch(action: EditorAction): void {
     case 'REPLACE_LAYER_MASK_BITMAP': {
       if (!prev.document) return;
       const target = findLayerById(prev.document.layers, action.layerId);
-      if (!target || target.type !== 'image' || !target.mask) return;
+      if (!target || (target.type !== 'image' && target.type !== 'look') || !target.mask) return;
       const layers = updateLayerById(prev.document.layers, action.layerId, {
         mask: { ...target.mask, bitmap: action.bitmap },
       } as Partial<Layer>);

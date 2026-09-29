@@ -445,26 +445,31 @@ export async function flattenImage(): Promise<boolean> {
 // Painted via BrushEngine (paintTarget: 'mask') — see BrushEngine.ts. The mask
 // alpha-multiplies the layer's color bitmap in CanvasRenderer.drawImageLayer.
 
-/** Adds a fully-visible (opaque white) mask to an image layer, sized to its bitmap. */
-export async function addMask(layerId: string): Promise<void> {
+/** Adds a mask to an image layer (sized to its bitmap) or a look layer (sized
+ *  to the document it covers). Fully visible by default. `hidden` (Looks panel
+ *  "Brush in") is the same opaque mask inverted: the brush hides mask pixels
+ *  (Photoshop convention), which under invert paints the look in. */
+export async function addMask(layerId: string, start: 'visible' | 'hidden' = 'visible'): Promise<void> {
   const layer = findLayer(layerId);
-  if (!layer || layer.type !== 'image' || layer.mask) return;
+  if (!layer || (layer.type !== 'image' && layer.type !== 'look') || layer.mask) return;
 
-  const oc = new OffscreenCanvas(layer.intrinsicWidth, layer.intrinsicHeight);
+  const oc = layer.type === 'image'
+    ? new OffscreenCanvas(layer.intrinsicWidth, layer.intrinsicHeight)
+    : new OffscreenCanvas(Math.max(1, Math.round(layer.transform.size.width)), Math.max(1, Math.round(layer.transform.size.height)));
   const ctx = oc.getContext('2d');
   if (!ctx) return;
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, oc.width, oc.height);
   const bitmap = await createImageBitmap(oc);
 
-  const mask: LayerMask = { bitmap, enabled: true, invert: false, feather: 0 };
+  const mask: LayerMask = { bitmap, enabled: true, invert: start === 'hidden', feather: 0 };
   pushCommand(makeLayerUpdateCmd(`Add mask to "${layer.name}"`, layerId, { mask: undefined }, { mask }));
 }
 
-/** Removes an image layer's mask entirely. */
+/** Removes an image or look layer's mask entirely. */
 export function removeMask(layerId: string): void {
   const layer = findLayer(layerId);
-  if (!layer || layer.type !== 'image' || !layer.mask) return;
+  if (!layer || (layer.type !== 'image' && layer.type !== 'look') || !layer.mask) return;
   pushCommand(makeLayerUpdateCmd(`Remove mask from "${layer.name}"`, layerId, { mask: layer.mask }, { mask: undefined }));
 }
 

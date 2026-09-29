@@ -27,13 +27,16 @@ export type LookComponent =
   /** 8 hue bands (HSL_BAND_HUES), each [hue shift °, saturation, lightness]. */
   | { kind: 'hsl'; enabled: boolean; bands: HslBand[] }
   | { kind: 'paper'; enabled: boolean; amount: number; scale: number }
-  | { kind: 'dust'; enabled: boolean; amount: number; scratches: number; seed: number };
+  | { kind: 'dust'; enabled: boolean; amount: number; scratches: number; seed: number }
+  | { kind: 'texture'; enabled: boolean; assetId: string; blend: TextureBlend; amount: number };
 
 export type HslBand = [number, number, number];
 /** Band centres: red, orange, yellow, green, aqua, blue, purple, magenta. */
 export const HSL_BAND_HUES = [0, 30, 60, 120, 180, 220, 270, 320] as const;
 
 export type FrameStyle = 'thin' | 'polaroid' | 'rounded';
+export const TEXTURE_BLENDS = ['overlay', 'soft-light', 'screen', 'multiply'] as const;
+export type TextureBlend = typeof TEXTURE_BLENDS[number];
 const FRAME_STYLES: FrameStyle[] = ['thin', 'polaroid', 'rounded'];
 
 export type LookComponentKind = LookComponent['kind'];
@@ -57,7 +60,8 @@ export interface LookRecipe {
  *  frame.width = border as a fraction of the short side (0…0.2), color '#rrggbb';
  *  hsl bands: hue shift −30…30°, saturation −1…1, lightness −1…1;
  *  paper.amount 0…1, scale = fibre size in document px (1…40);
- *  dust.amount 0…1 (speck density), scratches 0…1, seed picks the pattern.
+ *  dust.amount 0…1 (speck density), scratches 0…1, seed picks the pattern;
+ *  texture = a user image (assetId `user:…`) cover-fitted to the document, blended at amount 0…1.
  *  Textures are procedural (Jev, 2026-09-29: procedural over CC0 scans, 0.97). */
 export const COMPONENT_DEFAULTS: { [K in LookComponentKind]: Extract<LookComponent, { kind: K }> } = {
   develop:   { kind: 'develop', enabled: true, exposure: 0, contrast: 0, highlights: 0, shadows: 0, temp: 0, tint: 0, saturation: 0 },
@@ -75,6 +79,7 @@ export const COMPONENT_DEFAULTS: { [K in LookComponentKind]: Extract<LookCompone
   hsl:       { kind: 'hsl', enabled: true, bands: HSL_BAND_HUES.map((): HslBand => [0, 0, 0]) },
   paper:     { kind: 'paper', enabled: true, amount: 0.4, scale: 6 },
   dust:      { kind: 'dust', enabled: true, amount: 0.4, scratches: 0.3, seed: 1 },
+  texture:   { kind: 'texture', enabled: true, assetId: '', blend: 'overlay', amount: 0.6 },
 };
 
 export function makeRecipe(name: string, components: LookComponent[]): LookRecipe {
@@ -137,6 +142,8 @@ export function parseRecipe(json: unknown): LookRecipe | null {
       case 'paper': components.push({ kind: 'paper', enabled, amount: clamp(c.amount, 0, 1, 0.4), scale: clamp(c.scale, 1, 40, 6) }); break;
       case 'dust': components.push({ kind: 'dust', enabled, amount: clamp(c.amount, 0, 1, 0.4),
         scratches: clamp(c.scratches, 0, 1, 0.3), seed: clamp(c.seed, 0, 1e6, 1) }); break;
+      case 'texture': if (typeof c.assetId === 'string' && c.assetId) components.push({ kind: 'texture', enabled, assetId: c.assetId,
+        blend: (TEXTURE_BLENDS as readonly unknown[]).includes(c.blend) ? c.blend as TextureBlend : 'overlay', amount: clamp(c.amount, 0, 1, 0.6) }); break;
       // unknown kinds (from a newer build) are skipped, not fatal
     }
   }

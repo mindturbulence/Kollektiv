@@ -88,9 +88,9 @@ export function collectDocumentBitmaps(doc: EditorDocument | null): Set<ImageBit
   if (!doc) return live;
   const visit = (layers: EditorDocument['layers']): void => {
     for (const layer of layers) {
+      if (layer.mask) live.add(layer.mask.bitmap); // image and look layers
       if (layer.type === 'image') {
         live.add(layer.bitmap);
-        if (layer.mask) live.add(layer.mask.bitmap);
       } else if (layer.type === 'group') {
         visit(layer.children);
       }

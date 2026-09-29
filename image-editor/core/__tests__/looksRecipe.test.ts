@@ -154,3 +154,22 @@ describe('texture components', () => {
     ]);
   });
 });
+
+describe('texture component', () => {
+  it('parses a texture with a known blend, defaults an unknown one, drops one without an asset', () => {
+    const r = parseRecipe({ formatVersion: LOOK_FORMAT_VERSION, components: [
+      { kind: 'texture', assetId: 'user:abc', blend: 'screen', amount: 3 },
+      { kind: 'texture', assetId: 'user:def', blend: 'hard-mix' },
+      { kind: 'texture', blend: 'overlay' },
+    ] })!;
+    expect(r.components).toEqual([
+      { kind: 'texture', enabled: true, assetId: 'user:abc', blend: 'screen', amount: 1 },
+      { kind: 'texture', enabled: true, assetId: 'user:def', blend: 'overlay', amount: 0.6 },
+    ]);
+  });
+
+  it('develop gains highlights and shadows, clamped, defaulting to 0 for older recipes', () => {
+    const r = parseRecipe({ formatVersion: LOOK_FORMAT_VERSION, components: [{ kind: 'develop', exposure: 1, highlights: -5 }] })!;
+    expect(r.components[0]).toMatchObject({ exposure: 1, highlights: -1, shadows: 0 });
+  });
+});

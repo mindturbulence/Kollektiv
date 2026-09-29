@@ -148,11 +148,12 @@ export const BrushEngine = {
 
   beginStroke(layerId: string, target: 'color' | 'mask' = 'color', docScale = 1): void {
     const { document: doc } = getSnapshot();
-    const layer = (doc && findLayerById(doc.layers, layerId)) as ImageLayer | undefined;
-    if (!layer || layer.type !== 'image') return;
+    const layer = doc ? findLayerById(doc.layers, layerId) : undefined;
+    // Image layers paint color or mask; look layers only their mask (where the look applies).
+    if (!layer || !(layer.type === 'image' || (layer.type === 'look' && target === 'mask'))) return;
     if (target === 'mask' && !layer.mask) return; // caller must add a mask first (LayerManager.addMask)
 
-    const sourceBitmap = target === 'mask' ? layer.mask!.bitmap : layer.bitmap;
+    const sourceBitmap = target === 'mask' ? layer.mask!.bitmap : (layer as ImageLayer).bitmap;
 
     _layerId    = layerId;
     _target     = target;

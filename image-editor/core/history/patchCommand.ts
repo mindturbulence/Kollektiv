@@ -28,8 +28,9 @@ export function dirtyRect(
 function currentBitmap(layerId: string, target: PatchTarget): ImageBitmap | null {
   const doc = getSnapshot().document;
   const layer = doc ? findLayerById(doc.layers, layerId) : undefined;
-  if (!layer || layer.type !== 'image') return null;
-  return target === 'mask' ? layer.mask?.bitmap ?? null : layer.bitmap;
+  if (!layer) return null;
+  if (target === 'mask') return layer.type === 'image' || layer.type === 'look' ? layer.mask?.bitmap ?? null : null;
+  return layer.type === 'image' ? layer.bitmap : null;
 }
 
 function applyPatch(layerId: string, target: PatchTarget, rect: Rect, patch: ImageBitmap): void {
