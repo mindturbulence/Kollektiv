@@ -97,6 +97,7 @@ export const defaultLLMSettings: LLMSettings = {
   convertImageToJpgLocal: false,
   convertImageToJpgDrive: true,
   jpgCompressionQuality: 0.9,
+  galleryConvertTarget: 'jpg',
 
   // Converter (plan W5): defaults persisted across sessions
   converterDefaultTargetId: 'webp',
@@ -213,6 +214,7 @@ function mergeSettings(parsed: Record<string, unknown>): LLMSettings {
       convertImageToJpgLocal: parsed.convertImageToJpgLocal ?? defaultLLMSettings.convertImageToJpgLocal,
       convertImageToJpgDrive: parsed.convertImageToJpgDrive ?? defaultLLMSettings.convertImageToJpgDrive,
       jpgCompressionQuality: parsed.jpgCompressionQuality ?? defaultLLMSettings.jpgCompressionQuality,
+      galleryConvertTarget: (['jpg', 'webp', 'avif'] as unknown[]).includes(parsed.galleryConvertTarget) ? parsed.galleryConvertTarget : defaultLLMSettings.galleryConvertTarget,
       autoTagEnabled: parsed.autoTagEnabled ?? false,
       providerFallbackEnabled: parsed.providerFallbackEnabled ?? false,
       providerFallbackChain: parsed.providerFallbackChain ?? [],

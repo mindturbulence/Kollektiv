@@ -521,8 +521,8 @@ const GallerySection: React.FC<GallerySectionProps> = ({
 
                         <SettingsGroup title="Storage Format">
                             <SettingRow
-                                label="Convert Media to JPG (Local Storage)"
-                                desc="Automatically convert saved images to JPG format when using Local Storage. Metadata will be preserved."
+                                label="Convert Saved Images (Local Storage)"
+                                desc="Automatically convert images saved into the gallery when using Local Storage (format below)."
                             >
                                 <input
                                     type="checkbox"
@@ -533,8 +533,8 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                             </SettingRow>
 
                             <SettingRow
-                                label="Convert Media to JPG (Google Drive)"
-                                desc="Automatically convert saved images to JPG format when using Google Drive storage. Metadata will be preserved."
+                                label="Convert Saved Images (Google Drive)"
+                                desc="Automatically convert images saved into the gallery when using Google Drive storage (format below)."
                             >
                                 <input
                                     type="checkbox"
@@ -546,8 +546,28 @@ const GallerySection: React.FC<GallerySectionProps> = ({
 
                             {(settings.convertImageToJpgLocal || settings.convertImageToJpgDrive) && (
                                 <SettingRow
-                                    label="JPG Compression Quality"
-                                    desc="Adjust the compression level for JPG conversion (10% to 100%)."
+                                    label="Convert To"
+                                    desc={(settings.galleryConvertTarget ?? 'jpg') === 'jpg'
+                                        ? 'JPG keeps prompt metadata inside the file (EXIF); transparency becomes solid.'
+                                        : 'Keeps transparency and saves space. The prompt stays in the gallery, but is not embedded in the file.'}
+                                >
+                                    <select
+                                        aria-label="Gallery convert format"
+                                        value={settings.galleryConvertTarget ?? 'jpg'}
+                                        onChange={(e) => handleSettingsChange('galleryConvertTarget', e.target.value as 'jpg' | 'webp' | 'avif')}
+                                        className="form-select h-8 text-xs w-32"
+                                    >
+                                        <option value="jpg">JPG</option>
+                                        <option value="webp">WebP</option>
+                                        <option value="avif">AVIF (slow)</option>
+                                    </select>
+                                </SettingRow>
+                            )}
+
+                            {(settings.convertImageToJpgLocal || settings.convertImageToJpgDrive) && (
+                                <SettingRow
+                                    label="Compression Quality"
+                                    desc="Compression level for the conversion above (10% to 100%)."
                                 >
                                     <div className="flex items-center gap-4 w-48">
                                         <input

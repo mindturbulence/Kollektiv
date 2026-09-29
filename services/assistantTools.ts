@@ -1075,7 +1075,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
                 'musicEnabled', 'musicYoutubeUrl',
                 'dashboardVideoUrl', 'isDashboardVideoEnabled', 'dashboardBackgroundType',
                 'idleScreenType', 'isIdleEnabled', 'idleTimeoutMinutes',
-                'convertImageToJpgLocal', 'convertImageToJpgDrive', 'jpgCompressionQuality',
+                'convertImageToJpgLocal', 'convertImageToJpgDrive', 'jpgCompressionQuality', 'galleryConvertTarget',
             ]);
             if (!changes || typeof changes !== 'object') return 'Error: changes must be a JSON object.';
             const current = loadLLMSettings();

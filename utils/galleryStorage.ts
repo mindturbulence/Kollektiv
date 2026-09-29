@@ -4,6 +4,7 @@ import { fileSystemManager } from './fileUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { loadLLMSettings } from './settingsStorage';
 import { convertToJpgWithMetadata } from './imageFormatTools';
+import { transcodeImage } from './imageTranscode';
 import { loadManifestSafe, ManifestWriteBlockedError, stampSchemaVersion, type ManifestLoad } from './manifestStore';
 
 interface GalleryManifest {
@@ -208,8 +209,16 @@ export const addItemToGallery = async (
                     : settings.convertImageToJpgLocal;
                     
                 if (shouldConvert) {
-                    blob = await convertToJpgWithMetadata(blob, settings.jpgCompressionQuality || 0.9);
-                    extension = 'jpg';
+                    const target = settings.galleryConvertTarget ?? 'jpg';
+                    if (target === 'jpg') {
+                        blob = await convertToJpgWithMetadata(blob, settings.jpgCompressionQuality || 0.9);
+                        extension = 'jpg';
+                    } else if (!blob.type.includes(target)) {
+                        // WebP/AVIF via the converter's ImageMagick worker. The prompt stays in
+                        // the gallery manifest; it isn't embedded in the file (Settings says so).
+                        blob = await transcodeImage(blob, target, Math.round((settings.jpgCompressionQuality || 0.9) * 100));
+                        extension = target;
+                    }
                 }
             }
 

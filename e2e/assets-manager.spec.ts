@@ -252,3 +252,23 @@ test('save to the Vault gallery with tags, then browse the vault gallery as a ro
     await page.getByRole('button', { name: 'Add the vault gallery as a root' }).click();
     await expect(page.getByText(/[1-9]\d* IMAGES?$/)).toBeVisible({ timeout: 15_000 });
 });
+
+test('opt-in gallery conversion: saved images become WebP when the setting says so', async ({ page }) => {
+    test.setTimeout(120_000);
+    await openPhotos(page);
+    await page.evaluate(() => {
+        const s = JSON.parse(localStorage.getItem('kollektivSettingsV4') ?? '{}');
+        localStorage.setItem('kollektivSettingsV4', JSON.stringify({ ...s, convertImageToJpgLocal: true, galleryConvertTarget: 'webp' }));
+    });
+    await card(page, 'a.png').click({ modifiers: ['Control'] });
+    await page.getByRole('toolbar', { name: 'Selection actions' }).getByRole('button', { name: 'To Vault' }).click();
+    await page.getByRole('dialog', { name: /Save 1 to the Vault gallery/ }).getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText(/Saved 1 to the gallery/)).toBeVisible({ timeout: 30_000 });
+    const names = await page.evaluate(async () => {
+        const gallery = await (await navigator.storage.getDirectory()).getDirectoryHandle('gallery');
+        const out: string[] = [];
+        for await (const [n] of (gallery as any).entries()) out.push(n);
+        return out;
+    });
+    expect(names.some(n => n.endsWith('.webp'))).toBe(true);
+});

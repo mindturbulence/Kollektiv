@@ -80,7 +80,8 @@ export async function getSourceItemMeta(
 /** Returns true if the current settings would JPEG-convert the saved image (destroying alpha). */
 export function willConvertToJpeg(): boolean {
   const settings = loadLLMSettings();
-  return settings.storageProvider === 'drive'
+  const converts = settings.storageProvider === 'drive'
     ? (settings.convertImageToJpgDrive ?? true)
     : (settings.convertImageToJpgLocal ?? false);
+  return converts && (settings.galleryConvertTarget ?? 'jpg') === 'jpg'; // WebP/AVIF keep alpha
 }

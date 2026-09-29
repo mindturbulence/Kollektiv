@@ -263,6 +263,8 @@ export interface LLMSettings {
   convertImageToJpgLocal?: boolean;
   convertImageToJpgDrive?: boolean;
   jpgCompressionQuality?: number;
+  /** Format the toggles above convert saved images to (default 'jpg'). */
+  galleryConvertTarget?: 'jpg' | 'webp' | 'avif';
 
   // Converter (plan W5): defaults persisted across sessions
   converterDefaultTargetId?: string;
