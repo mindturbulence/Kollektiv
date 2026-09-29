@@ -572,3 +572,25 @@ test('HSL colour mix: desaturating the red band greys reds and leaves blues', as
     await expect.poll(async () => spread(await pixelAt(page, 300, 150)), { timeout: 5_000 }).toBeLessThan(25);
     expect(spread(await pixelAt(page, 100, 150))).toBeGreaterThan(80);           // blue half keeps its colour
 });
+
+test('a RAW LibRaw cannot decode opens its embedded JPEG preview', async ({ page }) => {
+    test.setTimeout(90_000);
+    await bootToAppShell(page, 'image_editor');
+    const jpeg = Buffer.from((await page.evaluate(() => {
+        const c = document.createElement('canvas');
+        c.width = 200; c.height = 100;
+        const ctx = c.getContext('2d')!;
+        ctx.fillStyle = '#2060c0'; ctx.fillRect(0, 0, 200, 100);
+        return c.toDataURL('image/jpeg');
+    })).split(',')[1], 'base64');
+    // Not a RAW LibRaw knows, but with a camera-style embedded JPEG inside.
+    const broken = Buffer.concat([Buffer.from('KOLLEKTIV-NOT-A-REAL-RAW'.repeat(8)), jpeg, Buffer.alloc(256)]);
+
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
+    await (await chooser).setFiles({ name: 'broken.cr2', mimeType: '', buffer: broken });
+
+    await expect(page.getByText('200 × 100px')).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByText(/embedded preview instead/)).toBeVisible();
+    await expect(page.getByRole('region', { name: 'RAW develop' })).toHaveCount(0);
+});

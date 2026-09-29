@@ -12,7 +12,13 @@ Legend: **S** small · **M** medium · **L** large. Check items off here; delete
 ## 1. Image Editor
 
 - [ ] **Looks / Quick-Edit / RAW** — the active plan: [2026-09-28-image-editor-looks.md](2026-09-28-image-editor-looks.md). **L** (~11.5–14 wks)
-  Phases 1–3 done (2026-09-29); next Phase 4 RAW/DNG, then Phase 5. Phase 0 GPU checks pass on the owner's machine; the RAW decode probe waits for a RAW file.
+  - [ ] Phase 0 — spikes. GPU checks done 2026-09-29 (all pass on the owner's Intel UHD); **RAW decode probe still needs a RAW file** (runs first in Phase 4).
+  - [x] Phase 1 — engine core: look layers, fused WebGL2 pass, render cache, LUT catalog (2026-09-29)
+  - [x] Phase 2 — Quick/Pro mode and the Looks panel (2026-09-29)
+  - [x] Phase 3 — full catalog: glow, leaks, fringe, frames, HSL, procedural textures, 30 looks, Randomize, Favourites (2026-09-29)
+  - [ ] Phase 4 — RAW/DNG. Done: worker decode, embedded-preview fallback (e2e), Develop on float source + Highlights/Shadows, in-panel Re-develop, licence notice. Left: verify with a real RAW file + synthetic-DNG e2e, live-develop e2e, Gallery → Edit for RAW, CR3 check. **M**
+  - [ ] Phase 5 — My Looks save/import/export, `.cube` + texture import, masking looks, tiled export, context-loss recovery. **M**
+  - [ ] Thumbnail priority by visibility (IntersectionObserver) — optional; 30 thumbnails render fine without it. **S**
 - [ ] **Optional: CC0 texture scans** (paper/dust/light-leak photos from ambientCG-style CC0 sources, listed in `public/looks/LICENSES.md`) if the procedural textures feel too clean. **S**
 
 ## 2. Assets Manager (Utilities → `assets_manager`)

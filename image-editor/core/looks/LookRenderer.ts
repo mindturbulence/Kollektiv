@@ -73,7 +73,8 @@ uniform mat3 u_toDoc;         // canvas px (y down) → document px
 uniform vec2 u_docSize;
 uniform float u_pxPerDoc;     // canvas px per document px
 uniform float u_strength;
-uniform bool u_dev; uniform float u_exposure, u_contrast, u_temp, u_tint, u_sat;
+uniform bool u_srcLinear;     // source is linear float (RAW develop), not 8-bit sRGB
+uniform bool u_dev; uniform float u_exposure, u_contrast, u_hi, u_sh, u_temp, u_tint, u_sat;
 uniform bool u_useLut; uniform float u_lutN, u_lutStrength; uniform vec3 u_domMin, u_domMax;
 uniform bool u_useCurve;
 uniform bool u_hsl; uniform vec3 u_hslBands[8]; uniform float u_hslHues[8];
@@ -146,12 +147,25 @@ void main() {
     c.b = texture(u_src, (px - off) / u_size).b;
   }
   if (u_dev) {
-    vec3 lin = toLin(c) * exp2(u_exposure);
+    vec3 lin = (u_srcLinear ? c : toLin(c)) * exp2(u_exposure);
     lin *= vec3(1.0 + 0.25 * u_temp, 1.0 - 0.15 * u_tint, 1.0 - 0.25 * u_temp);
-    c = toSrgb(lin);
+    c = toSrgb(lin);                                            // may exceed 1 (RAW headroom)
+    float y = max(luma(c), 1e-4), y2 = y;
+    if (u_hi < 0.0 && y > 0.6) {                                // extended-Reinhard shoulder: white point
+      float wn = -u_hi * 3.0 / 0.4 + 1.0;                       // 1 + 3|h| maps back to 1; identity at 0
+      float t = (y - 0.6) / 0.4;
+      y2 = 0.6 + 0.4 * t * (1.0 + t / (wn * wn)) / (1.0 + t);
+    } else if (u_hi > 0.0) {
+      y2 = y + u_hi * 0.3 * smoothstep(0.4, 1.0, y) * max(0.0, 1.0 - y);
+    }
+    float ws = 1.0 - smoothstep(0.0, 0.5, y2);
+    y2 += u_sh * 0.3 * ws * (u_sh > 0.0 ? max(0.0, 1.0 - y2) : y2);
+    c *= y2 / y;
     c = (c - 0.5) * (1.0 + u_contrast) + 0.5;
     c = mix(vec3(luma(c)), c, 1.0 + u_sat);
     c = clamp(c, 0.0, 1.0);
+  } else if (u_srcLinear) {
+    c = clamp(toSrgb(c), 0.0, 1.0);
   }
   if (u_useLut) {
     vec3 t = clamp((c - u_domMin) / (u_domMax - u_domMin), 0.0, 1.0);
@@ -386,12 +400,37 @@ export class LookRenderer {
   }
 
   /**
+   * Uploads a linear RGB source (RAW decode: 16-bit, 3 channels) as RGBA16F;
+   * a following `render(null, …)` develops it instead of an 8-bit image. Rows go
+   * up in strips so the float staging buffer stays small. Throws when the GPU
+   * can't hold it (MAX_TEXTURE_SIZE) or has no float textures.
+   */
+  loadLinearSource(data: Uint16Array, w: number, h: number): void {
+    const gl = this.gl;
+    const max = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+    if (w > max || h > max) throw new Error(`RAW is ${w}×${h}px; this GPU handles up to ${max}px`);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.srcTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+    const rows = Math.max(1, Math.floor(262144 / w));
+    const strip = new Float32Array(w * rows * 4);
+    for (let y0 = 0; y0 < h; y0 += rows) {
+      const n = Math.min(rows, h - y0);
+      for (let i = 0, j = y0 * w * 3, end = n * w * 4; i < end; i += 4, j += 3) {
+        strip[i] = data[j] / 65535; strip[i + 1] = data[j + 1] / 65535; strip[i + 2] = data[j + 2] / 65535; strip[i + 3] = 1;
+      }
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, y0, w, n, gl.RGBA, gl.FLOAT, strip.subarray(0, n * w * 4));
+    }
+  }
+
+  /**
    * Shades `source` (the pixels below the look, `w`×`h` canvas px) and returns
    * the result canvas. `toDoc` maps canvas px → document px as a 2×3 affine
-   * [a, b, c, d, e, f] (DOMMatrix order); `strength` is 0–1.
+   * [a, b, c, d, e, f] (DOMMatrix order); `strength` is 0–1. A `null` source
+   * reuses the texture from `loadLinearSource` (scaled to `w`×`h`).
    */
   render(
-    source: TexImageSource, w: number, h: number,
+    source: TexImageSource | null, w: number, h: number,
     recipe: LookRecipe, strength: number,
     toDoc: [number, number, number, number, number, number], docW: number, docH: number,
   ): OffscreenCanvas {
@@ -399,8 +438,10 @@ export class LookRenderer {
     if (this.canvas.width !== w || this.canvas.height !== h) { this.canvas.width = w; this.canvas.height = h; }
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.srcTex);
-    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    if (source) {
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    }
 
     const [a, b, c, d, e, f] = toDoc;
     const pxPerDoc = 1 / Math.max(1e-6, Math.hypot(a, b));
@@ -424,6 +465,7 @@ export class LookRenderer {
     gl.uniform2f(this.u(m, 'u_docSize'), Math.max(1, docW), Math.max(1, docH));
     gl.uniform1f(this.u(m, 'u_pxPerDoc'), pxPerDoc);
     gl.uniform1f(this.u(m, 'u_strength'), Math.max(0, Math.min(1, strength)));
+    gl.uniform1i(this.u(m, 'u_srcLinear'), source ? 0 : 1);
     gl.uniform1f(this.u(m, 'u_bloomAmt'), bloomTex ? bloom!.amount : 0);
     gl.uniform1f(this.u(m, 'u_haloAmt'), haloTex ? halo!.amount : 0);
     this.setComponents(m, find);
@@ -443,6 +485,7 @@ export class LookRenderer {
     gl.uniform1i(u('u_dev'), dev ? 1 : 0);
     if (dev) {
       gl.uniform1f(u('u_exposure'), dev.exposure); gl.uniform1f(u('u_contrast'), dev.contrast);
+      gl.uniform1f(u('u_hi'), dev.highlights); gl.uniform1f(u('u_sh'), dev.shadows);
       gl.uniform1f(u('u_temp'), dev.temp); gl.uniform1f(u('u_tint'), dev.tint); gl.uniform1f(u('u_sat'), dev.saturation);
     }
 

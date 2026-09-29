@@ -60,6 +60,7 @@ interface SerializedImageLayer extends SerializedLayerBase {
   intrinsicWidth: number;
   intrinsicHeight: number;
   mask?: SerializedMask;
+  raw?: ImageLayer['raw'];
 }
 
 interface SerializedGroupLayer extends SerializedLayerBase {
@@ -155,6 +156,7 @@ async function serializeLayer(layer: Layer, blobs: Record<string, ArrayBuffer>):
         type: 'image',
         intrinsicWidth: layer.intrinsicWidth,
         intrinsicHeight: layer.intrinsicHeight,
+        ...(layer.raw ? { raw: layer.raw } : {}),
       };
       if (layer.mask) {
         // Serialize the mask bitmap alongside the layer bitmap (review C3 —
@@ -194,6 +196,7 @@ async function deserializeLayer(meta: SerializedLayer, blobs: Record<string, Arr
         bitmap,
         intrinsicWidth: meta.intrinsicWidth,
         intrinsicHeight: meta.intrinsicHeight,
+        ...(meta.raw ? { raw: meta.raw } : {}),
       };
       if (meta.mask) {
         const maskBuf = blobs[`${meta.id}::mask`];

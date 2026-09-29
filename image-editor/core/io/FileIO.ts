@@ -15,6 +15,9 @@ import { getSnapshot } from '../store';
  *  from the import that caused it. */
 export const MAX_DIM = 8192;
 
+/** Camera RAW extensions the file picker offers (decoded by core/io/rawImport). */
+export const RAW_ACCEPT = '.dng,.cr2,.cr3,.nef,.nrw,.arw,.raf,.orf,.rw2,.pef,.srw';
+
 /** HEIC MIME types (iPhone photos) — Chrome/Firefox can't decode them and the
  *  generic "Unsupported format" gave the user no path forward. */
 const HEIC_TYPES = /^image\/hei[cf]$/i;
@@ -147,13 +150,17 @@ export async function importFromPayload(
     );
   }
 
-  const layer = bitmapToLayer(bitmap, 'Background');
+  return documentFromLayer(bitmapToLayer(bitmap, 'Background'), payload.title ?? 'Untitled');
+}
+
+/** A document sized to one image layer. */
+export function documentFromLayer(layer: ImageLayer, title: string): EditorDocument {
   const now = Date.now();
   return {
     id: crypto.randomUUID(),
-    title: payload.title ?? 'Untitled',
-    width: bitmap.width,
-    height: bitmap.height,
+    title,
+    width: layer.intrinsicWidth,
+    height: layer.intrinsicHeight,
     resolution: 72,
     layers: [layer],
     guides: [],
@@ -237,7 +244,7 @@ export function openFilePicker(): Promise<File | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*,.psd';
+    input.accept = `image/*,.psd,${RAW_ACCEPT}`;
     input.style.display = 'none';
     let settled = false;
 

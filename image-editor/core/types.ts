@@ -2,7 +2,7 @@
 // All types in this file are plain JSON-compatible (except ImageBitmap refs).
 // ImageBitmap refs are NOT serialized to IDB — only the encoded blob bytes are.
 
-import type { LookRecipe } from './looks/recipe';
+import type { LookComponent, LookRecipe } from './looks/recipe';
 
 // ─── Geometry ───────────────────────────────────────────────────────────────
 
@@ -81,6 +81,9 @@ export interface ImageLayer extends LayerBase {
   bitmap: ImageBitmap;
   intrinsicWidth: number;
   intrinsicHeight: number;
+  /** Set on layers developed from a camera RAW: the Develop settings used and
+   *  the source file's name (Re-develop re-decodes the file on demand). */
+  raw?: { develop: Extract<LookComponent, { kind: 'develop' }>; fileName: string };
 }
 
 export interface GroupLayer extends LayerBase {

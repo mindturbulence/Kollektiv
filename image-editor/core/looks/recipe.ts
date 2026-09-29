@@ -12,7 +12,7 @@ export const LOOK_FORMAT_VERSION = 1;
 export type CurvePoints = [number, number][]; // 0–1 in, 0–1 out, sorted by x
 
 export type LookComponent =
-  | { kind: 'develop'; enabled: boolean; exposure: number; contrast: number; temp: number; tint: number; saturation: number }
+  | { kind: 'develop'; enabled: boolean; exposure: number; contrast: number; highlights: number; shadows: number; temp: number; tint: number; saturation: number }
   | { kind: 'lut'; enabled: boolean; assetId: string; strength: number }
   | { kind: 'curve'; enabled: boolean; rgb: CurvePoints }
   | { kind: 'splitTone'; enabled: boolean; shadowHue: number; shadowSat: number; highlightHue: number; highlightSat: number; balance: number }
@@ -46,7 +46,8 @@ export interface LookRecipe {
 }
 
 /** Units, all neutral at the defaults below:
- *  develop — exposure in stops (−3…3), contrast/saturation −1…1, temp/tint −1…1;
+ *  develop — exposure in stops (−3…3), contrast/highlights/shadows/saturation −1…1,
+ *  temp/tint −1…1 (highlights < 0 also recovers RAW detail above white);
  *  lut.strength 0…1; splitTone hues 0…360, sats 0…1, balance −1…1;
  *  fade.amount 0…1 (lifted blacks); vignette.amount −1…1 (negative = darken),
  *  midpoint/feather 0…1; grain.amount 0…1, size in document px (≥ 0.5);
@@ -59,7 +60,7 @@ export interface LookRecipe {
  *  dust.amount 0…1 (speck density), scratches 0…1, seed picks the pattern.
  *  Textures are procedural (Jev, 2026-09-29: procedural over CC0 scans, 0.97). */
 export const COMPONENT_DEFAULTS: { [K in LookComponentKind]: Extract<LookComponent, { kind: K }> } = {
-  develop:   { kind: 'develop', enabled: true, exposure: 0, contrast: 0, temp: 0, tint: 0, saturation: 0 },
+  develop:   { kind: 'develop', enabled: true, exposure: 0, contrast: 0, highlights: 0, shadows: 0, temp: 0, tint: 0, saturation: 0 },
   lut:       { kind: 'lut', enabled: true, assetId: '', strength: 1 },
   curve:     { kind: 'curve', enabled: true, rgb: [[0, 0], [1, 1]] },
   splitTone: { kind: 'splitTone', enabled: true, shadowHue: 210, shadowSat: 0, highlightHue: 40, highlightSat: 0, balance: 0 },
@@ -97,6 +98,7 @@ export function parseRecipe(json: unknown): LookRecipe | null {
     switch (c.kind) {
       case 'develop': components.push({ kind: 'develop', enabled,
         exposure: clamp(c.exposure, -3, 3, 0), contrast: clamp(c.contrast, -1, 1, 0),
+        highlights: clamp(c.highlights, -1, 1, 0), shadows: clamp(c.shadows, -1, 1, 0),
         temp: clamp(c.temp, -1, 1, 0), tint: clamp(c.tint, -1, 1, 0), saturation: clamp(c.saturation, -1, 1, 0) }); break;
       case 'lut': if (typeof c.assetId === 'string' && c.assetId) components.push({ kind: 'lut', enabled, assetId: c.assetId, strength: clamp(c.strength, 0, 1, 1) }); break;
       case 'curve': {

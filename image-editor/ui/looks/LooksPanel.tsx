@@ -13,9 +13,10 @@ import { renderThumbnails } from '../../core/looks/thumbnails';
 import { onLutsChanged } from '../../core/looks/lutRegistry';
 import { setLookBypass } from '../../core/looks/compare';
 import { varyRecipe } from '../../core/looks/randomize';
-import { useFavourites, toggleFavourite } from './favourites';
+import { useFavourites, toggleFavourite } from './favourites';
+import RawDevelop, { DEVELOP_SLIDERS } from './RawDevelop';
 import { COMPONENT_DEFAULTS, HSL_BAND_HUES, type FrameStyle, type HslBand, type LookComponent, type LookComponentKind, type LookRecipe } from '../../core/looks/recipe';
-import type { Layer, LookLayer } from '../../core/types';
+import type { ImageLayer, Layer, LookLayer } from '../../core/types';
 
 /** Only the non-look layers decide what the thumbnails look like. */
 const baseLayersKey = (layers: Layer[] | undefined) => (layers ?? []).filter(l => l.type !== 'look');
@@ -37,7 +38,7 @@ const Thumb: React.FC<{ bitmap: ImageBitmap | undefined; label: string }> = ({ b
 
 /** Main slider per component kind for the inspector: [field, min, max, step, label]. */
 const INSPECTOR: Partial<Record<LookComponentKind, [string, number, number, number, string][]>> = {
-  develop: [['exposure', -2, 2, 0.05, 'Exposure'], ['contrast', -1, 1, 0.05, 'Contrast'], ['temp', -1, 1, 0.05, 'Temperature'], ['saturation', -1, 1, 0.05, 'Saturation']],
+  develop: DEVELOP_SLIDERS,
   lut: [['strength', 0, 1, 0.05, 'Grade']],
   splitTone: [['shadowSat', 0, 1, 0.05, 'Shadow tint'], ['highlightSat', 0, 1, 0.05, 'Highlight tint']],
   fade: [['amount', 0, 1, 0.05, 'Fade']],
@@ -205,11 +206,15 @@ const LooksPanel: React.FC = () => {
 
   const active = activeLayerId ? findLayerById(document.layers, activeLayerId) : undefined;
   const activeLook = active?.type === 'look' ? active : null;
+  // The RAW to develop: the active layer if it is one, else the first in the stack.
+  const isRaw = (l: Layer | undefined): l is ImageLayer & { raw: NonNullable<ImageLayer['raw']> } => l?.type === 'image' && !!l.raw;
+  const rawLayer = isRaw(active) ? active : document.layers.find(isRaw);
   const visible = BUILTIN_LOOKS.map((l, i) => ({ l, i })).filter(({ l }) =>
     category === 'all' || (category === 'favourites' ? favourites.has(l.key) : l.category === category));
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
+      {rawLayer && <RawDevelop layer={rawLayer} />}
       <div className="flex flex-wrap gap-1 px-2 py-2 border-b border-base-content/5" role="tablist" aria-label="Look categories">
         {[{ id: 'all' as const, label: 'All' }, { id: 'favourites' as const, label: '★ Favourites' }, ...LOOK_CATEGORIES].map(c => (
           <button key={c.id} type="button" role="tab" aria-selected={category === c.id}

@@ -8,7 +8,8 @@ import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore }
 import { createPortal } from 'react-dom';
 import { dispatch, getSnapshot, resetStore, subscribe } from '../core/store';
 import type { EditorDocument, EditorOpenPayload } from '../core/types';
-import { exportToBlob, importFromPayload, openFilePicker, importImage, createBlankDocument, exportMaskToBlob, bitmapToLayer } from '../core/io/FileIO';
+import { exportToBlob, importFromPayload, openFilePicker, importImage, createBlankDocument, exportMaskToBlob, bitmapToLayer, documentFromLayer } from '../core/io/FileIO';
+import { importRaw, isRawFile } from '../core/io/rawImport';
 import { importPsd, isPsdFile } from '../core/io/psdImport';
 import { rasterizeLayersToCanvas } from '../core/renderer/LayerPainter';
 import * as AutosaveService from '../core/autosave/AutosaveService';
@@ -266,10 +267,20 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
     }
   }, []);
 
+  /** Decodes + develops a camera RAW (seconds for a big file); a file LibRaw
+   *  can't read opens as its embedded JPEG, which the user is told about. */
+  const importRawLayer = useCallback(async (file: File) => {
+    showGlobalFeedback?.(`Developing ${file.name}…`);
+    const { layer, previewOnly } = await importRaw(file);
+    if (previewOnly) showGlobalFeedback?.(`Couldn't decode ${file.name}; opened its embedded preview instead (preview only, limited latitude).`);
+    return layer;
+  }, [showGlobalFeedback]);
+
   /** Opens an image file as a new document sized to the image. */
   const openFileAsDocument = useCallback(async (file: File) => {
     try {
-      const doc = isPsdFile(file) ? await importPsd(file) : await importFromPayload({
+      const doc = isRawFile(file) ? documentFromLayer(await importRawLayer(file), file.name.replace(/\.[^.]+$/, ''))
+        : isPsdFile(file) ? await importPsd(file) : await importFromPayload({
         kind: 'blob',
         blob: file,
         title: file.name.replace(/\.[^.]+$/, '') || undefined,
@@ -282,12 +293,13 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
     } catch (err) {
       showGlobalFeedback?.(`Failed to open image: ${err instanceof Error ? err.message : String(err)}`, true);
     }
-  }, [showGlobalFeedback]);
+  }, [importRawLayer, showGlobalFeedback]);
 
   /** With a document open, a file becomes a new top layer; without one, it becomes the document. */
   const openOrPlaceFile = useCallback(async (file: File) => {
     const psd = isPsdFile(file);
-    if (!psd && !file.type.startsWith('image/')) {
+    const raw = isRawFile(file);
+    if (!psd && !raw && !file.type.startsWith('image/')) {
       showGlobalFeedback?.(`Not an image: ${file.name}`, true);
       return;
     }
@@ -304,11 +316,11 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
         addLayer(bitmapToLayer(await createImageBitmap(flat), doc.title));
         return;
       }
-      addLayer(await importImage(file));
+      addLayer(raw ? await importRawLayer(file) : await importImage(file));
     } catch (err) {
       showGlobalFeedback?.(`Failed to import image: ${err instanceof Error ? err.message : String(err)}`, true);
     }
-  }, [openFileAsDocument, showGlobalFeedback]);
+  }, [importRawLayer, openFileAsDocument, showGlobalFeedback]);
 
   const handleImport = useCallback(async () => {
     const file = await openFilePicker();

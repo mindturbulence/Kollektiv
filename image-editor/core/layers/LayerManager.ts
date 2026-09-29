@@ -133,6 +133,26 @@ export function commitLookRecipe(layerId: string, before: LookRecipe): void {
   });
 }
 
+/** RAW Develop slider drag: show a freshly developed bitmap without history… */
+export function setLayerBitmapLive(layerId: string, bitmap: ImageBitmap): void {
+  dispatch({ type: 'REPLACE_LAYER_BITMAP', layerId, bitmap });
+}
+
+/** …then one undo step from the bitmap and settings the drag started with. */
+export function commitRawDevelop(layerId: string, before: ImageBitmap, beforeRaw: ImageLayer['raw'], raw: NonNullable<ImageLayer['raw']>): void {
+  const layer = findLayer(layerId);
+  if (layer?.type !== 'image' || layer.bitmap === before) return;
+  const after = layer.bitmap;
+  pushCommand({
+    id: crypto.randomUUID(),
+    label: `Develop "${layer.name}"`,
+    timestamp: Date.now(),
+    bitmapRefs: { 'new (do)': after, 'prev (undo)': before },
+    do: () => { dispatch({ type: 'REPLACE_LAYER_BITMAP', layerId, bitmap: after }); dispatch({ type: 'UPDATE_LAYER', layerId, patch: { raw } }); },
+    undo: () => { dispatch({ type: 'REPLACE_LAYER_BITMAP', layerId, bitmap: before }); dispatch({ type: 'UPDATE_LAYER', layerId, patch: { raw: beforeRaw } }); },
+  });
+}
+
 /** Removes the given layer from wherever it lives in the tree (top-level or
  *  inside a group — review H12: the old top-level `findIndex` made deleting a
  *  nested layer silently do nothing), restoring it to its exact parent + index
