@@ -90,6 +90,38 @@ export function getExtensionMime(ext: string): string {
   return imageMimes[normalized] || 'application/octet-stream';
 }
 
+// ── Export presets (web / social / broadcast targets) ─────────────────
+
+/** Audio bitrate for the 1–100 quality slider: 40 → 128 kbps, 100 → 320 kbps. */
+export function audioKbps(quality: number): number {
+  return Math.max(32, Math.min(320, Math.round(quality * 3.2)));
+}
+
+export interface ConverterPreset {
+  id: string;
+  label: string;
+  /** One-line summary shown under the label. */
+  hint: string;
+  targetId: string;
+  quality: number;
+  /** Longest side in px; larger sources shrink, smaller ones are never upscaled. */
+  maxEdge?: number;
+}
+
+export const CONVERTER_PRESETS: ConverterPreset[] = [
+  { id: 'web-image', label: 'Web image', hint: 'WebP · q80 · ≤ 2048 px', targetId: 'webp', quality: 80, maxEdge: 2048 },
+  { id: 'social-image', label: 'Social post', hint: 'JPEG · q90 · ≤ 1080 px', targetId: 'jpeg', quality: 90, maxEdge: 1080 },
+  { id: 'archive-image', label: 'Archive', hint: 'PNG · lossless · full size', targetId: 'png', quality: 100 },
+  { id: 'print-image', label: 'Print', hint: 'TIFF · full size', targetId: 'tiff', quality: 100 },
+  { id: 'web-video', label: 'Web video', hint: 'MP4 H.264 · ≤ 1920 px', targetId: 'mp4', quality: 80, maxEdge: 1920 },
+  { id: 'social-clip', label: 'Social clip', hint: 'MP4 H.264 · ≤ 1080 px', targetId: 'mp4', quality: 80, maxEdge: 1080 },
+  { id: 'podcast', label: 'Podcast', hint: 'MP3 · 128 kbps', targetId: 'mp3', quality: 40 },
+  { id: 'broadcast-audio', label: 'Broadcast audio', hint: 'WAV · 16-bit PCM', targetId: 'wav', quality: 100 },
+];
+
+/** Max-size choices offered next to the presets (0 = keep the original size). */
+export const MAX_EDGE_OPTIONS = [0, 3840, 2048, 1920, 1080, 720] as const;
+
 // ── Options & limits (plan W1/W2/E3) ──────────────────────────────────
 
 export const CONVERTER_LIMITS = {

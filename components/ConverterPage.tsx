@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { motion } from 'motion/react';
 import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import { evaluateConversion, isKnownSourceExt, getTargetsForSource, type RegistryRejectReason } from '../services/convert/convertRegistry';
-import { IMAGE_TARGET_FORMATS, AUDIO_TARGET_FORMATS, VIDEO_TARGET_FORMATS, CONVERTER_LIMITS, getFormatById, type ConverterFormatDef } from '../constants/converterFormats';
+import { IMAGE_TARGET_FORMATS, AUDIO_TARGET_FORMATS, VIDEO_TARGET_FORMATS, CONVERTER_LIMITS, CONVERTER_PRESETS, MAX_EDGE_OPTIONS, getFormatById, type ConverterFormatDef } from '../constants/converterFormats';
 import { sanitizeBaseName } from '../utils/converterNaming';
 import { downloadZip } from '../utils/zipDownload';
 import { useObjectUrls } from '../utils/useObjectUrls';
@@ -29,6 +29,8 @@ interface QueueRow {
   outputSize?: number;
   outputBlob?: Blob;
   durationMs?: number;
+  /** performance.now() when conversion started (live "converting… Ns"). */
+  startedAt?: number;
 }
 
 const REJECT_COPY: Record<RegistryRejectReason, string> = {
@@ -72,6 +74,8 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
     const saved = settings.converterQuality;
     return typeof saved === 'number' && saved >= 1 && saved <= 100 ? Math.round(saved) : 80;
   });
+  // Longest output side (0 = original); set by presets or the Max size select.
+  const [maxEdge, setMaxEdge] = useState(0);
   const settingsTouchedRef = useRef(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isZipping, setIsZipping] = useState(false);
@@ -183,14 +187,14 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
     async (row: QueueRow, targetId: string, verdict: { engine?: 'magick' | 'ffmpeg' }): Promise<Partial<QueueRow>> => {
       const started = performance.now();
       const buffer = await row.file.arrayBuffer();
-      const req = { id: row.id, data: buffer, fileName: row.file.name, targetId, quality };
+      const req = { id: row.id, data: buffer, fileName: row.file.name, targetId, quality, maxEdge: maxEdge || undefined };
       const result =
         verdict.engine === 'ffmpeg'
           ? await audioVideoConverter.convert(req)
           : await getManager().convert(req);
       return finishOk(row, result, targetId, started);
     },
-    [getManager, quality],
+    [getManager, quality, maxEdge],
   );
 
   // Output-name collisions within the batch → -2/-3 suffixes (plan failure table).
@@ -264,7 +268,7 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
         );
         continue;
       }
-      setRows(prev => prev.map(r => (r.id === row.id ? { ...r, status: 'converting' } : r)));
+      setRows(prev => prev.map(r => (r.id === row.id ? { ...r, status: 'converting', startedAt: performance.now() } : r)));
       const jobStarted = performance.now();
       try {
         const patch = await convertOne(row, targetId, verdict);
@@ -464,6 +468,24 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
               <TerminalText text="CONVERSION SETTINGS" delay={1.4} className="text-2xs font-black uppercase text-primary" />
             </div>
             <div className="flex-grow overflow-y-auto p-4 flex flex-col gap-5">
+              {/* Presets: target + quality + max size in one click */}
+              <div>
+                <p className="text-2xs font-mono uppercase tracking-[0.25em] text-base-content/60 mb-2">Presets</p>
+                <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Export presets">
+                  {CONVERTER_PRESETS.map(p => {
+                    const active = globalTarget === p.targetId && quality === p.quality && maxEdge === (p.maxEdge ?? 0);
+                    return (
+                      <button key={p.id} type="button" aria-pressed={active} title={p.hint}
+                        className={`text-left px-2 py-1.5 border transition-colors ${active ? 'border-primary text-primary bg-primary/10' : 'border-base-content/15 text-base-content/70 hover:text-primary hover:border-primary/60'}`}
+                        onClick={() => { handleTargetChange(p.targetId); handleQualityChange(p.quality); setMaxEdge(p.maxEdge ?? 0); }}>
+                        <span className="block text-2xs font-mono font-bold uppercase">{p.label}</span>
+                        <span className="block text-2xs font-mono text-base-content/50 normal-case">{p.hint}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Target format */}
               <div>
                 <p className="text-2xs font-mono uppercase tracking-[0.25em] text-base-content/60 mb-2">Target Format</p>
@@ -492,6 +514,15 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
                   aria-label="Conversion quality"
                 />
               </div>
+
+              {/* Max size */}
+              <label className="flex items-center justify-between gap-2 text-2xs font-mono uppercase tracking-[0.25em] text-base-content/60">
+                Max size
+                <select aria-label="Max size" className="form-select h-8 text-xs w-36 normal-case tracking-normal" value={maxEdge}
+                  onChange={e => setMaxEdge(Number(e.target.value))}>
+                  {MAX_EDGE_OPTIONS.map(v => <option key={v} value={v}>{v ? `≤ ${v} px` : 'Original'}</option>)}
+                </select>
+              </label>
 
               {/* AV engine state */}
               <div className="text-2xs font-mono uppercase tracking-widest">
@@ -589,6 +620,25 @@ const STATUS_META: Record<RowStatus, { led: string; label: string }> = {
   cancelled: { led: 'bg-base-content/40', label: 'cancelled' },
 };
 
+/** Live status for the row being converted: engines report no progress for
+ *  single images, and AVIF/large files take tens of seconds — a ticking timer
+ *  shows the work is happening. */
+const ConvertingNote: React.FC<{ ext: string; target: string; startedAt?: number }> = ({ ext, target, startedAt }) => {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick(n => n + 1), 500);
+    return () => clearInterval(t);
+  }, []);
+  const secs = startedAt ? Math.floor((performance.now() - startedAt) / 1000) : 0;
+  return (
+    <p className="text-2xs font-mono text-warning uppercase tracking-wider flex items-center gap-1.5" role="status">
+      <LoadingSpinner className="w-3 h-3" />
+      Converting {ext.toUpperCase()} → {target.toUpperCase()}… {secs}s
+      {target === 'avif' && secs >= 5 && <span className="text-base-content/50 normal-case">(AVIF encodes slowly — large photos take 20–40 s each)</span>}
+    </p>
+  );
+};
+
 const QueueRowItem: React.FC<{
   row: QueueRow;
   targets: ConverterFormatDef[];
@@ -619,13 +669,15 @@ const QueueRowItem: React.FC<{
           </p>
         ) : row.status === 'error' ? (
           <p className="text-2xs font-mono text-error uppercase tracking-wider">{row.error}</p>
+        ) : row.status === 'converting' ? (
+          <ConvertingNote ext={row.ext} target={effectiveTarget} startedAt={row.startedAt} />
         ) : (
           <p className="text-2xs font-mono text-base-content/60 uppercase tracking-wider">
             {row.ext.toUpperCase()} → {effectiveTarget.toUpperCase()}
           </p>
         )}
       </div>
-      {targets.length > 0 && row.status !== 'done' && (
+      {targets.length > 0 && (row.status === 'pending' || row.status === 'error' || row.status === 'cancelled') && (
         <select
           className="bg-transparent border border-base-content/15 text-2xs font-mono uppercase px-1 py-0.5 hover:border-primary/40"
           value={row.targetId}

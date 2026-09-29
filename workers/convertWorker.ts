@@ -91,7 +91,10 @@ async function runNext(): Promise<void> {
       const collection = MagickImageCollection.create(bytes);
       try {
         collection.coalesce();
+        // Max size (presets): shrink to fit maxEdge², never upscale.
+        const fits = (w: number, h: number) => !req.maxEdge || (w <= req.maxEdge && h <= req.maxEdge);
         if (collection.length > 1) {
+          if (!fits(collection[0].width, collection[0].height)) collection.forEach(frame => frame.resize(req.maxEdge!, req.maxEdge!));
           collection.write(fmt, (data: Uint8Array) => {
             resolve(copyBuffer(data));
           });
@@ -101,6 +104,7 @@ async function runNext(): Promise<void> {
         ImageMagick.read(bytes, image => {
           try {
             if (req.quality !== undefined) image.quality = clampQuality(req.quality);
+            if (!fits(image.width, image.height)) image.resize(req.maxEdge!, req.maxEdge!);
             image.write(fmt, (data: Uint8Array) => {
               resolve(copyBuffer(data));
             });

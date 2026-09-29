@@ -42,6 +42,18 @@ if (typeof (window as any).process === 'undefined') {
   };
 }
 
+// --- File drops outside a drop zone ---
+// A file dropped where no component handles it would make the browser open it
+// in this tab, replacing the app (a white page for TIFF/HEIC/large files).
+// Drop zones call preventDefault themselves; this only catches the rest.
+const isFileDrag = (e: DragEvent) => !!e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files');
+window.addEventListener('dragover', e => {
+  if (isFileDrag(e) && !e.defaultPrevented) { e.preventDefault(); e.dataTransfer!.dropEffect = 'none'; }
+});
+window.addEventListener('drop', e => {
+  if (isFileDrag(e) && !e.defaultPrevented) e.preventDefault();
+});
+
 // --- App Bootstrap ---
 class RootErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
   constructor(props: { children: React.ReactNode }) {

@@ -71,7 +71,7 @@ export class ConvertWorkerManager {
     }
   }
 
-  convert(req: { id: string; data: ArrayBuffer; fileName: string; targetId: string; quality?: number }): Promise<WorkerSuccess> {
+  convert(req: { id: string; data: ArrayBuffer; fileName: string; targetId: string; quality?: number; maxEdge?: number }): Promise<WorkerSuccess> {
     const worker = this.ensureWorker();
     return new Promise<WorkerSuccess>((resolve, reject) => {
       const job: ManagedJob = { id: req.id, resolve, reject, cancelled: false };

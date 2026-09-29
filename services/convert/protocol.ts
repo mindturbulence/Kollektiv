@@ -17,6 +17,8 @@ export interface ConvertRequestBase {
   targetId: string;
   /** 0-100; engine-specific meaning. */
   quality?: number;
+  /** Longest output side in px (images and non-GIF video); only ever shrinks. */
+  maxEdge?: number;
 }
 
 export interface CancelRequest {

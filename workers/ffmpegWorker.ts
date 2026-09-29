@@ -13,7 +13,7 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import type { EncodeFramesRequest, FfmpegWorkerRequest, WorkerRequest, WorkerResponse } from '../services/convert/protocol';
-import { getFormatById } from '../constants/converterFormats';
+import { audioKbps, getFormatById } from '../constants/converterFormats';
 
 type ConvertJobRequest = Extract<WorkerRequest, { kind: 'convert' }>;
 type QueueableRequest = ConvertJobRequest | EncodeFramesRequest;
@@ -76,8 +76,14 @@ async function runConvert(ff: FFmpeg, job: Job & { req: ConvertJobRequest }): Pr
     if (req.quality !== undefined) {
       const idx = targetArgs.indexOf('-b:a');
       if (idx !== -1 && targetArgs[idx + 1] === undefined) {
-        targetArgs[idx + 1] = `${Math.max(32, Math.min(320, Math.round(req.quality)))}k`;
+        targetArgs[idx + 1] = `${audioKbps(req.quality)}k`;
       }
+    }
+    // Max size (presets): fit inside maxEdge², never upscale, keep even dimensions
+    // for H.264/VP8. GIF targets carry their own scale filter.
+    if (req.maxEdge && target.category === 'video' && !targetArgs.includes('-vf')) {
+      const e = Math.round(req.maxEdge);
+      args.push('-vf', `scale=w=min(${e}\\,iw):h=min(${e}\\,ih):force_original_aspect_ratio=decrease:force_divisible_by=2`);
     }
     args.push(...targetArgs);
 

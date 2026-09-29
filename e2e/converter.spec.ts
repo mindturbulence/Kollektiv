@@ -139,3 +139,45 @@ test.describe('Converter (plan §8 e2e)', () => {
         await expect(page.locator('[aria-label="cancelled"], [title="cancelled"]').first()).toBeVisible();
     });
 });
+
+test.describe('Converter presets and live status', () => {
+    test('Social post preset: JPEG, shrunk to 1080 px on the long edge; the running row shows a timer', async ({ page }) => {
+        test.setTimeout(180_000);
+        await bootToAppShell(page);
+        await navigateToConverter(page);
+        const mk = (w: number, h: number) => page.evaluate(async ([W, H]) => {
+            const c = document.createElement('canvas'); c.width = W; c.height = H;
+            const x = c.getContext('2d')!; for (let i = 0; i < 60; i++) { x.fillStyle = `hsl(${i * 13} 70% 50%)`; x.fillRect((i * 97) % W, (i * 53) % H, 300, 200); }
+            const b = await new Promise<Blob>(r => c.toBlob(bb => r(bb!), 'image/png'));
+            return Array.from(new Uint8Array(await b.arrayBuffer()));
+        }, [w, h]).then(a => Buffer.from(a));
+
+        // A file dropped outside any drop zone must not navigate the tab (white page).
+        expect(await page.evaluate(() => {
+            const dt = new DataTransfer();
+            dt.items.add(new File(['x'], 'photo.tif', { type: 'image/tiff' }));
+            const ev = new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true });
+            document.querySelector('.app-header')!.dispatchEvent(ev);
+            return ev.defaultPrevented;
+        })).toBe(true);
+
+        await page.getByRole('button', { name: /Social post/ }).click();
+        await expect(page.getByRole('radio', { name: 'JPEG' })).toHaveAttribute('aria-checked', 'true');
+        await expect(page.getByLabel('Max size')).toHaveValue('1080');
+
+        await page.setInputFiles('input[type="file"]', [{ name: 'wide.png', mimeType: 'image/png', buffer: await mk(2400, 1200) }]);
+        await page.getByText('CONVERT ALL').click();
+        await expect(page.getByText(/1\/1 converted/)).toBeVisible({ timeout: 90_000 });
+        const href = await page.getByRole('link', { name: 'SAVE' }).getAttribute('href');
+        const size = await page.evaluate(async (u) => { const bmp = await createImageBitmap(await (await fetch(u!)).blob()); return `${bmp.width}x${bmp.height}`; }, href);
+        expect(size).toBe('1080x540');
+        await expect(page.getByText(/→ wide\.jpg/)).toBeVisible();
+
+        // A slow AVIF encode shows a live "converting… Ns" status, not just a dot.
+        await page.getByRole('radio', { name: 'AVIF' }).first().click();
+        await page.getByLabel('Max size').selectOption('0');
+        await page.setInputFiles('input[type="file"]', [{ name: 'big.png', mimeType: 'image/png', buffer: await mk(3000, 2000) }]);
+        await page.getByText('CONVERT ALL').click();
+        await expect(page.getByRole('status').filter({ hasText: /Converting PNG → AVIF… \d+s/ })).toBeVisible({ timeout: 30_000 });
+    });
+});

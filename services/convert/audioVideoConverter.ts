@@ -104,7 +104,7 @@ class AudioVideoConverter {
     });
   }
 
-  async convert(req: { id: string; data: ArrayBuffer; fileName: string; targetId: string; quality?: number }): Promise<WorkerSuccess> {
+  async convert(req: { id: string; data: ArrayBuffer; fileName: string; targetId: string; quality?: number; maxEdge?: number }): Promise<WorkerSuccess> {
     if (this.loadState === 'idle' || this.loadState === 'loading') {
       this.setLoadState('loading');
     }

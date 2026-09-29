@@ -77,7 +77,7 @@ Boundary: Assets Manager = external multi-root browser; Vault gallery = ingested
 ## 6. Converter (deferred ideas)
 
 - [ ] `convert_file` assistant/MCP tool on the capability registry. **S**
-- [ ] Export presets (web/social/broadcast targets). **S**
+- [x] Export presets — Web image, Social post, Archive, Print, Web video, Social clip, Podcast, Broadcast audio; Max size (shrink only) for images and video; audio bitrate now 32–320 kbps (was capped at 100). (2026-09-29)
 - [ ] Auto-convert-on-import gallery action. **M**
 - [ ] Long-form / >60 s 1080p video: server-side ffmpeg via `server.ts` (single-thread wasm is impractical). **L**
 
