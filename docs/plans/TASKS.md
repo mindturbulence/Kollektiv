@@ -12,8 +12,11 @@ Legend: **S** small · **M** medium · **L** large. Check items off here; delete
 ## 1. Image Editor
 
 - [x] **Looks / Quick-Edit / RAW** — v1 complete (Phases 0–5, 2026-09-29); plan: [2026-09-28-image-editor-looks.md](2026-09-28-image-editor-looks.md).
-- [ ] **Looks follow-ups** — rename My Looks, visible-first thumbnails and a context-loss e2e done (2026-09-29). Left:
-  - [ ] Tiled look export for GPUs whose `MAX_TEXTURE_SIZE` < 8192 (Jev 0.41 then 0.36 → Claude's call: wait for a real low-end GPU; the editor caps images at 8192 and desktop GPUs report 16384; needs a test hook to verify here). **M**
+- [x] **Looks follow-ups** (2026-09-29):
+  - [x] Rename a My Look
+  - [x] Thumbnail priority by visibility (IntersectionObserver)
+  - [x] Automated context-loss e2e
+- [ ] **Tiled look export** for GPUs whose `MAX_TEXTURE_SIZE` < 8192 (Jev 0.41 then 0.36 → Claude's call: wait for a real low-end GPU; the editor caps images at 8192 and desktop GPUs report 16384; needs a test hook to verify here). **M**
 - [ ] **Looks v2** (plan §8): Gallery batch-apply, full float document pipeline, 16-bit PNG/TIFF export, high-quality grain on export, skin-tone isolation. **L**
 - [ ] **Optional: CC0 texture scans** (paper/dust/light-leak photos from ambientCG-style CC0 sources, listed in `public/looks/LICENSES.md`) if the procedural textures feel too clean. **S**
 
