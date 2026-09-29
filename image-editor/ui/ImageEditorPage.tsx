@@ -150,6 +150,11 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
     let cancelled = false;
     if (openPayload) {
       const load = async () => {
+        // A handed-off RAW File (e.g. a future Assets Manager listing) goes through the RAW importer.
+        if (openPayload.kind === 'blob' && openPayload.blob instanceof File && isRawFile(openPayload.blob)) {
+          const file = openPayload.blob;
+          return { doc: documentFromLayer(await importRawLayer(file), openPayload.title ?? file.name.replace(/\.[^.]+$/, '')), meta: null };
+        }
         if (openPayload.kind !== 'gallery') return { doc: await importFromPayload(openPayload), meta: null };
         const [blob, meta] = await Promise.all([
           loadGalleryImage(openPayload.url),

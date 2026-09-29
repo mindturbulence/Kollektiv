@@ -594,3 +594,75 @@ test('a RAW LibRaw cannot decode opens its embedded JPEG preview', async ({ page
     await expect(page.getByText(/embedded preview instead/)).toBeVisible();
     await expect(page.getByRole('region', { name: 'RAW develop' })).toHaveCount(0);
 });
+
+/** A minimal uncompressed LinearRaw DNG (16-bit RGB, identity colour matrix,
+ *  neutral as-shot white): left half at 10% of full scale, right half at 40%. */
+function makeDng(w: number, h: number): Buffer {
+    const entries: [number, number, number, Buffer][] = []; // tag, type, count, value bytes
+    const u16 = (...v: number[]) => { const b = Buffer.alloc(v.length * 2); v.forEach((x, i) => b.writeUInt16LE(x, i * 2)); return b; };
+    const u32 = (...v: number[]) => { const b = Buffer.alloc(v.length * 4); v.forEach((x, i) => b.writeUInt32LE(x, i * 4)); return b; };
+    const rat = (...v: number[]) => u32(...v.flatMap(x => [x, 1]));
+    const data = Buffer.alloc(w * h * 6);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const v = x < w / 2 ? 6554 : 26214;
+        for (let c = 0; c < 3; c++) data.writeUInt16LE(v, (y * w + x) * 6 + c * 2);
+    }
+    const SHORT = 3, LONG = 4, BYTE = 1, ASCII = 2, RATIONAL = 5, SRATIONAL = 10;
+    entries.push([254, LONG, 1, u32(0)], [256, LONG, 1, u32(w)], [257, LONG, 1, u32(h)], [258, SHORT, 3, u16(16, 16, 16)],
+        [259, SHORT, 1, u16(1)], [262, SHORT, 1, u16(34892)], [273, LONG, 1, u32(0)], [274, SHORT, 1, u16(1)],
+        [277, SHORT, 1, u16(3)], [278, LONG, 1, u32(h)], [279, LONG, 1, u32(data.length)], [284, SHORT, 1, u16(1)],
+        [50706, BYTE, 4, Buffer.from([1, 4, 0, 0])], [50708, ASCII, 15, Buffer.from('Kollektiv Test\0')],
+        [50717, LONG, 3, u32(65535, 65535, 65535)], [50721, SRATIONAL, 9, rat(1, 0, 0, 0, 1, 0, 0, 0, 1)],
+        [50728, RATIONAL, 3, rat(1, 1, 1)], [50778, SHORT, 1, u16(21)]);
+    const ifdSize = 2 + entries.length * 12 + 4;
+    let extra = 8 + ifdSize;
+    const ifd = Buffer.alloc(ifdSize);
+    ifd.writeUInt16LE(entries.length, 0);
+    const blobs: Buffer[] = [];
+    const extraSize = entries.reduce((n, [, , , v]) => n + (v.length > 4 ? v.length + (v.length & 1) : 0), 0);
+    const dataOff = 8 + ifdSize + extraSize;
+    entries.forEach(([tag, type, count, v], i) => {
+        const o = 2 + i * 12;
+        ifd.writeUInt16LE(tag, o); ifd.writeUInt16LE(type, o + 2); ifd.writeUInt32LE(count, o + 4);
+        if (tag === 273) { ifd.writeUInt32LE(dataOff, o + 8); return; }
+        if (v.length <= 4) { v.copy(ifd, o + 8); return; }
+        ifd.writeUInt32LE(extra, o + 8);
+        const padded = v.length & 1 ? Buffer.concat([v, Buffer.alloc(1)]) : v;
+        blobs.push(padded); extra += padded.length;
+    });
+    return Buffer.concat([Buffer.from([0x49, 0x49, 42, 0, 8, 0, 0, 0]), ifd, ...blobs, data]);
+}
+
+test('a DNG decodes and auto-develops; RAW develop re-renders live and undoes', async ({ page }) => {
+    test.setTimeout(120_000);
+    await bootToAppShell(page, 'image_editor');
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
+    await (await chooser).setFiles({ name: 'test-shot.dng', mimeType: '', buffer: makeDng(400, 300) });
+
+    await expect(page.getByText('400 × 300px')).toBeVisible({ timeout: 60_000 });
+    await waitForFit(page);
+    const luma = (p: number[]) => p[0] + p[1] + p[2];
+    const leftBefore = luma(await pixelAt(page, 100, 150));
+    const right = await pixelAt(page, 300, 150);
+    // Auto exposure puts the brighter half at white; the darker half stays mid-grey.
+    expect(luma(right)).toBeGreaterThan(700);
+    expect(leftBefore).toBeGreaterThan(200);
+    expect(leftBefore).toBeLessThan(600);
+    expect(Math.max(...right) - Math.min(...right)).toBeLessThan(12); // neutral stays neutral
+
+    const panel = page.getByRole('region', { name: 'RAW develop' });
+    await expect(panel).toContainText('test-shot.dng');
+    await panel.getByRole('button', { name: 'Develop' }).click();
+    const exposure = panel.getByRole('slider', { name: 'RAW exposure' });
+    await expect(exposure).toBeVisible({ timeout: 60_000 });
+    await exposure.focus();
+    await page.keyboard.press('PageDown');
+    await page.keyboard.press('PageDown');
+    await expect.poll(async () => luma(await pixelAt(page, 100, 150)), { timeout: 10_000 }).toBeLessThan(leftBefore - 60);
+
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press('Control+z');
+    await page.keyboard.press('Control+z');
+    await expect.poll(async () => luma(await pixelAt(page, 100, 150)), { timeout: 10_000 }).toBeGreaterThan(leftBefore - 6);
+});

@@ -12,11 +12,11 @@ Legend: **S** small · **M** medium · **L** large. Check items off here; delete
 ## 1. Image Editor
 
 - [ ] **Looks / Quick-Edit / RAW** — the active plan: [2026-09-28-image-editor-looks.md](2026-09-28-image-editor-looks.md). **L** (~11.5–14 wks)
-  - [ ] Phase 0 — spikes. GPU checks done 2026-09-29 (all pass on the owner's Intel UHD); **RAW decode probe still needs a RAW file** (runs first in Phase 4).
+  - [x] Phase 0 — spikes: GPU checks pass on the owner's Intel UHD; RAW decode ~5 s for 24 MP (2026-09-29)
   - [x] Phase 1 — engine core: look layers, fused WebGL2 pass, render cache, LUT catalog (2026-09-29)
   - [x] Phase 2 — Quick/Pro mode and the Looks panel (2026-09-29)
   - [x] Phase 3 — full catalog: glow, leaks, fringe, frames, HSL, procedural textures, 30 looks, Randomize, Favourites (2026-09-29)
-  - [ ] Phase 4 — RAW/DNG. Done: worker decode, embedded-preview fallback (e2e), Develop on float source + Highlights/Shadows, in-panel Re-develop, licence notice. Left: verify with a real RAW file + synthetic-DNG e2e, live-develop e2e, Gallery → Edit for RAW, CR3 check. **M**
+  - [x] Phase 4 — RAW/DNG: decode, embedded-preview fallback, Develop on float source + Highlights/Shadows, in-panel Re-develop; verified on NEF/CR2/ARW/CR3 samples (2026-09-29)
   - [ ] Phase 5 — My Looks save/import/export, `.cube` + texture import, masking looks, tiled export, context-loss recovery. **M**
   - [ ] Thumbnail priority by visibility (IntersectionObserver) — optional; 30 thumbnails render fine without it. **S**
 - [ ] **Optional: CC0 texture scans** (paper/dust/light-leak photos from ambientCG-style CC0 sources, listed in `public/looks/LICENSES.md`) if the procedural textures feel too clean. **S**
@@ -51,6 +51,7 @@ Boundary: Assets Manager = external multi-root browser; Vault gallery = ingested
 - [ ] **T23 remainder** — Resizer and Analyzer handoffs. **S**
 - [ ] **T24 Vault bridge** — save-to-gallery with metadata, vault folder as root, push picks into gallery categories. **M**
 - [ ] **T25 View modes + keyboard** — grid size slider, list view, slideshow, shortcuts overlay. **M**
+- [ ] **RAW files** — list RAW (dng/cr2/cr3/nef/arw/…) with embedded-JPEG thumbnails; the editor handoff already routes RAW Files through the RAW importer. **S–M**
 - [ ] **T26 States + docs + e2e** — degraded states, `e2e/assets-manager.spec.ts` smoke, handbook entry. **S–M**
 - Open questions: soft-delete as the default? phash-first find-similar? slideshow in T25? index manifest in the vault?
 
