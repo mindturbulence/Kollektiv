@@ -445,6 +445,40 @@ export const MenuIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
+export const GridViewIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M4 4h6v6h-6z" />
+    <path d="M14 4h6v6h-6z" />
+    <path d="M4 14h6v6h-6z" />
+    <path d="M14 14h6v6h-6z" />
+  </svg>
+);
+
+export const ListViewIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M9 6l11 0" />
+    <path d="M9 12l11 0" />
+    <path d="M9 18l11 0" />
+    <path d="M5 6l0 .01" />
+    <path d="M5 12l0 .01" />
+    <path d="M5 18l0 .01" />
+  </svg>
+);
+
+export const KeyboardIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M2 6m0 2a2 2 0 0 1 2 -2h16a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2z" />
+    <path d="M6 10l0 .01" />
+    <path d="M10 10l0 .01" />
+    <path d="M14 10l0 .01" />
+    <path d="M18 10l0 .01" />
+    <path d="M8 14l8 0" />
+  </svg>
+);
+
 export const CopyIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg {...commonProps} {...props}>
     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>

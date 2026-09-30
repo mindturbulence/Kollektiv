@@ -15,7 +15,7 @@ interface FullscreenViewerProps {
     onNavigate?: (newIndex: number) => void;
 }
 
-const ScramblingText: React.FC<{ text: string, className?: string }> = ({ text, className }) => {
+export const ScramblingText: React.FC<{ text: string, className?: string }> = ({ text, className }) => {
     const [display, setDisplay] = useState(text);
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+';
     const frameRef = useRef<number | null>(null);

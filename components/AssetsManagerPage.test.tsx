@@ -184,10 +184,10 @@ describe('AssetsManagerPage', () => {
     await waitFor(() => expect(screen.getAllByRole('img')).toHaveLength(2));
     fireEvent.click(screen.getAllByRole('button', { name: /Open/ })[0]);
     await screen.findByRole('dialog');
-    expect(screen.getByText('1 / 2')).toBeTruthy();
+    expect(screen.getByText('01 / 02')).toBeTruthy();
 
     fireEvent.keyDown(window, { key: 'ArrowRight' });
-    await waitFor(() => expect(screen.getByText('2 / 2')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('02 / 02')).toBeTruthy());
 
     fireEvent.keyDown(window, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());

@@ -115,7 +115,7 @@ afterEach(() => {
 describe('ConverterPage (plan §8 component tests)', () => {
   it('renders empty state with drop strip', () => {
     render(<ConverterPage />);
-    expect(screen.getByText('DROP FILES OR CLICK TO BROWSE — IMAGES · AUDIO · VIDEO')).toBeTruthy();
+    expect(screen.getByText('+ Add files')).toBeTruthy();
     expect(screen.getByText('Queue is Empty')).toBeTruthy();
   });
 

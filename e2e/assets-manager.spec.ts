@@ -419,11 +419,13 @@ test('Move to Trash files the file away; the Trash node restores it and Empty Tr
     })).toBe(true);
 
     // The Trash node lists it; Restore puts it back where it was.
-    await page.locator('[title="Trash"]').getByRole('button', { name: 'Expand trash' }).click();
-    await expect(page.locator('[title="photos/a.png"]')).toBeVisible();
-    await page.locator('[title="photos/a.png"]').click({ button: 'right' });
-    await page.getByRole('menu').getByRole('menuitem', { name: 'Restore' }).click();
+    // Like the Recycle Bin: the row has no chevron/children; clicking it opens the contents in the main panel.
+    await expect(page.getByRole('button', { name: 'Expand trash' })).toHaveCount(0);
+    await page.locator('[title="Trash"]').click();
+    await expect(page.locator('[data-testid="trash-list"] [title="photos/a.png"]')).toBeVisible();
+    await page.getByRole('button', { name: 'Restore', exact: true }).click();
     await expect(page.getByText('Restored "a.png".')).toBeVisible({ timeout: 10_000 });
+    await page.getByText('photos', { exact: true }).click();
     await expect(card(page, 'a.png')).toBeVisible({ timeout: 15_000 });
 
     // Trash it again, then Empty Trash from the node's own menu.
@@ -431,12 +433,13 @@ test('Move to Trash files the file away; the Trash node restores it and Empty Tr
     await page.getByRole('menu').getByRole('menuitem', { name: 'Move to Trash' }).click();
     await confirm('Move to trash');
     await expect(page.getByText('Moved 1 file to trash.')).toBeVisible({ timeout: 10_000 });
-    await page.locator('[title="Trash"]').click({ button: 'right' });
-    await page.getByRole('menu').getByRole('menuitem', { name: 'Empty Trash' }).click();
+    await page.locator('[title="Trash"]').click();
+    await expect(page.locator('[data-testid="trash-list"] [title="photos/a.png"]')).toBeVisible();
+    await page.getByRole('button', { name: 'EMPTY TRASH' }).click();
     await confirm('Empty trash');
     await expect(page.getByText('Emptied the trash (1 item).')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Trash Is Empty')).toBeVisible();
     await expect(page.locator('[title="photos/a.png"]')).toHaveCount(0);
-    await expect(card(page, 'a.png')).toHaveCount(0);
 
     // Every batch is gone: the trash folder is empty (or gone entirely).
     expect(await page.evaluate(async () => {
