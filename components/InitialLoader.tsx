@@ -99,14 +99,14 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
         if (systemTextRef.current) {
             gsap.fromTo(systemTextRef.current,
                 { y: 24, autoAlpha: 0 },
-                { y: 0, autoAlpha: 1, duration: 0.8, ease: "power2.out", delay: 3.2 }
+                { y: 0, autoAlpha: 1, duration: 0.8, ease: "power2.out", delay: 1.2 }
             );
         }
     }, []);
 
     useEffect(() => {
         if (targetPercentage >= 100 && smoothPercentage >= 99) {
-            const t = setTimeout(() => { setIsComplete(true); }, 1000);
+            const t = setTimeout(() => { setIsComplete(true); }, 250);
             return () => clearTimeout(t);
         }
     }, [targetPercentage, smoothPercentage]);
@@ -171,7 +171,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                 </div>
 
                 <div className="relative h-28 w-80">
-                    <div ref={progressStatusRef} className={`absolute inset-0 flex flex-col items-center gap-4 transition-[opacity,transform] duration-1000 origin-center ${isComplete ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
+                    <div ref={progressStatusRef} className={`absolute inset-0 flex flex-col items-center gap-4 transition-[opacity,transform] duration-500 origin-center ${isComplete ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
                         <div className="flex flex-col items-center gap-2 w-full">
                             <div className="flex flex-col items-center gap-1 mb-2">
                                 <div className="w-48 h-[2px] bg-base-content/10 relative overflow-hidden rounded-full">
@@ -192,7 +192,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                         </div>
                     </div>
 
-                    <div ref={actionButtonsRef} className={`absolute inset-0 flex flex-col items-center justify-center gap-4 transition-opacity duration-1000 ${isComplete ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+                    <div ref={actionButtonsRef} className={`absolute inset-0 flex flex-col items-center justify-center gap-4 transition-opacity duration-500 ${isComplete ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                         <button
                             className="form-btn form-btn-primary w-48 h-10 text-2xs"
                             onClick={() => handleContinue(true)}

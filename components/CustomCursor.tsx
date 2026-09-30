@@ -21,16 +21,14 @@ const CustomCursor: React.FC = () => {
         gsap.set(cursor, { xPercent: 10, yPercent: 10 });
         gsap.set(inner, { scale: 1 });
 
+        // quickTo reuses one tween per axis; gsap.to() built a new one on every mousemove.
+        const moveX = gsap.quickTo(cursor, 'x', { duration: 0.4, ease: 'power3.out' });
+        const moveY = gsap.quickTo(cursor, 'y', { duration: 0.4, ease: 'power3.out' });
         const moveCursor = (e: MouseEvent) => {
             if (!Number.isFinite(e.clientX) || !Number.isFinite(e.clientY)) return;
             setCoords({ x: e.clientX, y: e.clientY });
-            
-            gsap.to(cursor, {
-                x: e.clientX,
-                y: e.clientY,
-                duration: 0.4,
-                ease: "power3.out",
-            });
+            moveX(e.clientX);
+            moveY(e.clientY);
         };
 
         const handleMouseOver = (e: MouseEvent) => {

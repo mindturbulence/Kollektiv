@@ -585,7 +585,7 @@ const AppContent: React.FC = () => {
                             {Array.from({ length: 12 }).map((_, i) => (
                                 <div
                                     key={i}
-                                    className="flex-1 bg-base-100/80 backdrop-blur-md will-change-transform z-50"
+                                    className="flex-1 bg-base-100/90 will-change-transform z-50"
                                 /> 
                             ))}
                         </div>
