@@ -90,7 +90,7 @@ describe('assetFilter', () => {
 });
 
 import { planRename, renderName, planIsValid } from './batchRename';
-import { groupDuplicates } from './duplicates';
+import { groupDuplicates, findSimilar } from './duplicates';
 
 describe('batchRename', () => {
   const e = (name: string, mtime = new Date(2026, 8, 29).getTime()): AssetEntry => ({
@@ -123,5 +123,22 @@ describe('duplicates', () => {
       { id: 'd', dhash: 'ffffffffffffffff' },
     ], 2);
     expect(groups).toEqual([['a', 'b', 'c']]);
+  });
+});
+
+describe('findSimilar', () => {
+  it('ranks by hash distance, drops itself and anything beyond the cutoff, honours the limit', () => {
+    const items = [
+      { id: 'self', dhash: '0000000000000000' },
+      { id: 'near', dhash: '0000000000000001' },   // 1 bit
+      { id: 'nearer', dhash: '0000000000000000' }, // 0 bits
+      { id: 'mid', dhash: '00000000000000ff' },    // 8 bits
+      { id: 'far', dhash: 'ffffffffffffffff' },    // 64 bits
+    ];
+    const r = findSimilar({ id: 'self', dhash: '0000000000000000' }, items);
+    expect(r.map(x => x.id)).toEqual(['nearer', 'near', 'mid']);
+    expect(r.map(x => x.distance)).toEqual([0, 1, 8]);
+    expect(findSimilar({ id: 'self', dhash: '0000000000000000' }, items, 2).map(x => x.id)).toEqual(['nearer', 'near']);
+    expect(findSimilar({ id: 'self', dhash: '0000000000000000' }, items, 10, 0).map(x => x.id)).toEqual(['nearer']);
   });
 });

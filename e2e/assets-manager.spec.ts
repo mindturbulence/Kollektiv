@@ -509,3 +509,44 @@ test('folder drag: self-drop is blocked, dropping onto a sibling nests the folde
         } catch { return false; }
     })).toBe(true);
 });
+
+test('find similar, list view, thumbnail size and the shortcuts overlay', async ({ page }) => {
+    test.setTimeout(120_000);
+    await openPhotos(page);
+
+    // Find Similar (right-click): a.png's near-copy b.png appears, the striped c.jpg does not.
+    await card(page, 'a.png').click({ button: 'right' });
+    await page.getByRole('menu').getByRole('menuitem', { name: 'Find Similar' }).click();
+    await expect(page.getByRole('status').filter({ hasText: /Similar to a\.png/ })).toBeVisible({ timeout: 15_000 });
+    await expect(card(page, 'a.png')).toBeVisible();
+    await expect(card(page, 'b.png')).toBeVisible();
+    await expect(card(page, 'c.jpg')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    await expect(card(page, 'c.jpg')).toBeVisible();
+
+    // Thumbnail size drives the column width.
+    const grid = page.locator('[data-testid="asset-grid"]');
+    const before = await grid.evaluate(el => getComputedStyle(el).columnWidth);
+    await page.getByLabel('Thumbnail size').fill('360');
+    await expect.poll(() => grid.evaluate(el => getComputedStyle(el).columnWidth)).not.toBe(before);
+    expect(await grid.evaluate(el => getComputedStyle(el).columnWidth)).toBe('360px');
+
+    // List view: rows with details; the choice is remembered across a reload.
+    await page.getByRole('radio', { name: 'LIST' }).click();
+    await expect(page.getByLabel('Thumbnail size')).toHaveCount(0);
+    await expect(card(page, 'a.png')).toContainText('png');
+    await expect(card(page, 'a.png')).toContainText('96 × 64');
+    await card(page, 'a.png').click({ modifiers: ['Control'] });
+    await expect(page.getByText('1 SELECTED')).toBeVisible();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('assets.viewPrefs') ?? '{}').mode)).toBe('list');
+
+    // Shortcuts overlay from its button and from the ? key.
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Keyboard shortcuts' }).click();
+    const help = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
+    await expect(help.getByRole('table', { name: 'Shortcuts' })).toContainText('Rate the selection');
+    await page.keyboard.press('Escape');
+    await expect(help).toHaveCount(0);
+    await page.keyboard.press('?');
+    await expect(help).toBeVisible();
+});

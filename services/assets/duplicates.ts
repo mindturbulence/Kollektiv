@@ -1,9 +1,9 @@
 /**
- * Assets Manager — duplicate detection (plan Task 20) on the dHash computed
- * with the thumbnail: near-identical images differ by a few bits. ("Find
- * similar", T21, waits on the owner's phash-vs-embeddings decision.) Grouping is single-link (union-find), so a chain of close
- * images lands in one group for review. Nothing here deletes: resolving
- * duplicates is the user's call (soft-delete, T15, is owner-gated).
+ * Assets Manager — duplicate detection (plan Task 20) and find-similar (Task 21 v1)
+ * on the dHash computed with the thumbnail: near-identical images differ by a
+ * few bits. Grouping is single-link (union-find), so a chain of close images
+ * lands in one group for review. Nothing here deletes; resolving duplicates is
+ * the user's call (Move to Trash, from the grid).
  */
 import { hamming } from './assetFacts';
 
@@ -22,3 +22,14 @@ export function groupDuplicates(items: Hashed[], threshold = 5): string[][] {
   return [...groups.values()].filter(g => g.length > 1);
 }
 
+
+/** Nearest images to `target` by dHash distance, closest first (excluding itself).
+ *  v1 of "find similar": local and instant; embeddings can replace it later. */
+export function findSimilar(target: Hashed, items: Hashed[], limit = 48, maxDistance = 14): { id: string; distance: number }[] {
+  return items
+    .filter(it => it.id !== target.id)
+    .map(it => ({ id: it.id, distance: hamming(target.dhash, it.dhash) }))
+    .filter(r => r.distance <= maxDistance)
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, limit);
+}

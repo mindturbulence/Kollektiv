@@ -46,14 +46,14 @@ Boundary: Assets Manager = external multi-root browser; Vault gallery = ingested
 - [ ] **T18 AI captions** (batch queue, resumable, no key → manual workflow unaffected). **M** — needs a live AI key to build/verify.
 - [ ] **T19 Auto-tagging** (vision → keywords, dedupe merge). **M** — needs a live AI key.
 - [x] **T20 Duplicate detection** (dHash from indexing, single-link groups, review + "select extras"; no delete — that's T15). (2026-09-29)
-- [ ] **T21 Find similar** — waits on the owner: phash-first or embeddings?
+- [x] **T21 Find similar** — v1 as the approved plan says: right-click → Find Similar lists the nearest images by dHash among those in the current view, closest first, with a banner and Clear (2026-09-30). Embeddings stay an optional later upgrade.
 - [x] **T22 XMP/IPTC write-back** — JPEG (XMP APP1 + EXIF) and PNG (iTXt XMP), atomic write, read-back verify (restores on mismatch), undoable; other formats index-only with a badge. (2026-09-29)
 - [x] **T23** — Resizer and Media Analyzer handoffs (`utils/pendingHandoff`). (2026-09-29)
 - [x] **T24 Vault bridge** — save to the gallery (category, tags, caption) and the local vault's gallery folder as a root. (2026-09-29)
-- [ ] **T25 View modes + keyboard** — grid size, list view, slideshow, shortcuts overlay. **M** — waits on the owner: slideshow wanted? (Rating/label/select-all keys are in.)
+- [x] **T25 View modes + keyboard** (2026-09-30): Grid / List toggle, thumbnail-size slider, `?` shortcuts overlay, remembered per viewer; the card menu no longer advertises an unwired Ctrl+R. **Slideshow not built** — only if you want it.
 - [x] **RAW files** — listed with embedded-JPEG thumbnails and a RAW badge; the editor handoff routes them to the RAW importer. (2026-09-29)
 - [x] **T26 States + docs + e2e** — no-vault/read-only/missing-collection notices, `e2e/assets-manager.spec.ts` (3 flows), handbook Feature Modules entry. (2026-09-29)
-- Open questions: phash-first find-similar? slideshow in T25? (Soft-delete is settled: trash is the default. The index manifest lives in the vault.)
+- Open question: is a slideshow wanted? (Soft-delete is settled: trash is the default. Find-similar is hash-based v1. The index manifest lives in the vault.)
 
 ## 3. App-wide (from the 2026-09-24 whole-app review)
 

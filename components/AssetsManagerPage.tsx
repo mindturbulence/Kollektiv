@@ -12,7 +12,7 @@ import {
   type ColorLabel, type FilterCriteria, type AssetMeta,
 } from '../services/assets/assetLibrary';
 import { matches, sortEntries, type AssetEntry, type SortKey } from '../services/assets/assetFilter';
-import { groupDuplicates } from '../services/assets/duplicates';
+import { findSimilar, groupDuplicates } from '../services/assets/duplicates';
 import { canWriteMetadata, readXmpFields, sameMeta, writeMetadata } from '../services/assets/metadataWriter';
 import { latestOp, onJournalChanged, recordOp, undoOp, type JournalEntry } from '../services/assets/undoJournal';
 import type { RenamePlanItem } from '../services/assets/batchRename';
@@ -29,7 +29,7 @@ import LoadingSpinner from './LoadingSpinner';
 import FilterBar, { LABEL_COLORS } from './assets/FilterBar';
 import AssetInspector from './assets/AssetInspector';
 import { useAsk } from './assets/AskDialog';
-import { BatchRenameModal, CopyMoveModal, DuplicatesModal, VaultSaveModal } from './assets/AssetDialogs';
+import { BatchRenameModal, CopyMoveModal, DuplicatesModal, ShortcutsModal, VaultSaveModal } from './assets/AssetDialogs';
 import ContextMenu, { type MenuItem } from './ContextMenu';
 import { clipboardCopy, clipboardCut, clipboardContent, clipboardClear, clipboardHasContent } from '../services/assets/clipboard';
 import { createFolder, renameFolder, deleteFolder, FolderNotEmptyError } from '../services/assets/folderOps';
@@ -64,6 +64,18 @@ interface AssetsManagerPageProps {
 }
 
 type View = { kind: 'folder' } | { kind: 'collection'; id: string };
+const VIEW_KEY = 'assets.viewPrefs';
+const GRID_SIZE_MIN = 120, GRID_SIZE_MAX = 420, GRID_SIZE_DEFAULT = 220;
+/** Per-viewer convenience (a remembered view), so a storage failure is harmless. */
+function loadViewPrefs(): { mode: 'grid' | 'list'; size: number } {
+  try {
+    const v = JSON.parse(localStorage.getItem(VIEW_KEY) ?? '{}');
+    const size = typeof v.size === 'number' ? Math.min(GRID_SIZE_MAX, Math.max(GRID_SIZE_MIN, v.size)) : GRID_SIZE_DEFAULT;
+    return { mode: v.mode === 'list' ? 'list' : 'grid', size };
+  } catch { return { mode: 'grid', size: GRID_SIZE_DEFAULT }; }
+}
+/** A find-similar result: the target and its neighbours with their hash distances. */
+interface SimilarState { targetId: string; distances: Map<string, number> }
 
 // ── Component ─────────────────────────────────────────────────────────
 
@@ -98,8 +110,17 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   const [criteria, setCriteria] = useState<FilterCriteria>({});
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [descending, setDescending] = useState(false);
+  const [similar, setSimilar] = useState<SimilarState | null>(null);
+  const [viewPrefs, setViewPrefs] = useState(loadViewPrefs);
+  const updateViewPrefs = useCallback((patch: Partial<{ mode: 'grid' | 'list'; size: number }>) => {
+    setViewPrefs(prev => {
+      const next = { ...prev, ...patch };
+      try { localStorage.setItem(VIEW_KEY, JSON.stringify(next)); } catch { /* private mode: not remembered */ }
+      return next;
+    });
+  }, []);
   const [expandedStacks, setExpandedStacks] = useState<Set<string>>(new Set());
-  const [dialog, setDialog] = useState<null | 'rename' | 'copymove' | 'duplicates' | 'vault'>(null);
+  const [dialog, setDialog] = useState<null | 'rename' | 'copymove' | 'duplicates' | 'vault' | 'shortcuts'>(null);
   const [undoEntry, setUndoEntry] = useState<JournalEntry | null>(null);
   const [missingInCollection, setMissingInCollection] = useState(0);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
@@ -255,6 +276,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
     setVisibleCount(PAGE_SIZE);
     setLightboxIndex(null);
     setSelectedIds(new Set());
+    setSimilar(null);
     lastClickedIndexRef.current = null;
 
     if (view.kind === 'collection') {
@@ -407,9 +429,15 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       info.set(members[0], { stackId: s.id, count: members.length, expanded });
       if (!expanded) members.slice(1).forEach(id => hidden.add(id));
     }
+    if (similar) {
+      // Find-similar replaces the normal order: closest first, stacks don't hide members.
+      const near = entries.filter(e => similar.distances.has(e.file.id) && matches(e, criteria));
+      near.sort((a, b) => similar.distances.get(a.file.id)! - similar.distances.get(b.file.id)!);
+      return { shownEntries: near, stackInfo: info };
+    }
     const list = sortEntries(entries.filter(e => !hidden.has(e.file.id) && matches(e, criteria)), sortKey, descending);
     return { shownEntries: list, stackInfo: info };
-  }, [entries, folderFiles, library.stacks, expandedStacks, criteria, sortKey, descending]);
+  }, [entries, folderFiles, library.stacks, expandedStacks, criteria, sortKey, descending, similar]);
 
   const visibleFiles = useMemo(() => shownEntries.slice(0, visibleCount).map(e => e.file), [shownEntries, visibleCount]);
   const loadedThumbCount = visibleFiles.filter(f => {
@@ -700,6 +728,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       const t = e.target as HTMLElement | null;
       if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
       if (lightboxIndex !== null || dialog) return;
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); setDialog('shortcuts'); return; }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && visibleFiles.length) {
         e.preventDefault();
         setSelectedIds(new Set(visibleFiles.map(f => f.id)));
@@ -1246,6 +1275,18 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
     { kind: 'action', label: 'Deselect', onSelect: clearSelection },
   ], [isBusy, selectedIds.size, getSelectedFiles, handleExport, handleSendToConverter, handleEditInImageEditor, handleOpenInVideoEditor, handleSendTo, clearSelection]);
 
+  /** Find similar (plan Task 21 v1): nearest images by dHash among those in this view. */
+  const handleFindSimilar = useCallback((id: string | undefined) => {
+    const dhash = id ? entryById.get(id)?.facts?.dhash : undefined;
+    if (!id || !dhash) { showGlobalFeedback?.("That image has no fingerprint yet — wait for indexing, or its format can't be decoded."); return; }
+    const hashed = entries.filter(e => e.facts?.dhash).map(e => ({ id: e.file.id, dhash: e.facts!.dhash! }));
+    const found = findSimilar({ id, dhash }, hashed);
+    if (found.length === 0) { showGlobalFeedback?.('No similar images in this view.'); return; }
+    setSimilar({ targetId: id, distances: new Map([[id, 0], ...found.map(f => [f.id, f.distance] as [string, number])]) });
+    setSelectedIds(new Set());
+    setVisibleCount(PAGE_SIZE);
+  }, [entries, entryById, showGlobalFeedback]);
+
   const buildCardMenu = useCallback((effectiveIds: Set<string>): MenuItem[] => {
     const isSingle = effectiveIds.size === 1;
     const files = folderFiles.filter(f => effectiveIds.has(f.id));
@@ -1256,7 +1297,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       { kind: 'action', label: 'Select All', shortcut: 'Ctrl+A', onSelect: () => setSelectedIds(new Set(visibleFiles.map(f => f.id))) },
       { kind: 'action', label: 'Clear Selection', shortcut: 'Esc', disabled: effectiveIds.size === 0, onSelect: clearSelection },
       { kind: 'separator' },
-      { kind: 'action', label: 'Rename…', shortcut: 'Ctrl+R', onSelect: () => setDialog('rename') },
+      { kind: 'action', label: 'Rename…', onSelect: () => setDialog('rename') },
       { kind: 'action', label: 'Copy', shortcut: 'Ctrl+C', onSelect: () => { if (selectedRoot) clipboardCopy([...effectiveIds], selectedRoot.id, selectedFolderPath); } },
       { kind: 'action', label: 'Cut', shortcut: 'Ctrl+X', onSelect: () => { if (selectedRoot) clipboardCut([...effectiveIds], selectedRoot.id, selectedFolderPath); } },
       { kind: 'action', label: 'Paste', shortcut: 'Ctrl+V', disabled: !clipboardHasContent(), onSelect: () => { if (selectedRoot) void handlePaste(selectedRoot.id, selectedFolderPath); } },
@@ -1270,13 +1311,14 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       { kind: 'action', label: 'Open in Video Editor', disabled: !canVideoEdit, onSelect: () => void handleOpenInVideoEditor() },
       { kind: 'action', label: 'Resize…', onSelect: () => void handleSendTo('resizer') },
       { kind: 'action', label: 'Analyze…', disabled: !isSingle, onSelect: () => void handleSendTo('media_analyzer') },
+      { kind: 'action', label: 'Find Similar', disabled: !isSingle, onSelect: () => handleFindSimilar([...effectiveIds][0]) },
       { kind: 'separator' },
       { kind: 'action', label: 'Save to Vault…', onSelect: () => setDialog('vault') },
       { kind: 'action', label: 'Write Metadata to File', onSelect: () => void handleWriteMetadata() },
       { kind: 'separator' },
       { kind: 'action', label: 'Move to Trash', danger: true, onSelect: () => void handleMoveToTrash(effectiveIds) },
     ];
-  }, [folderFiles, visibleFiles, clearSelection, selectedRoot, selectedFolderPath, handleExport, handleSendToConverter, handleEditInImageEditor, handleOpenInVideoEditor, handleSendTo, handleWriteMetadata, handlePaste, handleMoveToTrash]);
+  }, [folderFiles, visibleFiles, clearSelection, selectedRoot, selectedFolderPath, handleExport, handleSendToConverter, handleEditInImageEditor, handleOpenInVideoEditor, handleSendTo, handleWriteMetadata, handlePaste, handleMoveToTrash, handleFindSimilar]);
 
   const handleGridDragOver = useCallback((e: React.DragEvent, id: string) => {
     e.preventDefault();
@@ -1521,6 +1563,19 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                       UNDO: {undoEntry.op.label}
                     </button>
                   )}
+                  <div className="flex items-center gap-1" role="radiogroup" aria-label="View mode">
+                    {(['grid', 'list'] as const).map(m => (
+                      <button key={m} type="button" role="radio" aria-checked={viewPrefs.mode === m}
+                        className={`form-btn h-7 px-2 text-2xs ${viewPrefs.mode === m ? 'form-btn-primary' : ''}`}
+                        onClick={() => updateViewPrefs({ mode: m })}>{m.toUpperCase()}</button>
+                    ))}
+                  </div>
+                  {viewPrefs.mode === 'grid' && (
+                    <input type="range" aria-label="Thumbnail size" className="range range-xs range-primary w-24"
+                      min={GRID_SIZE_MIN} max={GRID_SIZE_MAX} step={10} value={viewPrefs.size}
+                      onChange={e => updateViewPrefs({ size: Number(e.target.value) })} />
+                  )}
+                  <button type="button" className="form-btn h-7 w-7 text-2xs" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={() => setDialog('shortcuts')}>?</button>
                   <button
                     type="button"
                     disabled={folderFiles.length === 0 || isFullIndexing}
@@ -1591,6 +1646,12 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                     : libStatus.reason}
                 </p>
               )}
+              {similar && (
+                <div role="status" className="px-4 py-1.5 flex items-center gap-3 text-2xs font-mono uppercase text-primary border-b border-base-content/10">
+                  <span className="truncate">Similar to {entryById.get(similar.targetId)?.file.name ?? 'image'} — {similar.distances.size - 1} in this view, closest first</span>
+                  <button type="button" className="ml-auto form-btn h-6 px-2 text-2xs" onClick={() => setSimilar(null)}>Clear</button>
+                </div>
+              )}
               {missingInCollection > 0 && view.kind === 'collection' && (
                 <p className="px-4 py-1.5 text-2xs font-mono uppercase text-warning border-b border-base-content/10">
                   {missingInCollection} item{missingInCollection === 1 ? '' : 's'} of this collection can't be found (moved outside the manager, or its root isn't connected).
@@ -1621,11 +1682,13 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                   </div>
                 ) : (
                   <>
-                    <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-2" data-testid="asset-grid">
+                    <div className={viewPrefs.mode === 'list' ? 'flex flex-col gap-1' : 'gap-2'} style={viewPrefs.mode === 'grid' ? { columnWidth: `${viewPrefs.size}px` } : undefined} data-testid="asset-grid">
                       {visibleFiles.map((file, idx) => (
                         <AssetCard
                           key={file.id}
                           file={file}
+                          list={viewPrefs.mode === 'list'}
+                          facts={facts.get(file.id)}
                           url={objectUrls.get(file.id) || undefined}
                           width={facts.get(file.id)?.width}
                           height={facts.get(file.id)?.height}
@@ -1736,6 +1799,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       </AnimatePresence>
 
       {askDialog}
+      <ShortcutsModal isOpen={dialog === 'shortcuts'} onClose={() => setDialog(null)} />
       <BatchRenameModal isOpen={dialog === 'rename'} entries={renameEntries} otherNames={renameOthers} busy={isBusy}
         onClose={() => setDialog(null)} onApply={plan => void handleRename(plan)} />
       <CopyMoveModal isOpen={dialog === 'copymove'} count={selectedIds.size} roots={roots} initialRootId={selectedRootId} busy={isBusy}
@@ -1955,6 +2019,9 @@ const TrashTreeNode: React.FC<{
 
 const AssetCard: React.FC<{
   file: AssetFile;
+  /** One compact row (thumb, name, type, size, dimensions, date, rating) instead of a tile. */
+  list?: boolean;
+  facts?: AssetFacts;
   url: string | undefined;
   /** Natural dimensions — reserve the box before the thumb decodes. */
   width?: number;
@@ -1975,7 +2042,54 @@ const AssetCard: React.FC<{
   onDragLeave?: (e: React.DragEvent) => void;
   /** Reorder indicator: insertion line at the top/bottom edge of this card. */
   dropIndicator?: 'before' | 'after' | null;
-}> = ({ file, url, width, height, noPreview, meta, stack, onToggleStack, selected, hasSelection, onClick, onContextMenu, onToggleSelect, onDragStart, onDragOver, onDrop, onDragLeave, dropIndicator }) => (
+}> = ({ file, list, facts, url, width, height, noPreview, meta, stack, onToggleStack, selected, hasSelection, onClick, onContextMenu, onToggleSelect, onDragStart, onDragOver, onDrop, onDragLeave, dropIndicator }) => list ? (
+  <button
+    onClick={onClick}
+    onContextMenu={onContextMenu}
+    draggable
+    onDragStart={onDragStart}
+    onDragOver={onDragOver}
+    onDrop={onDrop}
+    onDragLeave={onDragLeave}
+    className={`group relative w-full flex items-center gap-3 px-2 py-1 rounded border text-left transition-colors bg-base-200/30 ${
+      selected ? 'border-primary ring-1 ring-primary/50' : 'border-base-content/10 hover:border-primary/50'
+    }`}
+    aria-label={`Open ${file.name}`}
+    aria-pressed={selected}
+  >
+    {dropIndicator === 'before' && <span aria-hidden className="absolute top-0 inset-x-0 z-10 h-0.5 bg-primary" />}
+    {dropIndicator === 'after' && <span aria-hidden className="absolute bottom-0 inset-x-0 z-10 h-0.5 bg-primary" />}
+    <div
+      role="checkbox"
+      aria-checked={selected}
+      aria-label={selected ? `Deselect ${file.name}` : `Select ${file.name}`}
+      onClick={e => { e.stopPropagation(); onToggleSelect(); }}
+      className={`w-5 h-5 flex-shrink-0 rounded flex items-center justify-center border ${selected ? 'bg-primary border-primary' : 'border-base-content/30'}`}
+    >
+      {selected && <CheckIcon className="w-3.5 h-3.5 text-primary-content" />}
+    </div>
+    <div className="w-10 h-10 flex-shrink-0 overflow-hidden rounded bg-base-300/40 flex items-center justify-center">
+      {url ? <img src={url} alt={file.name} className="w-full h-full object-cover" loading="lazy" draggable={false} />
+        : noPreview ? <span className="text-2xs font-mono font-black uppercase text-base-content/40">.{file.ext}</span>
+        : <LoadingSpinner size={14} className="opacity-40" />}
+    </div>
+    <span className="flex-1 min-w-0 truncate text-xs font-mono" title={file.name}>{file.name}</span>
+    <span className="w-12 text-2xs font-mono uppercase text-base-content/50">{file.ext}{RAW_EXT_SET.has(file.ext) ? ' · RAW' : ''}</span>
+    <span className="hidden md:block w-24 text-2xs font-mono text-base-content/60">{facts?.width ? `${facts.width} × ${facts.height}` : '—'}</span>
+    <span className="hidden md:block w-16 text-2xs font-mono text-base-content/60">{facts?.size === undefined ? '—' : facts.size < 1048576 ? `${Math.max(1, Math.round(facts.size / 1024))} KB` : `${(facts.size / 1048576).toFixed(1)} MB`}</span>
+    <span className="hidden lg:block w-24 text-2xs font-mono text-base-content/60">{facts?.mtime ? new Date(facts.mtime).toLocaleDateString() : '—'}</span>
+    <span className="w-16 text-2xs text-warning" aria-label={meta?.rating ? `${meta.rating} stars` : undefined}>{meta?.rating ? '★'.repeat(meta.rating) : ''}</span>
+    <span className="w-3 h-3 flex-shrink-0 rounded-full" style={meta?.label ? { background: LABEL_COLORS[meta.label] } : undefined} aria-label={meta?.label ? `${meta.label} label` : undefined} />
+    {stack && (
+      <span role="button" tabIndex={0} aria-label={stack.expanded ? 'Collapse stack' : `Expand stack of ${stack.count}`}
+        className="px-1.5 h-5 flex items-center text-2xs font-mono font-black bg-primary text-primary-content rounded"
+        onClick={e => { e.stopPropagation(); onToggleStack(stack.stackId); }}
+        onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); onToggleStack(stack.stackId); } }}>
+        {stack.expanded ? '−' : stack.count}
+      </span>
+    )}
+  </button>
+) : (
   <button
     onClick={onClick}
     onContextMenu={onContextMenu}

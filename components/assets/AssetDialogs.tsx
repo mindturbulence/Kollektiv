@@ -206,3 +206,32 @@ export const VaultSaveModal: React.FC<{
     </Modal>
   );
 };
+
+const SHORTCUTS: { keys: string; does: string }[] = [
+  { keys: 'Ctrl + A', does: 'Select everything shown' },
+  { keys: 'Esc', does: 'Clear the selection' },
+  { keys: '1 – 5', does: 'Rate the selection (0 clears)' },
+  { keys: '6 7 8 9', does: 'Colour label: red, yellow, green, blue (again to clear)' },
+  { keys: 'Ctrl + C / X', does: 'Copy / cut the selection' },
+  { keys: 'Ctrl + V', does: 'Paste into the open folder (Shift: paste as a copy)' },
+  { keys: 'Click · Ctrl/⌘ + click · Shift + click', does: 'Open · toggle · select a range' },
+  { keys: 'Right-click', does: 'Menu for an image, folder, root or Trash (Find Similar, Move to Trash, …)' },
+  { keys: '← →  ·  Esc  ·  double-click', does: 'In the viewer: previous / next · close · zoom' },
+  { keys: '?', does: 'This list' },
+];
+
+/** Keyboard shortcuts help (plan Task 25). Only lists what the page really handles. */
+export const ShortcutsModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => (
+  <Modal isOpen={isOpen} onClose={onClose} title="Keyboard shortcuts" size="lg">
+    <table className="w-full text-xs font-mono" aria-label="Shortcuts">
+      <tbody>
+        {SHORTCUTS.map(s => (
+          <tr key={s.keys} className="border-b border-base-content/5 last:border-0">
+            <th scope="row" className="text-left font-normal p-2 whitespace-nowrap text-primary">{s.keys}</th>
+            <td className="p-2 text-base-content/70">{s.does}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </Modal>
+);
