@@ -10,7 +10,7 @@ import { appEventBus } from '../../utils/eventBus';
 export const researchTools: AssistantTool[] = [
   {
     name: 'append_findings',
-    description: "Append a note to the active research project's findings.md (Research mode, Findings panel). Use when the user says things like 'note that down as a finding' during a research conversation. No-op error if no research project is currently open.",
+    description: "Append a note to the active research project's findings.md (Research mode, Findings panel). Use when the user says things like 'note that down as a finding' or 'save that' during a research conversation. Nothing is saved unless you CALL this tool — replying 'noted' without calling it loses the finding. No-op error if no research project is currently open.",
     parameters: {
       type: 'object',
       properties: { text: { type: 'string', description: 'Markdown text to append as a new finding.' } },

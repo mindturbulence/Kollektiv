@@ -90,5 +90,5 @@ Procedures and details are in [ISSUES.md](../ISSUES.md). Deferred by the owner o
 - [ ] **ISSUE-11** Source-aware research answers — walk the checklist (ISSUE-9's run already produced a cited answer).
 - [ ] **ISSUE-30** Production CSP: verify live voice, Spotify, YouTube search, local Ollama/llama.cpp, Google Sign-In under Report-Only, then switch `security.ts` to enforcing and re-verify.
 - [ ] **ISSUE-42** YouTube transcript tool fails (empty caption body / UNPLAYABLE) — re-verify from a residential network; if still failing it needs a PO-token-capable path. Reddit 403 from datacenter IPs is expected.
-- [ ] **ISSUE-12 follow-up** — if the assistant keeps answering "noted" without calling `append_findings`, strengthen the tool description or add a nudge in `buildSystemIdentity`.
-- [ ] **ISSUE-47 residuals** — plan steps can't pass output to later steps; `mcp_call`/`persistence`/`user_confirmation`/`fallback` step kinds throw "not implemented".
+- [ ] **ISSUE-12 follow-up** — description strengthened 2026-09-30; if the assistant still answers "noted" without calling `append_findings`, add a nudge in `buildSystemIdentity`. (Needs live use to tell.)
+- [ ] **ISSUE-47 residuals** — only `mcp_call`/`persistence`/`fallback` still throw "not implemented" (the planner never emits them — build when a plan needs one). Step-output data flow already existed and `user_confirmation` now auto-approves explicitly (2026-09-30).
