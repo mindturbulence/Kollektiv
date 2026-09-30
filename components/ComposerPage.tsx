@@ -580,7 +580,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                                 {mode === 'frame' && (
                                     <div className="w-full h-full relative">
                                         <div ref={framePaddingRef} className="w-full h-full will-change-[padding]">
-                                            {frameItem ? <ItemRenderer animateEntry item={frameItem} w={previewMetrics.width - (frameInsets[1]+frameInsets[3])*previewMetrics.scale} h={previewMetrics.height - (frameInsets[0]+frameInsets[2])*previewMetrics.scale} onRemove={() => setFrameItem(null)} onTransform={t => setFrameItem({...frameItem!, ...t})} />
+                                            {frameItem ? <ItemRenderer animateEntry item={frameItem} w={previewMetrics.width - (frameInsets[1]+frameInsets[3])*previewMetrics.scale} h={previewMetrics.height - (frameInsets[0]+frameInsets[2])*previewMetrics.scale} onRemove={() => setFrameItem(null)} onTransform={t => setFrameItem({...frameItem, ...t})} />
                                             : <div className="w-full h-full border-2 border-dashed border-base-content/10 bg-base-200/30 flex flex-col items-center justify-center gap-4 opacity-40 hover:opacity-100 transition-opacity">
                                                 <div className="flex gap-4">
                                                     <button onClick={() => setIsPickerOpen(true)} className="btn btn-circle btn-sm bg-transparent border-none text-primary"><FolderClosedIcon className="w-8 h-8"/></button>

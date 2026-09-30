@@ -21,7 +21,7 @@ export function decodeColorGrading(params: Effect['params']): ColorGrading {
   if (typeof raw !== 'string') return {};
   try {
     const parsed: unknown = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? (parsed as ColorGrading) : {};
+    return parsed && typeof parsed === 'object' ? (parsed) : {};
   } catch {
     return {};
   }
@@ -40,7 +40,7 @@ export function encodeChromaKey(s: ChromaKeySettings): Effect['params'] {
 
 export function decodeChromaKey(params: Effect['params']): ChromaKeySettings {
   const d = DEFAULT_CHROMA_KEY_SETTINGS;
-  const num = (k: string, fallback: number) => (typeof params[k] === 'number' ? (params[k] as number) : fallback);
+  const num = (k: string, fallback: number) => (typeof params[k] === 'number' ? (params[k]) : fallback);
   const hex = typeof params.keyColor === 'string' ? /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(params.keyColor) : null;
   return {
     keyColor: hex

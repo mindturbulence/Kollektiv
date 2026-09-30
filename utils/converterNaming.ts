@@ -12,7 +12,7 @@ export function sanitizeBaseName(name: string, maxLen: number = CONVERTER_NAME_M
     // strip any directory components (win + unix separators)
     .replace(/^.*[\\/]/, '')
     // remove control characters
-    // eslint-disable-next-line no-control-regex
+     
     .replace(/[\u0000-\u001f\u007f]/g, '')
     // filesystem-hostile characters
     .replace(/[<>:"|?*]/g, '')

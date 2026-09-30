@@ -68,7 +68,7 @@ export const addSavedPrompt = async (promptData: Omit<SavedPrompt, 'id' | 'creat
     let newId = '';
     try {
         newId = `prompt_${Date.now()}_${uuidv4().substring(0, 6)}`;
-    } catch (e) {
+    } catch {
         newId = `prompt_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     }
 

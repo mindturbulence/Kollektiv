@@ -132,6 +132,22 @@ export async function deleteProject(id: string): Promise<void> {
   await tx.done;
 }
 
+/** Deletes media blobs no saved project references (left behind when media is
+ *  removed from a project — deleteProject only GCs on project delete). Reads
+ *  the project list and deletes inside ONE transaction, so an autosave can't
+ *  slip a fresh blob in between and have it swept. Returns how many went. */
+export async function sweepOrphanedMedia(): Promise<number> {
+  const db = await getDB();
+  const tx = db.transaction([PROJECTS_STORE, MEDIA_STORE], 'readwrite');
+  const projects = (await tx.objectStore(PROJECTS_STORE).getAll()) as StoredProject[];
+  const used = new Set(projects.flatMap((p) => p.media.map((m) => m.id)));
+  const mediaStore = tx.objectStore(MEDIA_STORE);
+  const orphans = ((await mediaStore.getAllKeys()) as string[]).filter((k) => !used.has(k));
+  await Promise.all(orphans.map((k) => mediaStore.delete(k)));
+  await tx.done;
+  return orphans.length;
+}
+
 /** Renames a project in place, bumping updatedAt. No-op if the project is gone. */
 export async function renameProject(id: string, name: string): Promise<void> {
   const db = await getDB();

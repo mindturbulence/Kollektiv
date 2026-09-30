@@ -408,7 +408,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
             try {
                 const blob = await fileSystemManager.getFileAsBlob(url);
                 if (blob) size = blob.size;
-            } catch (e) {}
+            } catch {}
         }
         
         // For video/image dimensions, we'll wait for the media to load and trigger onLoaded
@@ -602,7 +602,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
               setVideoBlob(blob);
               setIsPublishModalOpen(true);
           }
-      } catch (e) {
+      } catch {
           showGlobalFeedback("Failed to load binary data for publishing.", true);
       }
   };

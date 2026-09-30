@@ -65,14 +65,14 @@ export const WebResultCard: React.FC<{
                                     alt=""
                                     loading="lazy"
                                     className="w-full max-h-64 object-cover border border-base-300/20 mb-3"
-                                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                    onError={(e) => { (e.currentTarget).style.display = 'none'; }}
                                 />
                             )}
                             <div className="prose prose-sm prose-invert max-w-none text-[14px] leading-relaxed">
                                 <Markdown
                                     remarkPlugins={[remarkGfm]}
                                     components={{
-                                        a: ({node, ...props}) => <a target="_blank" rel="noopener noreferrer" {...props} />
+                                        a: ({node: _node, ...props}) => <a target="_blank" rel="noopener noreferrer" {...props} />
                                     }}
                                 >{result.markdown}</Markdown>
                             </div>

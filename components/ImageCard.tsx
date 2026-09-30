@@ -97,7 +97,7 @@ const Media: React.FC<{
             if ('requestIdleCallback' in window) {
                 idleHandleRef.current = (window as any).requestIdleCallback(() => startLoading(), { timeout: 1500 });
             } else {
-                idleHandleRef.current = (window as any).setTimeout(() => startLoading(), 50) as any;
+                idleHandleRef.current = (window as any).setTimeout(() => startLoading(), 50);
             }
         };
         void loadMedia();

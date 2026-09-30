@@ -34,7 +34,7 @@ export const twitterTools: AssistantTool[] = [
           return `Error: could not fetch this tweet (Twitter/X restricts third-party access, so this can happen even for valid, public tweets). (${data?.error || 'unknown error'})`;
         }
         const tweet = data.tweet;
-        appEventBus.emit('webSearchResults', [{
+        const result: WebResult = {
           title: `Tweet by ${tweet.author}`,
           url: tweet.url,
           markdown: tweet.text,
@@ -42,7 +42,8 @@ export const twitterTools: AssistantTool[] = [
           engine: 'twitter',
           author: tweet.author,
           timestamp: Date.now(),
-        } as WebResult]);
+        };
+        appEventBus.emit('webSearchResults', [result]);
         return JSON.stringify(tweet);
       } catch (e: any) {
         return `Error: could not fetch this tweet (${e?.message || e}).`;

@@ -7,6 +7,7 @@ import {
 } from './icons';
 import ConfirmationModal from './ConfirmationModal';
 import { audioService } from '../services/audioService';
+import Modal from './Modal';
 
 interface Category {
   id: string;
@@ -421,7 +422,7 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
         </div>
 
         {isAddModalOpen && (
-            <div className="fixed inset-0 bg-black/80 z-modal flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsAddModalOpen(false)}>
+            <Modal isOpen={true} onClose={() => setIsAddModalOpen(false)} title="Add category" bare size="7xl" className="" backdropClassName="bg-black/80">
                 <div className="flex flex-col bg-transparent w-full max-w-lg mx-auto relative p-[3px] corner-frame overflow-visible" onClick={e => e.stopPropagation()}>
                     <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
                         <header className="p-8 border-b border-base-300 bg-transparent">
@@ -440,7 +441,7 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
                         </footer>
                     </div>
                 </div>
-            </div>
+            </Modal>
         )}
 
         <ConfirmationModal

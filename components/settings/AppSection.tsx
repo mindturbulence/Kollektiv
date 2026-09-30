@@ -150,7 +150,7 @@ const AppSection: React.FC<AppSectionProps> = ({
                                     showGlobalFeedback("Refreshing Google session silently...", false);
                                 }
                             } else {
-                                const success = await fileSystemManager.initialize(updatedSettings, {} as any);
+                                const success = await fileSystemManager.initialize(updatedSettings, {});
                                 if (success) {
                                     setAppDataDirectory(fileSystemManager.appDirectoryName);
                                     const folderId = (fileSystemManager as any).rootFolderId;
@@ -169,7 +169,7 @@ const AppSection: React.FC<AppSectionProps> = ({
                                 }
                             }
                         } else {
-                            await fileSystemManager.initialize(updatedSettings, {} as any);
+                            await fileSystemManager.initialize(updatedSettings, {});
                             setAppDataDirectory(fileSystemManager.appDirectoryName);
                             showFeedback("Switched to Local Directory Mode.");
                         }

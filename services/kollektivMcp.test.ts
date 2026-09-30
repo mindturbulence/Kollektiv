@@ -166,7 +166,7 @@ function getFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const srv = require('node:net').createServer();
     srv.listen(0, '127.0.0.1', () => {
-      const port = (srv.address() as any).port;
+      const port = (srv.address()).port;
       srv.close(() => resolve(port));
     });
     srv.on('error', reject);

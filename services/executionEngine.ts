@@ -273,7 +273,7 @@ export function createExecutionEngine(options?: EngineOptions) {
 // Dynamic imports of ./assistantTools and ./llmService avoid a circular
 // top-level import: assistantTools.ts imports this module already.
 //
-// Everything else (mcp_call, persistence, user_confirmation, fallback, and
+// Everything else (mcp_call, persistence, fallback, and
 // a provider_call with no plain-text input — e.g. media generation, which
 // needs aspect ratio and gallery ingestion this layer doesn't have) throws
 // an honest "not implemented" error rather than fabricating a success. A
@@ -350,7 +350,11 @@ async function dispatchStep(step: PlanStep, intent: RouterIntent, ctx: ToolConte
       throw new Error('persistence dispatch is not implemented at this layer.');
 
     case 'user_confirmation':
-      throw new Error('user_confirmation dispatch is not implemented at this layer — no confirmation UI is wired here.');
+      // Owner decision (ISSUE-47, 2026-09-28): plan.requiresConfirmation stays
+      // unenforced, so this step can't block — but it must not fail the plan
+      // either (a settings plan starts with it). It completes as an explicit
+      // auto-approval; the output says no prompt was shown, never a fake click.
+      return { confirmed: true, mode: 'auto', userPrompted: false, reason: 'confirmation is intentionally unenforced (ISSUE-47)' };
 
     case 'fallback':
       throw new Error('fallback dispatch is not implemented at this layer.');
@@ -453,6 +457,7 @@ export function interpolateStepValue(
     const resolved = getNestedProperty(outputs, path);
     return typeof resolved === 'object'
       ? JSON.stringify(resolved)
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string -- objects were handled above
       : String(resolved ?? '');
   });
 }

@@ -142,7 +142,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                 };
                 updateSettings(updatedSettings);
 
-                const success = await fileSystemManager.initialize(updatedSettings, {} as any);
+                const success = await fileSystemManager.initialize(updatedSettings, {});
                 if (success) {
                   audioService.playAppStart();
                   const folderId = (fileSystemManager as any).rootFolderId;
@@ -207,7 +207,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
     }
 
     try {
-      const success = await fileSystemManager.initialize(activeSettings, {} as any);
+      const success = await fileSystemManager.initialize(activeSettings, {});
       if (success) {
         const folderId = (fileSystemManager as any).rootFolderId;
         const finalSettings = {
@@ -221,7 +221,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
       } else {
         handleGoogleDriveSignIn();
       }
-    } catch (e) {
+    } catch {
       handleGoogleDriveSignIn();
     }
   };
@@ -265,7 +265,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
     // Ensure settings reflect the user's storage provider and LLM choice
     const updatedSettings = {
       ...settings,
-      storageProvider: currentProvider === 'demo' ? ('local' as const) : (currentProvider as 'local' | 'drive'),
+      storageProvider: currentProvider === 'demo' ? ('local' as const) : (currentProvider),
       activeLLM: settings.geminiApiKey ? (settings.activeLLM || 'gemini') : settings.activeLLM,
     };
     // Fire-and-forget: initializeApp is async but we don't need to await the result
@@ -323,7 +323,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                   audioService.playClick();
                   const updatedSettings = { ...settings, storageProvider: 'local' as const };
                   updateSettings(updatedSettings);
-                  await fileSystemManager.initialize(updatedSettings, {} as any);
+                  await fileSystemManager.initialize(updatedSettings, {});
                   setCurrentProvider('local');
                   setError(null);
                 }}
@@ -340,7 +340,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                   audioService.playClick();
                   const updatedSettings = { ...settings, storageProvider: 'drive' as const };
                   updateSettings(updatedSettings);
-                  await fileSystemManager.initialize(updatedSettings, {} as any);
+                  await fileSystemManager.initialize(updatedSettings, {});
                   setCurrentProvider('drive');
                   setError(null);
                 }}
@@ -453,7 +453,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                               customClientId: e.target.value,
                             },
                           };
-                          updateSettings(updated as any);
+                          updateSettings(updated);
                         }}
                         placeholder="407408718192-example.apps.googleusercontent.com"
                         className="w-full text-2xs font-mono bg-black/40 border border-primary/20 p-2 text-base-content placeholder-base-content/25 focus:outline-none focus:border-primary/50"
@@ -609,7 +609,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                   type="password"
                   value={settings.geminiApiKey || ''}
                   onChange={(e) => {
-                    updateSettings({ ...settings, geminiApiKey: e.target.value } as any);
+                    updateSettings({ ...settings, geminiApiKey: e.target.value });
                   }}
                   placeholder="AIzaSy..."
                   className="w-full text-2xs font-mono bg-black/40 border border-primary/20 p-3 text-base-content placeholder-base-content/25 focus:outline-none focus:border-primary/50 transition-colors"
@@ -633,7 +633,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                 <select
                   value={settings.llmModel || 'gemini-2.5-flash'}
                   onChange={(e) => {
-                    updateSettings({ ...settings, llmModel: e.target.value } as any);
+                    updateSettings({ ...settings, llmModel: e.target.value });
                   }}
                   className="w-full text-2xs font-mono bg-black/40 border border-primary/20 p-3 text-base-content focus:outline-none focus:border-primary/50 transition-colors appearance-none"
                 >

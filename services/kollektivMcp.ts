@@ -632,7 +632,7 @@ export async function startKollektivMcp(
       subServers.push(sub);
       console.log(`[Kollektiv MCP] Obsidian vault tools loaded (${sub.tools.length} tools)`);
     } catch (err) {
-      console.log(`[Kollektiv MCP] Obsidian vault tools not available: ${err instanceof Error ? err.message : err}`);
+      console.log(`[Kollektiv MCP] Obsidian vault tools not available: ${err instanceof Error ? err.message : String(err)}`);
     }
   } else if (vaultPath) {
     console.log(`[Kollektiv MCP] Obsidian vault path not found: ${vaultPath} — skipping`);
@@ -649,7 +649,7 @@ export async function startKollektivMcp(
     subServers.push(sub);
     console.log(`[Kollektiv MCP] Playwright browser tools loaded (${sub.tools.length} tools)`);
   } catch (err) {
-    console.log(`[Kollektiv MCP] Playwright tools not available: ${err instanceof Error ? err.message : err}`);
+    console.log(`[Kollektiv MCP] Playwright tools not available: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   const toolToServer = new Map<string, McpSubServer>();

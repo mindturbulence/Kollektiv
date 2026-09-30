@@ -97,8 +97,10 @@ export const ScanLine = ({ delay = 0 }: { delay?: number }) => (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-40">
         {/* Soft Feathered Glow */}
         <motion.div
-            initial={{ top: "-50%" }}
-            animate={{ top: "150%" }}
+            // Transform, not `top`: same travel (-50% → 150% of the panel; the glow is
+            // 45% tall, so -111% → 333% of its own height) without re-laying-out every frame.
+            initial={{ y: "-111%" }}
+            animate={{ y: "333%" }}
             transition={{ 
                 duration: 7, 
                 delay, 

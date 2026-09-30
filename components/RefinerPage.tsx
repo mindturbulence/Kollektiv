@@ -24,6 +24,7 @@ import {
 import { MODIFIER_CATEGORIES } from '../constants/modifierRegistry';
 import { TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 import type { LLMSettings } from '../types';
+import Modal from './Modal';
 
 type MediaMode = 'image' | 'video' | 'audio';
 
@@ -245,6 +246,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                 const tab = defs[key].tab;
                 if (mediaMode === 'audio' && ['styling', 'photography', 'motion', 'platform'].includes(tab)) return;
                 if (mediaMode !== 'audio' && tab === 'audio') return;
+                // eslint-disable-next-line @typescript-eslint/no-base-to-string -- modifier values are strings/numbers/booleans
                 list.push({ label: defs[key].label, value: String(val), tab: defs[key].tab, key });
             }
         });
@@ -261,7 +263,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                 ]);
                 setArtStyles(styles);
                 setCustomOptions(custom);
-            } catch (e) {
+            } catch {
                 setErrorRefine({ message: "Reference data offline." });
             }
         };
@@ -429,7 +431,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
         try {
             const text = await navigator.clipboard.readText();
             if (text) setRefineText(prev => prev ? `${prev} ${text}` : text);
-        } catch (err) {
+        } catch {
             showGlobalFeedback('Clipboard access denied.', true);
         }
     };
@@ -712,7 +714,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                                 {directMediaResult.type === 'video' ? (
                                                     <video src={directMediaResult.url} controls autoPlay loop className="w-full h-full object-contain" />
                                                 ) : (
-                                                    <img src={directMediaResult.url} alt="Generated result" className="w-full h-full object-contain" referrerPolicy="no-referrer" onError={(e) => { (e.currentTarget as HTMLImageElement).style.filter = 'grayscale(1)'; }} />
+                                                    <img src={directMediaResult.url} alt="Generated result" className="w-full h-full object-contain" referrerPolicy="no-referrer" onError={(e) => { (e.currentTarget).style.filter = 'grayscale(1)'; }} />
                                                 )}
                                             </div>
                                             <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-20">
@@ -871,7 +873,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
 
             {/* Modals */}
             {isSavePresetModalOpen && (
-                <div className="fixed inset-0 z-system flex items-center justify-center">
+                <Modal isOpen onClose={() => setIsSavePresetModalOpen(false)} title="Register preset" bare size="7xl" className="">
                     <div className="bg-base-200/95 backdrop-blur-xl p-8 border border-primary/20 shadow-[0_0_60px_oklch(var(--p)/0.2)] max-w-md w-full mx-4 relative corner-frame">
                         <div className="flex items-center justify-between mb-6">
                             <span className="text-sm font-black uppercase tracking-widest text-primary">REGISTER PRESET</span>
@@ -888,7 +890,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                 className="btn btn-sm btn-primary btn-snake-primary">{isSavingPreset ? 'SAVING...' : 'CONFIRM'}</button>
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {isDeletePresetModalOpen && (

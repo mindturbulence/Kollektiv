@@ -245,9 +245,9 @@ function mergeSettings(parsed: Record<string, unknown>): LLMSettings {
   }
 
   // legacy: migrate single mcpServerUrl/mcpEnabled to mcpServers array
-  if ((merged as any).mcpServerUrl && !Array.isArray(merged.mcpServers?.length)) {
-      const oldUrl = String((merged as any).mcpServerUrl || '');
-      const oldEnabled = Boolean((merged as any).mcpEnabled);
+  if ((merged).mcpServerUrl && !Array.isArray(merged.mcpServers?.length)) {
+      const oldUrl = String((merged).mcpServerUrl || '');
+      const oldEnabled = Boolean((merged).mcpEnabled);
       if (oldUrl) {
           merged.mcpServers = [{
               id: 'mcp-server-1',
@@ -256,8 +256,8 @@ function mergeSettings(parsed: Record<string, unknown>): LLMSettings {
               enabled: oldEnabled,
           }];
       }
-      delete (merged as any).mcpServerUrl;
-      delete (merged as any).mcpEnabled;
+      delete (merged).mcpServerUrl;
+      delete (merged).mcpEnabled;
   }
   if (!Array.isArray(merged.mcpServers)) merged.mcpServers = [];
 

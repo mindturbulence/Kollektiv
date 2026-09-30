@@ -59,7 +59,7 @@ const CurvesPanel: React.FC<CurvesPanelProps> = ({ layerId, onClose }) => {
     for (let x = 0; x < 256; x++) {
       const px = (x / 255) * S;
       const py = S - (lut[x] / 255) * S;
-      x === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      if (x === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
     }
     ctx.stroke();
 

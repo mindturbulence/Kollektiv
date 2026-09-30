@@ -12,6 +12,7 @@ import {
   type SavedWorkflowEntry,
 } from '../services/comfyWorkflowParser';
 import { saveWorkflowSchema, generateWorkflowId } from '../utils/workflowStorage';
+import Modal from './Modal';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -56,7 +57,7 @@ function buildNodeList(rawJson: Record<string, any>): RawNodeInfo[] {
   const nodes: RawNodeInfo[] = [];
   for (const [nodeId, node] of Object.entries(rawJson)) {
     if (!node || typeof node !== 'object') continue;
-    const n = node as any;
+    const n = node;
     nodes.push({
       nodeId,
       classType: n.class_type || 'unknown',
@@ -176,7 +177,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
           }
         }
 
-        setRawJson(promptJson!);
+        setRawJson(promptJson);
         initMapping(promptJson!);
         setStep('map');
       } catch {
@@ -202,7 +203,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
 
   const handleResetAuto = useCallback(() => {
     if (!rawJson) return;
-    initMapping(rawJson!);
+    initMapping(rawJson);
   }, [rawJson, initMapping]);
 
   // ── Mapping helpers ──────────────────────────────────────────────────
@@ -256,7 +257,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
 
     const schema: ComfyWorkflowSchema = {
       workflowName: workflowLabel || `Custom ${new Date().toLocaleDateString()}`,
-      rawPromptJson: rawJson!,
+      rawPromptJson: rawJson,
       targetInputs,
     };
 
@@ -355,14 +356,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
   if (!isOpen) return null;
 
   const modalContent = (
-    <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-xl z-modal flex items-center justify-center p-4 animate-fade-in"
-      onClick={handleClose}
-    >
-      <div
-        className="flex flex-col bg-transparent w-full max-w-2xl mx-auto relative p-[3px] corner-frame overflow-visible max-h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal isOpen={isOpen} onClose={handleClose} title="Import workflow" bare size="2xl" className="flex flex-col bg-transparent relative p-[3px] corner-frame overflow-visible max-h-[90vh]">
         <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full flex flex-col overflow-hidden relative z-10 max-h-[90vh]">
           {/* ── Header ──────────────────────────────────────────── */}
           <header className="px-8 py-4 border-b border-base-300 bg-transparent relative flex items-center justify-between shrink-0">
@@ -532,8 +526,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
         <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
         <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
         <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-      </div>
-    </div>
+      </Modal>
   );
 
   if (typeof window !== 'undefined' && window.document?.body) {

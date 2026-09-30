@@ -146,7 +146,7 @@ const Inspector: React.FC<{ look: LookLayer }> = ({ look }) => {
               <span className="w-24 shrink-0">{label}</span>
               <input type="range" className="range range-xs range-primary flex-1" min={min} max={max} step={step}
                 value={(c as unknown as Record<string, number>)[field]}
-                onChange={e => update(i, { [field]: Number(e.target.value) } as Partial<LookComponent>)}
+                onChange={e => update(i, { [field]: Number(e.target.value) })}
                 onPointerUp={commit} onKeyUp={commit} onBlur={commit} />
             </label>
           ))}
@@ -210,7 +210,7 @@ const LooksPanel: React.FC = () => {
 
   // Built-ins first, then My Looks; thumbnails are indexed like this list.
   const entries = useMemo(() => [
-    ...BUILTIN_LOOKS.map(l => ({ key: l.key, name: l.name, category: l.category as LookCategory | 'mine', recipe: l.build(), myId: null as string | null })),
+    ...BUILTIN_LOOKS.map(l => ({ key: l.key, name: l.name, category: l.category, recipe: l.build(), myId: null as string | null })),
     ...myLooks.map(m => ({ key: `my:${m.id}`, name: m.name, category: 'mine' as const, recipe: m.recipe, myId: m.id })),
   ], [myLooks]);
   const recipes = useMemo(() => entries.map(e => e.recipe), [entries]);

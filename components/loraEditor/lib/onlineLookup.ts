@@ -1,6 +1,6 @@
 import type { LookupResult, LookupSource } from '../types';
 
-async function onlineLookupFetch(url: string): Promise<any | null> {
+async function onlineLookupFetch(url: string): Promise<any> {
     const response = await fetch(url);
     if (!response.ok) return null;
     return response.json();

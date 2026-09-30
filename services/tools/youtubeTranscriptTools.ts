@@ -35,14 +35,15 @@ export const youtubeTranscriptTools: AssistantTool[] = [
           return `Error: transcript unavailable for this video (captions disabled, or fetch blocked). Try scrape_url on the video page instead. (${data?.error || 'unknown error'})`;
         }
         const text = (data.segments || []).map((s: any) => s.text).join(' ');
-        appEventBus.emit('webSearchResults', [{
+        const result: WebResult = {
           title: `YouTube transcript: ${id}`,
           url: `https://www.youtube.com/watch?v=${id}`,
           markdown: text,
           source: 'fetch',
           engine: 'youtube',
           timestamp: Date.now(),
-        } as WebResult]);
+        };
+        appEventBus.emit('webSearchResults', [result]);
         return text || 'Transcript was empty.';
       } catch (e: any) {
         return `Error: transcript unavailable for this video (captions disabled, or fetch blocked). Try scrape_url on the video page instead. (${e?.message || e})`;

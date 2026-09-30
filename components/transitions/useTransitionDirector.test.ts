@@ -27,11 +27,11 @@ describe('useTransitionDirector', () => {
         const { result } = renderHook(() => useTransitionDirector({
             overlayRef: { current: overlay as any },
             contentRef: { current: null },
-            getActiveTab: () => 'dashboard' as any,
+            getActiveTab: () => 'dashboard',
             commit,
         }));
 
-        act(() => { result.current.navigate('settings' as any); });
+        act(() => { result.current.navigate('settings'); });
         expect(commit).not.toHaveBeenCalled();
         await act(async () => { await vi.advanceTimersByTimeAsync(4100); });
 

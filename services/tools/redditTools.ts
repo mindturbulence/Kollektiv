@@ -37,7 +37,7 @@ export const redditTools: AssistantTool[] = [
             engine: 'reddit',
             author: data.post.author,
             timestamp: Date.now(),
-          } as WebResult]);
+          }]);
         } else if (Array.isArray(data) && data.length > 0) {
           appEventBus.emit('webSearchResults', data.slice(0, 3).map((p: any): WebResult => ({
             title: p.title, url: p.permalink, markdown: p.selftext || '', source: 'fetch', engine: 'reddit', author: p.author, timestamp: Date.now(),

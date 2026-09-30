@@ -25,9 +25,9 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             aria-modal="true"
           >
             <motion.div
-              initial={{ scale: 0, opacity: 0 }}
+              initial={{ scale: 0.92, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
+              exit={{ scale: 0.92, opacity: 0 }}
               transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
               className="flex flex-col bg-transparent w-full max-w-2xl mx-auto relative p-[3px] corner-frame overflow-visible"
               onClick={(e) => e.stopPropagation()}

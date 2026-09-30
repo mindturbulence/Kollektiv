@@ -252,7 +252,7 @@ describe('AssetsManagerPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /export/i }));
     await waitFor(() => expect(downloadZipMock).toHaveBeenCalledTimes(1));
-    const entries = downloadZipMock.mock.calls[0]![0] as { name: string }[];
+    const entries = downloadZipMock.mock.calls[0][0] as { name: string }[];
     expect(entries.map(e => e.name).sort()).toEqual(['a.png', 'b.png']);
   });
 
@@ -303,7 +303,7 @@ describe('AssetsManagerPage', () => {
     fireEvent.drop(screen.getByText('sub'), { dataTransfer });
 
     await waitFor(() => expect(transferFilesMock).toHaveBeenCalledTimes(1));
-    const [items, dest, mode, policy] = transferFilesMock.mock.calls[0]! as [{ file: { name: string } }[], { path: string }, string, string];
+    const [items, dest, mode, policy] = transferFilesMock.mock.calls[0] as [{ file: { name: string } }[], { path: string }, string, string];
     expect(items.map(i => i.file.name)).toEqual(['a.png']);
     expect(dest.path).toBe('sub');
     expect([mode, policy]).toEqual(['move', 'keep-both']);

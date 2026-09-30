@@ -49,14 +49,14 @@ const MessageBubbleImpl: React.FC<{ msg: ChatBubbleMessage; isTyping: boolean }>
                     <Markdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                            table: ({ node, ...props }) => (
+                            table: ({ node: _node, ...props }) => (
                                 <div className="overflow-x-auto my-4 w-full">
                                     <table className="table table-zebra w-full border border-base-content/10 text-[15px]" {...props} />
                                 </div>
                             ),
-                            th: ({ node, ...props }) => <th className="bg-base-300 text-base-content/80 font-bold text-[15px]" {...props} />,
-                            td: ({ node, ...props }) => <td className="text-[15px]" {...props} />,
-                            code({ node, inline, className, children, ...props }: any) {
+                            th: ({ node: _node, ...props }) => <th className="bg-base-300 text-base-content/80 font-bold text-[15px]" {...props} />,
+                            td: ({ node: _node, ...props }) => <td className="text-[15px]" {...props} />,
+                            code({ node: _node, inline, className, children, ...props }: any) {
                                 const match = /language-(\w+)/.exec(className || '');
                                 return !inline && match ? (
                                     <SyntaxHighlighter

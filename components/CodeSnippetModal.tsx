@@ -1,6 +1,6 @@
 // CodeSnippetModal.tsx - Modal for exporting generated prompt snippets to code
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import Modal from './Modal';
 
 const commonProps = {
   xmlns: "http://www.w3.org/2000/svg",
@@ -93,17 +93,7 @@ console.log(data);`;
     };
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <div id="code_snippet_modal_overlay" className="fixed inset-0 bg-black/80 backdrop-blur-xl z-modal flex items-center justify-center p-4 md:p-8" onClick={onClose}>
-                    <motion.div
-                        id="code_snippet_modal_container"
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        className="bg-transparent w-full max-w-3xl relative p-[3px] corner-frame"
-                        onClick={(e) => e.stopPropagation()}
-                    >
+        <Modal isOpen={isOpen} onClose={onClose} title="Export code" bare size="3xl" className="bg-transparent relative p-[3px] corner-frame" backdropClassName="bg-black/80 backdrop-blur-xl">
                         <div className="bg-base-100/90 backdrop-blur-2xl rounded-none w-full max-h-[85vh] flex flex-col overflow-hidden border border-primary/10">
                             <header className="px-8 py-6 flex items-center justify-between bg-base-100/20">
                                 <div className="flex items-center gap-3">
@@ -145,10 +135,7 @@ console.log(data);`;
                                 </button>
                             </footer>
                         </div>
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
+                    </Modal>
     );
 };
 

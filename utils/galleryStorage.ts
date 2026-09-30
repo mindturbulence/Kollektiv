@@ -104,7 +104,7 @@ const healItemUrls = async (item: GalleryItem, categories: GalleryCategory[]): P
                     foundPath = candidate;
                     break;
                 }
-            } catch (err) {
+            } catch {
                 // ignore
             }
         }
@@ -297,7 +297,7 @@ export const updateItemInGallery = async (id: string, updates: Partial<Omit<Gall
                     
                     const savedPath = await fileSystemManager.saveFile([...pathSegments, fileName].join('/'), blob);
                     return { savedPath, sourceName: `New File ${index+1}` };
-                } catch (e) {
+                } catch {
                     return null;
                 }
             }

@@ -26,14 +26,17 @@ These decisions are permanent — do not re-litigate without the user asking fir
 Reddit returning 403 from datacenter IPs is expected (documented fragility in `redditTools.ts`).
 
 **ISSUE-47 residuals — capability execution engine**
-- Plan steps can't pass output to later steps (no data flow between steps).
-- `mcp_call` / `persistence` / `user_confirmation` / `fallback` step kinds throw "not implemented"
-  (honest failure; `optional` steps are skipped).
+- `mcp_call` / `persistence` / `fallback` step kinds throw "not implemented" (honest failure; `optional`
+  steps are skipped). The planner never emits `mcp_call` or `fallback`, and `persistence` only follows
+  a `provider_call` that has no dispatch — build them when a plan actually needs one.
+- Resolved 2026-09-30: step outputs already flow to later steps (`{{step1.output…}}` interpolation in
+  the engine), and `user_confirmation` now completes as an explicit auto-approval (output says
+  `userPrompted: false`) so settings plans run, per the unenforced-confirmation decision above.
 
 **ISSUE-12 follow-up — `append_findings` not always called** (model behaviour, not a code defect)
 The tool path is proven (`researchVaultService.test.ts`, live run 2026-07-27), but the assistant once
-answered "noted" without calling it. If that recurs, strengthen the tool description or add a nudge
-in `buildSystemIdentity`.
+answered "noted" without calling it. 2026-09-30: the tool description now says nothing is saved unless
+the tool is called. If it still recurs, add a nudge in `buildSystemIdentity`.
 
 ---
 

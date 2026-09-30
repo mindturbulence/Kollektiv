@@ -311,7 +311,7 @@ Driven by a five-axis review (design system, motion, visual walk, tech stack, im
 - [x] **Motion:** route transitions retimed (~650 ms, cinematic only on first visit, then a 150 ms crossfade). `<MotionConfig reducedMotion="user">` wraps the app, and the GSAP boot reveals jump to their end state under reduced motion. The page shell is a plain keyed `div` — `AnimatePresence mode="wait"` there intermittently never finished the old page's exit, so the new page never mounted. `useTransitionDirector` aborts the overlay and still commits if `cover()` misses its 4 s deadline.
 - [x] **Typed event bus:** `utils/eventBus.ts` exports `AppEvents` (event name → payload); `emit`/`on` are compile-checked. Command-palette Next Theme and the Chat/Activity/LLM panel toggles now work.
 - [x] **Tech:** entry chunk 4.1 MB → 2.6 MB (PrismLight, lazy voice services); promise-misuse ESLint errors fixed; CI runs on `main` + `development` with a Playwright job (full e2e green); unused `helmet`/`cors`/`vfile` removed; `llmService` ↔ `providerFallback` import cycle removed.
-- [ ] **Open:** see the plan's remaining-work table (E6 dirty-rect history, ~37 overlays still to migrate to `Modal`, ESLint backlog of 300 errors, TerminalText reveal delays, motion.md leftovers, light-theme hard-coded colours, CSP enforcement).
+- [ ] **Open:** see `docs/plans/TASKS.md`. Since 2026-09-30: dialogs run on the shared `Modal` (use `bare` to keep a dialog's own chrome; `PromptEditorModal` and `AboutModal` keep bespoke entrances), ESLint is at zero errors and blocking in CI, and TerminalText starts within 150 ms. Still open: motion leftovers, light-theme hard-coded colours, CSP enforcement.
 
 ### Phase 9 — Video Editor (2026-09-26 → 28)
 

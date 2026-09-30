@@ -276,7 +276,7 @@ async function* runFallbackTurn(messages: ChatMsg[], settings: LLMSettings, sour
     // streamChat dispatches on activeLLM, so force it to the assistant's brain.
     // masterRolePrompt is blanked because buildSystemIdentity already prepends
     // it — streamChat would otherwise inject it a second time.
-    const chatSettings: LLMSettings = { ...settings, activeLLM: provider as LLMSettings['activeLLM'], masterRolePrompt: '' };
+    const chatSettings: LLMSettings = { ...settings, activeLLM: provider, masterRolePrompt: '' };
     const attachments = latestAttachments(messages);
     const context = latestUserMessage(messages);
     const knowledgeBlock = await buildKnowledgeContextBlock(context);
@@ -316,7 +316,7 @@ async function* runOllamaTurn(messages: ChatMsg[], settings: LLMSettings, source
     const mcpTools = await loadMcpAssistantTools(settings);
     const allTools = mcpTools.length ? [...ASSISTANT_TOOLS, ...mcpTools] : ASSISTANT_TOOLS;
     const provider = getAssistantProvider(settings); // 'ollama' | 'ollama_cloud'
-    const config = getOllamaConfig({ ...settings, activeLLM: provider as LLMSettings['activeLLM'] });
+    const config = getOllamaConfig({ ...settings, activeLLM: provider });
     if (!config.baseUrl || !config.model) {
         yield { type: 'text', chunk: 'The Ollama brain is not configured — set the endpoint and model in Settings > Integrations.' };
         yield { type: 'turn_end' };

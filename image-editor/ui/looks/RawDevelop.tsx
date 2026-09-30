@@ -12,7 +12,7 @@ import { openFilePicker } from '../../core/io/FileIO';
 import type { ImageLayer } from '../../core/types';
 
 /** [field, min, max, step, label] — shared with the look inspector's Develop. */
-export const DEVELOP_SLIDERS: [keyof DevelopSettings & string, number, number, number, string][] = [
+export const DEVELOP_SLIDERS: [keyof DevelopSettings, number, number, number, string][] = [
   ['exposure', -3, 3, 0.05, 'Exposure'], ['contrast', -1, 1, 0.05, 'Contrast'],
   ['highlights', -1, 1, 0.05, 'Highlights'], ['shadows', -1, 1, 0.05, 'Shadows'],
   ['temp', -1, 1, 0.05, 'Temperature'], ['tint', -1, 1, 0.05, 'Tint'], ['saturation', -1, 1, 0.05, 'Saturation'],

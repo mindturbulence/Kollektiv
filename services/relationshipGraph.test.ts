@@ -502,7 +502,7 @@ describe('relationshipGraph', () => {
         entities: [{ kind: 'note' as KnowledgeKind, id: 'new', label: 'New', tags: [], addedAt: 1 }],
         relations: [],
       };
-      relationshipGraph.importGraph(freshData as any);
+      relationshipGraph.importGraph(freshData);
       expect(relationshipGraph.entityCount).toBe(1);
       expect(relationshipGraph.hasEntity('note', 'new')).toBe(true);
       expect(relationshipGraph.hasEntity('memory', 'old')).toBe(false);

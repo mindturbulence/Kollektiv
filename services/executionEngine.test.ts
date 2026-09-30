@@ -157,12 +157,31 @@ describe('dispatchStep — response_cleanup', () => {
 });
 
 describe('dispatchStep — not-yet-implemented kinds fail honestly, never fake success', () => {
-  it.each(['mcp_call', 'persistence', 'user_confirmation', 'fallback'] as const)('%s throws rather than fabricating a result', async (kind) => {
+  it.each(['mcp_call', 'persistence', 'fallback'] as const)('%s throws rather than fabricating a result', async (kind) => {
     const engine = createExecutionEngine({ maxRetries: 0 });
     const s = step({ kind });
     const result = await engine.executeStep(s, intent(), ctx);
     expect(result.status).toBe('failed');
     expect(result.error).toMatch(/not implemented/i);
+  });
+});
+
+describe('user_confirmation (ISSUE-47: confirmations are unenforced)', () => {
+  it('completes as an explicit auto-approval instead of failing the plan, and says no prompt was shown', async () => {
+    const engine = createExecutionEngine({ maxRetries: 0 });
+    const result = await engine.executeStep(step({ kind: 'user_confirmation' }), intent(), ctx);
+    expect(result.status).toBe('completed');
+    expect(result.output).toMatchObject({ confirmed: true, mode: 'auto', userPrompted: false });
+  });
+
+  it('a settings-style plan (confirmation first) now reaches its action step', async () => {
+    const engine = createExecutionEngine({ maxRetries: 0 });
+    const result = await engine.execute(makePlan([
+      step({ kind: 'user_confirmation', description: 'Confirm' }),
+      step({ kind: 'context_assembly', description: 'apply' }),
+    ]), ctx);
+    expect(result.status).toBe('completed');
+    expect(result.steps.map(s => s.status)).toEqual(['completed', 'completed']);
   });
 });
 

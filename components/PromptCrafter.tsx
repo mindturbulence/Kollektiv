@@ -15,6 +15,7 @@ import ConfirmationModal from './ConfirmationModal';
 import WildcardTree from './WildcardTree';
 import SavedResultItem from './SavedResultItem';
 import AutocompleteSelect from './AutocompleteSelect';
+import Modal from './Modal';
 
 interface PromptCrafterProps {
     onSaveToLibrary: (generatedText: string, baseText: string) => void;
@@ -1096,7 +1097,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
             </motion.aside>
 
             {isSaveModalOpen && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSaveModalOpen(false)}>
+                <Modal isOpen={true} onClose={() => setIsSaveModalOpen(false)} title="Save prompt" bare size="7xl" className="">
                     <div className="w-full max-w-lg relative p-[3px] corner-frame overflow-visible shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
                             <header className="px-8 py-6 panel-header">
@@ -1134,7 +1135,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
                         <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                     </div>
-                </div>
+                </Modal>
             )}
             <ConfirmationModal
                 isOpen={isDeleteModalOpen}

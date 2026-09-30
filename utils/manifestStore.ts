@@ -12,7 +12,7 @@ export const SCHEMA_VERSION = 2;
  *   await saveFile(name, new Blob([JSON.stringify(stampSchemaVersion(manifest))]));
  */
 export function stampSchemaVersion<T extends Record<string, unknown>>(manifest: T): T {
-  return { ...manifest, schemaVersion: SCHEMA_VERSION } as T;
+  return { ...manifest, schemaVersion: SCHEMA_VERSION };
 }
 
 export interface ManifestLoad<T> {

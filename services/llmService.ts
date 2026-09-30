@@ -544,7 +544,7 @@ Output JSON ONLY.`;
                 modifiers: result.modifiers || {},
                 constantModifier: result.constantModifier || ''
             };
-        } catch (e) {
+        } catch {
             return { prompt: cleanLLMResponse(raw), modifiers: {}, constantModifier: '' };
         }
     } else {
@@ -576,7 +576,7 @@ export interface OllamaTestResult {
 export const testOllamaConnection = async (baseUrl: string): Promise<OllamaTestResult> => {
     const cleanUrl = baseUrl.replace(/\/+$/, '').replace(/\/api\/tags\/?$/, '').replace(/\/api\/?$/, '');
     let targetUrl = cleanUrl;
-    let headers: Record<string, string> = {};
+    const headers: Record<string, string> = {};
     
     if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
         if (cleanUrl.includes('localhost:') || cleanUrl.includes('127.0.0.1:')) {

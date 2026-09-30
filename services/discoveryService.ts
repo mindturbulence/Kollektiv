@@ -89,7 +89,7 @@ export const discoveryService = {
 
                 // Search often fails if indexing isn't complete, fallback to list
                 return discoveryService.fetchPrompts(collection, offset, length);
-            } catch (err) {
+            } catch {
                 return `---ERROR---\nSearch synchronization failed`;
             }
         }

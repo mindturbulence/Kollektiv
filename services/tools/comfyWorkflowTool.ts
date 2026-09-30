@@ -67,7 +67,7 @@ export const comfyWorkflowTool: AssistantTool = {
     } else if (shouldValidate) {
       try {
         const { validateWorkflowOnComfy } = await import('../comfyWorkflowParser');
-        const result = await validateWorkflowOnComfy(workflow, comfyUrl!);
+        const result = await validateWorkflowOnComfy(workflow, comfyUrl);
         const errors = result.node_errors || {};
         const errorCount = Object.keys(errors).length;
         validationResult = errorCount === 0
@@ -75,7 +75,7 @@ export const comfyWorkflowTool: AssistantTool = {
           : `\n\n**Validation: FAILED** — ${errorCount} node errors:\n` +
             Object.entries(errors).map(([id, err]) => `- Node ${id}: ${JSON.stringify(err)}`).join('\n');
       } catch (e) {
-        validationResult = `\n\n**Validation error:** ${e}`;
+        validationResult = `\n\n**Validation error:** ${e instanceof Error ? e.message : String(e)}`;
       }
     }
 

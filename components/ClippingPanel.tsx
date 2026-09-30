@@ -9,6 +9,7 @@ import { fileSystemManager } from '../utils/fileUtils';
 import { CloseIcon, DeleteIcon, SparklesIcon, BookmarkIcon, RefreshIcon, PlusIcon, ArchiveIcon, CopyIcon, EditIcon, NoteIcon, GlobeIcon } from './icons';
 import { WebResultCard, stripHtml } from './WebTabContent';
 import { audioService } from '../services/audioService';
+import Modal from './Modal';
 
 interface ClippingPanelProps {
     isOpen: boolean;
@@ -63,7 +64,7 @@ const ManualClipModal: React.FC<{
     };
 
     const modalContent = (
-        <div className="fixed inset-0 bg-black/80 z-modal flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+        <Modal isOpen={isOpen} onClose={onClose} title="New clip" bare size="3xl" className="" backdropClassName="bg-black/80">
             <div className="flex flex-col bg-transparent w-[33vw] min-w-[400px] max-w-[700px] mx-auto relative p-[3px] corner-frame overflow-visible" onClick={e => e.stopPropagation()}>
                 <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full flex flex-col overflow-hidden relative z-10">
                     <header className="p-8 border-b border-base-300 bg-base-200/20 relative">
@@ -115,7 +116,7 @@ const ManualClipModal: React.FC<{
                 <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
                 <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
             </div>
-        </div>
+        </Modal>
     );
 
     return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;

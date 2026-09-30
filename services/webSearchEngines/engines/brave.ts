@@ -5,7 +5,7 @@ function parseResults(html: string, maxResults: number): WebSearchResult[] {
   const dom = new JSDOM(html);
   // Brave uses a data-view-id pattern: mainline results have
   // data-view-id="mainline_result_N" and a class="snippet" for the description.
-  const items = Array.from(dom.window.document.querySelectorAll('[data-view-id^="mainline_result_"]')) as HTMLElement[];
+  const items = Array.from(dom.window.document.querySelectorAll('[data-view-id^="mainline_result_"]'));
   const results: WebSearchResult[] = [];
   for (const item of items) {
     if (results.length >= maxResults) break;

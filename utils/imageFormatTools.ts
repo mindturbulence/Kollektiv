@@ -36,7 +36,7 @@ function extractPngTextChunks(buffer: ArrayBuffer): Record<string, string> {
             // Language tag (null terminated)
             // Translated keyword (null terminated)
             // Text
-            let nullIndices = [];
+            const nullIndices = [];
             for (let i = 0; i < length; i++) {
                 if (data[i] === 0) {
                     nullIndices.push(i);

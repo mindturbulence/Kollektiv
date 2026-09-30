@@ -57,10 +57,10 @@ Boundary: Assets Manager = external multi-root browser; Vault gallery = ingested
 
 ## 3. App-wide (from the 2026-09-24 whole-app review)
 
-- [ ] **D2** — migrate the remaining ~37 hand-rolled `fixed inset-0` overlays to `components/Modal.tsx`. **L**
-- [ ] **T2** — ESLint to zero (300 errors, 72 warnings: `no-unnecessary-type-assertion`, `unbound-method`, `no-unused-vars`), then make the CI step blocking. **M**
+- [x] **D2** — 20 hand-rolled dialogs now run on `components/Modal.tsx` (2026-09-30): Confirmation, Migration, PromptTxtImport, YouTubePublish, GalleryPicker, WorkflowImport, PromptLibrary, AddSource, CodeSnippet, JSONBreakdown, AddItem, ClippingPanel, NestedCategoryManager, PromptCrafter (save), ResearchSources preview, GallerySection (bulk convert), RefinerPage (register preset), and the editor's Export / Size / Unsaved dialogs. `Modal` gained `bare` (keep a dialog's own chrome but get the portal, Escape, focus trap/restore, labelled `role=dialog`), `backdropClassName` and sizes up to `7xl`. Intentionally left bespoke: `PromptEditorModal` (GSAP staged entrance tied to refs) and `AboutModal` (animated blur/scale entrance). The other `fixed inset-0` uses aren't dialogs (loaders, idle overlay, command palette, fullscreen viewers/lightbox, drawers/panels, page frame) and stay as they are. **L**
+- [x] **T2** — ESLint: 321 errors → 0 and the CI step is blocking (2026-09-30). Autofixes that typecheck; test-file overrides for `unbound-method`/`no-require-imports`; `require-await` off (Jev 0.80: interface-conforming async methods); `literal | string` → `(string & {})`; unused `catch (e)` → `catch`; explained suppressions for deliberate coercions and the LoRA calculator's `new Function`. Left: 9 `react-hooks/exhaustive-deps` warnings (fixing changes behaviour — review each). **M**
 - [x] Page content visible at t=0: `TerminalText` start delays capped at 150 ms in the component (all 22 call sites); the decrypt effect stays. (2026-09-29)
-- [ ] Motion leftovers: ChromaticText still rAF; InitialLoader 3.2 s delay / 1 s timeout; AboutModal `scale: 0`; ScanLine animates `top`; `.animate-fade-in` on `--duration-slow`; CustomCursor has no `quickTo`; boot blinds `backdrop-blur-md`. **M**
+- [x] Motion leftovers (2026-09-30): ScanLine animates a transform not `top`; `.animate-fade-in` uses the 250 ms token; AboutModal scales from 0.92 not 0; CustomCursor uses `gsap.quickTo`; ChromaticText flickers on a 60 ms timer instead of a per-frame rAF loop; the 12 boot blinds lost their stacked backdrop-blur; InitialLoader's forced waits trimmed (system text 3.2 s → 1.2 s, completion 1 s → 0.25 s, crossfades 1 s → 0.5 s).
 - [ ] Light theme (`sanrita`) polish: ~200 hard-coded `white`/`black`; dark dashboard artwork reads as grey haze. **M**
 - [ ] V12 phone width (390 px) — deferred by design (desktop-first). **L**
 
@@ -72,7 +72,7 @@ Boundary: Assets Manager = external multi-root browser; Vault gallery = ingested
 ## 5. Video Editor
 
 - [ ] Make WebGPU the preview renderer — **waits until a GPU-only effect or transition is exposed in the UI**. Checked 2026-09-29: the UI only offers color grade, chroma key and crossfade, which the WebGPU renderer runs on the same CPU/Canvas2D paths, so switching adds readbacks and risk for no visible gain (Jev: defer 0.97). **M**
-- [ ] Background media GC sweep (today GC runs only on project delete). **S**
+- [x] Media GC sweep — `sweepOrphanedMedia` deletes blobs no saved project references, in one transaction with the project read (no autosave race); runs silently when the project list opens (Jev unsure 0.15 → Claude's call: automatic, no grace period, no button). (2026-09-30)
 
 ## 6. Converter (deferred ideas)
 
@@ -90,5 +90,5 @@ Procedures and details are in [ISSUES.md](../ISSUES.md). Deferred by the owner o
 - [ ] **ISSUE-11** Source-aware research answers — walk the checklist (ISSUE-9's run already produced a cited answer).
 - [ ] **ISSUE-30** Production CSP: verify live voice, Spotify, YouTube search, local Ollama/llama.cpp, Google Sign-In under Report-Only, then switch `security.ts` to enforcing and re-verify.
 - [ ] **ISSUE-42** YouTube transcript tool fails (empty caption body / UNPLAYABLE) — re-verify from a residential network; if still failing it needs a PO-token-capable path. Reddit 403 from datacenter IPs is expected.
-- [ ] **ISSUE-12 follow-up** — if the assistant keeps answering "noted" without calling `append_findings`, strengthen the tool description or add a nudge in `buildSystemIdentity`.
-- [ ] **ISSUE-47 residuals** — plan steps can't pass output to later steps; `mcp_call`/`persistence`/`user_confirmation`/`fallback` step kinds throw "not implemented".
+- [ ] **ISSUE-12 follow-up** — description strengthened 2026-09-30; if the assistant still answers "noted" without calling `append_findings`, add a nudge in `buildSystemIdentity`. (Needs live use to tell.)
+- [ ] **ISSUE-47 residuals** — only `mcp_call`/`persistence`/`fallback` still throw "not implemented" (the planner never emits them — build when a plan needs one). Step-output data flow already existed and `user_confirmation` now auto-approves explicitly (2026-09-30).

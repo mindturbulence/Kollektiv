@@ -178,7 +178,7 @@ export class BlendCompositor {
       }
       return s;
     };
-    const prog = gl.createProgram()!;
+    const prog = gl.createProgram();
     gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT_SRC));
     gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG_SRC));
     gl.linkProgram(prog);
@@ -190,7 +190,7 @@ export class BlendCompositor {
 
   private _initQuad(): void {
     const gl = this._gl;
-    const buf = gl.createBuffer()!;
+    const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(this._program, 'a_position');
@@ -200,7 +200,7 @@ export class BlendCompositor {
 
   private _makeTexture(): WebGLTexture {
     const gl = this._gl;
-    const tex = gl.createTexture()!;
+    const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);

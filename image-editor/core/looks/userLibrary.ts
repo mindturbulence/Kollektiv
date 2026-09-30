@@ -114,7 +114,7 @@ const userAssetIds = (recipe: LookRecipe) =>
 const blobToDataUrl = (b: Blob) => new Promise<string>((resolve, reject) => {
   const r = new FileReader();
   r.onload = () => resolve(r.result as string);
-  r.onerror = () => reject(r.error);
+  r.onerror = () => reject(r.error ?? new Error('Could not read the file'));
   r.readAsDataURL(b);
 });
 

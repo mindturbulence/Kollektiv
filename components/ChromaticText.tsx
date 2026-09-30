@@ -7,8 +7,6 @@ import React, { useState, useEffect, useRef } from 'react';
  *  contrast flash in the tick, not during render. */
 const ChromaticText: React.FC<{ children: React.ReactNode; enabled?: boolean }> = ({ children, enabled = true }) => {
     const [offsets, setOffsets] = useState({ x1: 0, y1: 0, x2: 0, y2: 0, opacity: 1, flash: false });
-    const requestRef = useRef<number>(0);
-    const lastUpdate = useRef<number>(0);
     const [isVisible, setIsVisible] = useState(true);
 
     const spanRef = useRef<HTMLSpanElement>(null);
@@ -26,32 +24,28 @@ const ChromaticText: React.FC<{ children: React.ReactNode; enabled?: boolean }> 
     useEffect(() => {
         // Disabled or off-screen: cancel any scheduled frame and snap clean once.
         if (!enabled || !isVisible) {
-            cancelAnimationFrame(requestRef.current);
             setOffsets({ x1: 0, y1: 0, x2: 0, y2: 0, opacity: 1, flash: false });
             return undefined;
         }
 
-        const update = (time: number) => {
-            // ~60ms "steppy" digital flicker, matching the original cadence.
-            if (time - lastUpdate.current > 60) {
-                lastUpdate.current = time;
-                if (Math.random() > 0.1) { // 90% chance of jittering
-                    setOffsets({
-                        x1: (Math.random() - 0.5) * 4,
-                        y1: (Math.random() - 0.5) * 2,
-                        x2: (Math.random() - 0.5) * -4,
-                        y2: (Math.random() - 0.5) * -2,
-                        opacity: 0.8 + Math.random() * 0.2,
-                        flash: Math.random() > 0.95,
-                    });
-                } else {
-                    setOffsets({ x1: 0, y1: 0, x2: 0, y2: 0, opacity: 1, flash: false });
-                }
+        // ~60ms "steppy" digital flicker. A 60 ms timer, not a per-frame rAF loop that
+        // woke ~60×/s just to check the clock.
+        const tick = () => {
+            if (Math.random() > 0.1) { // 90% chance of jittering
+                setOffsets({
+                    x1: (Math.random() - 0.5) * 4,
+                    y1: (Math.random() - 0.5) * 2,
+                    x2: (Math.random() - 0.5) * -4,
+                    y2: (Math.random() - 0.5) * -2,
+                    opacity: 0.8 + Math.random() * 0.2,
+                    flash: Math.random() > 0.95,
+                });
+            } else {
+                setOffsets({ x1: 0, y1: 0, x2: 0, y2: 0, opacity: 1, flash: false });
             }
-            requestRef.current = requestAnimationFrame(update);
         };
-        requestRef.current = requestAnimationFrame(update);
-        return () => cancelAnimationFrame(requestRef.current);
+        const timer = setInterval(tick, 60);
+        return () => clearInterval(timer);
     }, [enabled, isVisible]);
 
     return (

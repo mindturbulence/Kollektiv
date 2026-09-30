@@ -26,6 +26,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   onDismiss,
   className = '',
 }) => {
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- any thrown value is shown as text on purpose
   const message = error instanceof Error ? error.message : String(error ?? 'Unknown error');
   const code = getErrorCode(error);
   const suggestion = getSuggestion(error);

@@ -358,7 +358,7 @@ export function dispatch(action: EditorAction): void {
 
     case 'REPLACE_LAYER_BITMAP': {
       if (!prev.document) return;
-      const layers = updateLayerById(prev.document.layers, action.layerId, { bitmap: action.bitmap } as Partial<Layer>);
+      const layers = updateLayerById(prev.document.layers, action.layerId, { bitmap: action.bitmap });
       if (layers === prev.document.layers) return;
       const dirty = new Set(prev.dirtyLayerIds);
       dirty.add(action.layerId);
@@ -372,7 +372,7 @@ export function dispatch(action: EditorAction): void {
       if (!target || (target.type !== 'image' && target.type !== 'look') || !target.mask) return;
       const layers = updateLayerById(prev.document.layers, action.layerId, {
         mask: { ...target.mask, bitmap: action.bitmap },
-      } as Partial<Layer>);
+      });
       if (layers === prev.document.layers) return;
       _state = { ...prev, isDirty: true, document: { ...prev.document, layers } };
       break;
@@ -455,7 +455,7 @@ export function dispatch(action: EditorAction): void {
           ...target.transform,
           size: { ...action.size },
         },
-      } as Partial<Layer>);
+      });
       if (layers === prev.document.layers) return;
       const dirty = new Set(prev.dirtyLayerIds);
       dirty.add(action.layerId);
@@ -530,7 +530,7 @@ export function dispatch(action: EditorAction): void {
       if (!prev.document) return;
       const target = findLayerById(prev.document.layers, action.layerId);
       if (!target || target.type !== 'look') return;
-      const layers = updateLayerById(prev.document.layers, action.layerId, { recipe: action.recipe, name: action.recipe.name } as Partial<Layer>);
+      const layers = updateLayerById(prev.document.layers, action.layerId, { recipe: action.recipe, name: action.recipe.name });
       if (layers === prev.document.layers) return;
       _state = { ...prev, isDirty: true, document: { ...prev.document, layers } };
       break;

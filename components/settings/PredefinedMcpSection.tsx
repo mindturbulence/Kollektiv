@@ -37,7 +37,7 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
         setStatuses(prev => ({ ...prev, [sv.id]: { ...prev[sv.id], checking: true } }));
         try {
             const tools = await mcpService.listTools(sv.url);
-            setStatuses(prev => ({ ...prev, [sv.id]: { connected: true, toolCount: tools.length, tools: tools as any[], checking: false } }));
+            setStatuses(prev => ({ ...prev, [sv.id]: { connected: true, toolCount: tools.length, tools: tools, checking: false } }));
         } catch {
             setStatuses(prev => ({ ...prev, [sv.id]: { connected: false, toolCount: 0, tools: [], checking: false } }));
         }

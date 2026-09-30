@@ -1,5 +1,5 @@
 import React from 'react';
-import { createPortal } from 'react-dom';
+import Modal from './Modal';
 import { CloseIcon, ArchiveIcon } from './icons';
 import type { SavedPrompt } from '../types';
 
@@ -13,9 +13,8 @@ interface PromptLibraryModalProps {
 const PromptLibraryModal: React.FC<PromptLibraryModalProps> = ({ isOpen, onClose, libraryItems, onSelect }) => {
     if (!isOpen) return null;
 
-    return createPortal(
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-modal flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-            <div className="flex flex-col bg-transparent w-full max-w-2xl mx-auto relative p-[3px] corner-frame overflow-visible" onClick={(e) => e.stopPropagation()}>
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Prompt library" bare size="2xl" className="flex flex-col bg-transparent relative p-[3px] corner-frame overflow-visible">
                 <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full flex flex-col overflow-hidden relative z-10">
                     <header className="px-8 py-4 border-b border-base-content/10 bg-transparent relative flex items-center justify-between">
                         <div className="flex flex-col">
@@ -67,14 +66,12 @@ const PromptLibraryModal: React.FC<PromptLibraryModalProps> = ({ isOpen, onClose
                         </button>
                     </footer>
                 </div>
-            </div>
             {/* Corner Decorative Frames */}
             <div className="absolute top-[-5px] left-[-5px] w-4 h-4 border-t-2 border-l-2 border-primary z-20 pointer-events-none" />
             <div className="absolute top-[-5px] right-[-5px] w-4 h-4 border-t-2 border-r-2 border-primary z-20 pointer-events-none" />
             <div className="absolute bottom-[-5px] left-[-5px] w-4 h-4 border-b-2 border-l-2 border-primary z-20 pointer-events-none" />
             <div className="absolute bottom-[-5px] right-[-5px] w-4 h-4 border-b-2 border-r-2 border-primary z-20 pointer-events-none" />
-        </div>,
-        document.body
+        </Modal>
     );
 };
 

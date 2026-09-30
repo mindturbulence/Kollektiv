@@ -1,7 +1,7 @@
 // ─── Kollektiv Image Editor — Export Modal ───────────────────────────────────
 
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
+import Modal from '../../components/Modal';
 import { exportToBlob } from '../core/io/FileIO';
 import { getSnapshot } from '../core/store';
 
@@ -36,18 +36,8 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
   };
 
   const modalContent = (
-    <div
-      className="fixed inset-0 z-modal flex items-center justify-center bg-black/50 backdrop-blur-md"
-      onClick={onClose}
-    >
-      <div
-        className="bg-base-300 border border-base-content/10 shadow-2xl w-80"
-        onClick={e => e.stopPropagation()}
-      >
-        <header className="panel-header h-9 px-3 flex items-center">
-          <h2 className="text-xs font-display uppercase tracking-widest text-base-content/70">Export</h2>
-        </header>
-
+    <Modal isOpen onClose={onClose} title="Export" size="sm">
+      <div>
         <div className="p-4 space-y-4">
           {/* Format */}
           <div>
@@ -89,10 +79,10 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
           </button>
         </footer>
       </div>
-    </div>
+    </Modal>
   );
 
-  return createPortal(modalContent, window.document.body);
+  return modalContent;
 };
 
 export default ExportModal;

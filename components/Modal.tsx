@@ -10,10 +10,20 @@ interface ModalProps {
   children: ReactNode;
   /** Extra classes for the panel. */
   className?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl';
+  /** For dialogs with their own chrome (header, frame, footer): keeps the shared
+   *  behaviour — portal, Escape, focus trap and restore, labelled role=dialog,
+   *  backdrop click — but renders no header and no panel styling; `title` then
+   *  only names the dialog for assistive tech and `className` styles the panel. */
+  bare?: boolean;
+  /** Replaces the default backdrop look (`bg-black/40 backdrop-blur-xl`). */
+  backdropClassName?: string;
 }
 
-const SIZE_CLASS = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-xl' } as const;
+const SIZE_CLASS = {
+  sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-xl',
+  '2xl': 'max-w-2xl', '3xl': 'max-w-3xl', '4xl': 'max-w-4xl', '5xl': 'max-w-5xl', '6xl': 'max-w-6xl', '7xl': 'max-w-7xl',
+} as const;
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -21,7 +31,7 @@ const FOCUSABLE =
 /** Shared dialog shell: portal, backdrop, labelled header, Escape, focus trap
  *  and restore, fade/scale exit. Keyboard handling lives on the dialog itself
  *  (not document) so a modal stacked on another only traps its own focus. */
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, className = '', size = 'md' }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, className = '', size = 'md', bare = false, backdropClassName = 'bg-black/40 backdrop-blur-xl' }) => {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -68,7 +78,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, classNa
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 bg-black/40 backdrop-blur-xl z-modal flex items-center justify-center p-4"
+          className={`fixed inset-0 ${backdropClassName} z-modal flex items-center justify-center p-4`}
           // Target check so a drag that starts inside the panel doesn't close it.
           onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
           onKeyDown={handleKeyDown}
@@ -77,23 +87,28 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, classNa
             ref={panelRef}
             role="dialog"
             aria-modal="true"
-            aria-labelledby={titleId}
+            aria-labelledby={bare ? undefined : titleId}
+            aria-label={bare ? title : undefined}
             tabIndex={-1}
             initial={{ scale: 0.96, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.96, opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className={`bg-base-100/95 backdrop-blur-xl w-full ${SIZE_CLASS[size]} rounded-none border border-base-content/10 overflow-hidden outline-none ${className}`}
+            className={bare
+              ? `w-full ${SIZE_CLASS[size]} outline-none ${className}`
+              : `bg-base-100/95 backdrop-blur-xl w-full ${SIZE_CLASS[size]} rounded-none border border-base-content/10 overflow-hidden outline-none ${className}`}
           >
-            <header className="panel-header h-9 px-4">
-              <h3 id={titleId} className="self-center text-xs font-display uppercase tracking-widest text-base-content/80">
-                {title}
-              </h3>
-              <div className="flex-1" />
-              <button type="button" className="self-center p-1 text-base-content/60 hover:text-base-content" onClick={onClose} aria-label="Close">
-                <CloseIcon className="w-4 h-4" />
-              </button>
-            </header>
+            {!bare && (
+              <header className="panel-header h-9 px-4">
+                <h3 id={titleId} className="self-center text-xs font-display uppercase tracking-widest text-base-content/80">
+                  {title}
+                </h3>
+                <div className="flex-1" />
+                <button type="button" className="self-center p-1 text-base-content/60 hover:text-base-content" onClick={onClose} aria-label="Close">
+                  <CloseIcon className="w-4 h-4" />
+                </button>
+              </header>
+            )}
             {children}
           </motion.div>
         </motion.div>

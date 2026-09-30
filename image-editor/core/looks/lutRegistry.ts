@@ -77,9 +77,13 @@ export async function preloadLuts(layers: Layer[]): Promise<void> {
 }
 
 export async function preloadRecipeLuts(recipe: LookRecipe): Promise<void> {
-  await Promise.all(recipe.components.map(c => !c.enabled ? undefined
-    : c.kind === 'lut' && !getLut(c.assetId) ? loadLut(c.assetId)
-    : c.kind === 'texture' && !getTexture(c.assetId) ? loadTexture(c.assetId) : undefined));
+  const jobs: Promise<void>[] = [];
+  for (const c of recipe.components) {
+    if (!c.enabled) continue;
+    if (c.kind === 'lut' && !getLut(c.assetId)) jobs.push(loadLut(c.assetId));
+    else if (c.kind === 'texture' && !getTexture(c.assetId)) jobs.push(loadTexture(c.assetId));
+  }
+  await Promise.all(jobs);
 }
 
 /** A user texture image when loaded; starts loading it otherwise. */

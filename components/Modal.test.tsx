@@ -42,3 +42,22 @@ describe('Modal', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 });
+
+describe('Modal bare mode', () => {
+  it('keeps the dialog behaviour but renders no header, and names the dialog by aria-label', async () => {
+    let closed = 0;
+    render(<Modal isOpen onClose={() => { closed++; }} title="Bare Dialog" bare size="lg" className="my-panel" backdropClassName="bg-black/80">
+      <button>first</button><button>last</button>
+    </Modal>);
+    const dialog = screen.getByRole('dialog', { name: 'Bare Dialog' });
+    expect(dialog.className).toContain('my-panel');
+    expect(dialog.className).toContain('max-w-lg');
+    expect(screen.queryByLabelText('Close')).toBeNull();          // no built-in header/close
+    expect(dialog.parentElement!.className).toContain('bg-black/80');
+    fireEvent.keyDown(screen.getByText('first'), { key: 'Escape' });
+    expect(closed).toBe(1);
+    screen.getByText('last').focus();
+    fireEvent.keyDown(screen.getByText('last'), { key: 'Tab' });
+    expect(document.activeElement).toBe(screen.getByText('first')); // Tab still trapped
+  });
+});

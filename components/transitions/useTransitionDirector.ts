@@ -52,7 +52,7 @@ export const useTransitionDirector = (opts: DirectorOpts) => {
             const timer = setTimeout(() => { if (!settled) { settled = true; reject(new Error('transition deadline')); } }, ms);
             p.then(
                 (v) => { if (!settled) { settled = true; clearTimeout(timer); resolve(v); } },
-                (e) => { if (!settled) { settled = true; clearTimeout(timer); reject(e); } },
+                (e) => { if (!settled) { settled = true; clearTimeout(timer); reject(e instanceof Error ? e : new Error(String(e))); } },
             );
         }), []);
 

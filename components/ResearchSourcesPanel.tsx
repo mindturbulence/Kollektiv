@@ -6,6 +6,7 @@ import { researchVault } from '../services/researchVaultService';
 import { fileSystemManager } from '../utils/fileUtils';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Modal from './Modal';
 
 export const ResearchSourcesPanel: React.FC = () => {
   const { sources, removeSource, projectSlug } = useResearch();
@@ -78,10 +79,7 @@ export const ResearchSourcesPanel: React.FC = () => {
       </div>
       <AddSourceModal open={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
       {previewFile && (
-        <div
-          className="fixed inset-0 z-modal flex items-center justify-center bg-base-300/50 backdrop-blur-sm p-8"
-          onClick={() => setPreviewFile(null)}
-        >
+        <Modal isOpen={true} onClose={() => setPreviewFile(null)} title="Source preview" bare size="7xl" className="" backdropClassName="bg-base-300/50 backdrop-blur-sm">
           <div
             className="bg-base-200 border border-white/10 max-w-2xl w-full max-h-[80vh] flex flex-col shadow-2xl"
             onClick={e => e.stopPropagation()}
@@ -104,7 +102,7 @@ export const ResearchSourcesPanel: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

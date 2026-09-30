@@ -116,7 +116,7 @@ export const bingEngine: SearchEngine = {
         // If Playwright also fails, throw the original request error
         // with a note that both paths failed.
         throw new Error(
-          `Bing request failed (${requestErr instanceof Error ? requestErr.message : requestErr}); ` +
+          `Bing request failed (${requestErr instanceof Error ? requestErr.message : String(requestErr)}); ` +
           `Playwright fallback also failed (${pwErr?.message || pwErr})`
         );
       }

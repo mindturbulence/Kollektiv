@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { CloseIcon, CopyIcon, DownloadIcon, BracesIcon } from './icons';
+import Modal from './Modal';
 
 interface JSONBreakdownModalProps {
     isOpen: boolean;
@@ -21,20 +21,7 @@ const JSONBreakdownModal: React.FC<JSONBreakdownModalProps> = ({
     jsonCopied
 }) => {
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <div 
-                    className="fixed inset-0 bg-black/80 backdrop-blur-xl z-modal flex items-center justify-center p-4 md:p-8 overflow-hidden"
-                    onClick={onClose}
-                >
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="bg-transparent w-full max-w-2xl relative p-[3px] corner-frame"
-                        onClick={(e) => e.stopPropagation()}
-                    >
+        <Modal isOpen={isOpen} onClose={onClose} title="JSON breakdown" bare size="2xl" className="bg-transparent relative p-[3px] corner-frame" backdropClassName="bg-black/80 backdrop-blur-xl">
                         <div className="bg-base-100/90 backdrop-blur-2xl rounded-none w-full h-[600px] max-h-[85vh] flex flex-col overflow-hidden relative z-10 border border-primary/10 shadow-3xl">
                             <header className="px-8 py-6 panel-header flex items-center justify-between bg-base-100/20">
                                 <div className="flex items-center gap-3">
@@ -87,10 +74,7 @@ const JSONBreakdownModal: React.FC<JSONBreakdownModalProps> = ({
                                 </button>
                             </footer>
                         </div>
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
+                    </Modal>
     );
 };
 

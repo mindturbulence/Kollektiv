@@ -23,7 +23,8 @@ export async function rawDecode(file: File): Promise<ProbeRow[]> {
     rows.push({ name: 'open()', value: `${(performance.now() - t).toFixed(0)} ms` });
 
     const meta = (await raw.metadata()) as unknown as Record<string, unknown> | undefined;
-    if (meta) rows.push({ name: 'Camera', value: `${meta.camera_make ?? meta.make ?? ''} ${meta.camera_model ?? meta.model ?? ''}`.trim() || '—' });
+    const text = (v: unknown) => (typeof v === 'string' ? v : '');
+    if (meta) rows.push({ name: 'Camera', value: `${text(meta.camera_make ?? meta.make)} ${text(meta.camera_model ?? meta.model)}`.trim() || '—' });
 
     t = performance.now();
     const img = await raw.imageData();

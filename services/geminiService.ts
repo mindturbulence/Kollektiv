@@ -119,7 +119,7 @@ export const analyzePaletteMood = async (hexColors: string[], settings: LLMSetti
       }
     });
     return (response.text || '').trim();
-  } catch (err) { return "Archive Error"; }
+  } catch { return "Archive Error"; }
 };
 
 export const generateColorNameGemini = async (hexColor: string, mood: string, settings: LLMSettings): Promise<string> => {
@@ -135,7 +135,7 @@ export const generateColorNameGemini = async (hexColor: string, mood: string, se
             }
         });
         return (response.text || '').trim().replace(/"/g, '');
-    } catch (err) { return "Archived Color"; }
+    } catch { return "Archived Color"; }
 };
 
 const convertPromptToNaturalLanguage = async (promptText: string, settings: LLMSettings): Promise<string> => {
@@ -221,7 +221,7 @@ Output JSON ONLY. Format: { "prompt": string, "modifiers": { [key: string]: stri
                 constantModifier: result.constantModifier || '',
                 categorizedParameters: (result.categorizedParameters || []).slice(0, 10)
             };
-        } catch (e) { 
+        } catch { 
             return { naturalLanguage: naturalLang, prompt: promptText, modifiers: {}, constantModifier: '', categorizedParameters: [] }; 
         }
     } catch (err) { throw handleGeminiError(err, 'extraction'); }
@@ -240,7 +240,7 @@ export const generateFocusedVariationsGemini = async (promptText: string, compon
                 thinkingConfig: { thinkingBudget: 0 }
             }
         });
-        try { return JSON.parse(response.text || '{}'); } catch (e) { return {}; }
+        try { return JSON.parse(response.text || '{}'); } catch { return {}; }
     } catch (err) { throw handleGeminiError(err, 'processing'); }
 };
 
@@ -463,7 +463,7 @@ export const generateWithImagen = async (prompt: string, aspectRatio: string = '
             config: {
                 numberOfImages: 1,
                 outputMimeType: 'image/jpeg',
-                aspectRatio: aspectRatio as any,
+                aspectRatio: aspectRatio,
             },
         });
         const base64EncodeString = response.generatedImages?.[0]?.image?.imageBytes;
@@ -484,7 +484,7 @@ export const generateWithNanoBanana = async (prompt: string, referenceImages: st
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
             contents: { parts },
-            config: { imageConfig: { aspectRatio: aspectRatio as any } }
+            config: { imageConfig: { aspectRatio: aspectRatio } }
         });
         if (response.candidates?.[0]?.content?.parts) {
             for (const part of response.candidates[0].content.parts) {
@@ -508,7 +508,7 @@ export const generateWithVeo = async (prompt: string, onStatusUpdate?: (msg: str
         let operation = await ai.models.generateVideos({
             model: 'veo-3.1-lite-generate-preview',
             prompt: prompt,
-            config: { numberOfVideos: 1, resolution: '1080p', aspectRatio: finalAspectRatio as any }
+            config: { numberOfVideos: 1, resolution: '1080p', aspectRatio: finalAspectRatio }
         });
         while (!operation.done) {
             onStatusUpdate?.('Processing...');
@@ -574,7 +574,7 @@ Only include relevant modifiers. Output JSON ONLY.`,
                 modifiers: result.modifiers || {},
                 constantModifier: result.constantModifier || ''
             };
-        } catch (e) { 
+        } catch { 
             return { prompt: '', modifiers: {}, constantModifier: '' }; 
         }
     } catch (err) { throw handleGeminiError(err, 'processing'); }

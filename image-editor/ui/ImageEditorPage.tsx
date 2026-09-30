@@ -5,7 +5,6 @@
 // both the toolbar buttons and the page-scoped keyboard shortcuts.
 
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { createPortal } from 'react-dom';
 import { dispatch, getSnapshot, resetStore, subscribe } from '../core/store';
 import type { EditorDocument, EditorOpenPayload } from '../core/types';
 import { exportToBlob, importFromPayload, openFilePicker, importImage, createBlankDocument, exportMaskToBlob, bitmapToLayer, documentFromLayer } from '../core/io/FileIO';
@@ -57,34 +56,18 @@ const UnsavedChangesModal: React.FC<{
   onDiscard: () => void;
   onCancel: () => void;
 }> = ({ onSave, onDiscard, onCancel }) => {
-  const modalContent = (
-    <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-xl z-modal flex items-center justify-center p-4 animate-fade-in"
-      onClick={onCancel}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        className="bg-base-100/95 backdrop-blur-xl w-full max-w-sm rounded-none border border-base-content/10 overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-5">
-          <h3 className="text-sm font-display uppercase tracking-widest text-base-content/80 mb-2">Unsaved Changes</h3>
-          <p className="text-sm text-base-content/60">This document has unsaved changes. What would you like to do?</p>
-        </div>
-        <footer className="panel-footer h-11 p-1.5 gap-1.5">
-          <button type="button" className="form-btn flex-1 rounded-none" onClick={onCancel}>Cancel</button>
-          <button type="button" className="form-btn flex-1 rounded-none" onClick={onDiscard}>Discard</button>
-          <button type="button" className="form-btn form-btn-primary flex-1 rounded-none" onClick={onSave}>Save</button>
-        </footer>
+  return (
+    <Modal isOpen onClose={onCancel} title="Unsaved changes" size="sm">
+      <div className="p-5">
+        <p className="text-sm text-base-content/60">This document has unsaved changes. What would you like to do?</p>
       </div>
-    </div>
+      <footer className="panel-footer h-11 p-1.5 gap-1.5">
+        <button type="button" className="form-btn flex-1 rounded-none" onClick={onCancel}>Cancel</button>
+        <button type="button" className="form-btn flex-1 rounded-none" onClick={onDiscard}>Discard</button>
+        <button type="button" className="form-btn form-btn-primary flex-1 rounded-none" onClick={onSave}>Save</button>
+      </footer>
+    </Modal>
   );
-
-  if (typeof window !== 'undefined' && window.document?.body) {
-    return createPortal(modalContent, window.document.body);
-  }
-  return null;
 };
 /** Replaces the open document. Undo history belongs to the previous document —
  *  keeping it would let redo splice the old document's layers into the new one.

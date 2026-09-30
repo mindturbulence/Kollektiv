@@ -18,7 +18,7 @@ const getLlamaCppConfig = (settings: LLMSettings) => {
     const rawBaseUrl = sanitizeUrl(settings.llamacppBaseUrl || 'http://localhost:8080');
     
     let effectiveBaseUrl = rawBaseUrl;
-    let extraHeaders: Record<string, string> = {
+    const extraHeaders: Record<string, string> = {
         'Content-Type': 'application/json'
     };
 
@@ -151,7 +151,7 @@ export async function* enhancePromptLlamaCppStream(
                         yield content;
                         trackTokenUsage('llamacpp', Math.ceil(content.length / 4));
                     }
-                } catch (e) {}
+                } catch {}
             }
         }
     } catch (err: any) {
@@ -229,7 +229,7 @@ export async function* streamChatLlamaCpp(
                         yield content;
                         trackTokenUsage('llamacpp', Math.ceil(content.length / 4));
                     }
-                } catch (e) {}
+                } catch {}
             }
         }
     } catch (err: any) {
@@ -315,7 +315,7 @@ export interface LlamaCppTestResult {
 export const testLlamaCppConnection = async (baseUrl: string, apiKey?: string): Promise<LlamaCppTestResult> => {
     const cleanUrl = sanitizeUrl(baseUrl);
     let targetUrl = cleanUrl;
-    let headers: Record<string, string> = {
+    const headers: Record<string, string> = {
         'Content-Type': 'application/json'
     };
     

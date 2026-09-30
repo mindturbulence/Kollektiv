@@ -781,3 +781,32 @@ test('a lost WebGL context is rebuilt: the look renders again after the GPU drop
     }, { timeout: 5_000 }).toBe(true);
     expect(await page.evaluate(() => (window as any).__gl.length as number)).toBeGreaterThan(before);
 });
+
+test('editor dialogs run on the shared Modal: labelled, Escape closes, focus stays inside', async ({ page }) => {
+    test.setTimeout(120_000);
+    await bootToAppShell(page, 'image_editor');
+    const png = await makePng(page);
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: /Open image/ }).click({ timeout: 30_000 });
+    await (await chooser).setFiles({ name: 'red-banner.png', mimeType: 'image/png', buffer: png });
+    await expect(page.getByText('321 × 123px')).toBeVisible({ timeout: 15_000 });
+    await waitForFit(page);
+    await toPro(page);
+
+    // Export
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    const exportDialog = page.getByRole('dialog', { name: 'Export' });
+    await expect(exportDialog).toBeVisible();
+    await expect(exportDialog.getByRole('button', { name: 'Download' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(exportDialog).toHaveCount(0);
+
+    // Image Size… (Ctrl+J): Tab never leaves the dialog
+    await page.keyboard.press('Control+j');
+    const size = page.getByRole('dialog', { name: 'Image size' });
+    await expect(size).toBeVisible();
+    for (let i = 0; i < 12; i++) await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]'))).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(size).toHaveCount(0);
+});
