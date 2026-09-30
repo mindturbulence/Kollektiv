@@ -76,7 +76,8 @@ vi.mock('../services/assets/directoryScanner', () => ({
   listFolderFiles: () => listFolderFilesMock(),
 }));
 
-const listRootsMock = vi.fn(async () => [{ id: 'root1', name: 'RootFolder', handle: {}, addedAt: 1, status: 'granted' as const }]);
+const listRootsMock = vi.fn(async (): Promise<Array<{ id: string; name: string; handle: object; addedAt: number; status: 'granted' | 'denied' }>> =>
+  [{ id: 'root1', name: 'RootFolder', handle: {}, addedAt: 1, status: 'granted' as const }]);
 const addRootMock = vi.fn();
 const addRootFromHandleMock = vi.fn();
 const removeRootMock = vi.fn();
@@ -307,4 +308,91 @@ describe('AssetsManagerPage', () => {
     expect(dest.path).toBe('sub');
     expect([mode, policy]).toEqual(['move', 'keep-both']);
   });
+
+  // ── Loader lifecycle regressions (never-ending "Loading assets…") ─────
+
+  it('stops re-extracting once thumbnails are at spec (no upgrade loop)', async () => {
+    // Portrait/small images encode a thumb narrower than the long-side target;
+    // needsUpgrade must not re-extract them forever.
+    let decodeCalls = 0;
+    vi.stubGlobal('createImageBitmap', vi.fn(async () => {
+      decodeCalls++;
+      return { width: 100, height: 200, close: () => {} };
+    }));
+    vi.stubGlobal('OffscreenCanvas', class {
+      constructor(public _w: number, public _h: number) {}
+      getContext() {
+        return { drawImage: () => {}, getImageData: () => ({ data: new Uint8ClampedArray(72 * 4) }) };
+      }
+      async convertToBlob() { return new Blob(['thumb'], { type: 'image/webp' }); }
+    });
+    render(<AssetsManagerPage />);
+    await waitFor(() => expect(screen.getAllByRole('img')).toHaveLength(2));
+    await waitFor(() => expect(screen.queryByText(/Loading assets/)).toBeNull(), { timeout: 4000 });
+    const settled = decodeCalls;
+    await new Promise(r => setTimeout(r, 150));
+    expect(decodeCalls).toBe(settled);
+  }, 10000);
+
+  it('unreadable file: loader finishes and the card shows its type badge', async () => {
+    const bad = makeFile('root1:c.png', 'c.png');
+    bad.handle.getFile.mockImplementation(async () => { throw new DOMException('gone', 'NotFoundError'); });
+    folderContents = [makeFile('root1:a.png', 'a.png'), bad];
+    render(<AssetsManagerPage />);
+    await waitFor(() => expect(screen.getByText('2 IMAGES')).toBeTruthy());
+    await waitFor(() => expect(screen.queryByText(/Loading assets/)).toBeNull(), { timeout: 4000 });
+    expect(screen.getByText('.png')).toBeTruthy();
+  }, 8000);
+
+  it('failed full-file fetch settles with a badge instead of a dead loader', async () => {
+    const a = makeFile('root1:a.png', 'a.png');
+    a.handle.getFile
+      .mockResolvedValueOnce(new Blob(['x'], { type: 'image/png' })) // index pass
+      .mockResolvedValueOnce(new Blob(['x'], { type: 'image/png' })) // extraction
+      .mockRejectedValue(new DOMException('read error'));            // full-file URL fetch keeps failing
+    folderContents = [a, makeFile('root1:b.png', 'b.png')];
+    render(<AssetsManagerPage />);
+    await waitFor(() => expect(screen.getByText('2 IMAGES')).toBeTruthy());
+    await waitFor(() => expect(screen.queryByText(/Loading assets/)).toBeNull(), { timeout: 4000 });
+    expect(screen.getByText('.png')).toBeTruthy();
+  }, 8000);
+
+  it('refresh during a held extraction still settles (generation-scoped guard)', async () => {
+    let releaseB!: () => void;
+    const held = new Promise<Blob>(r => { releaseB = () => r(new Blob(['x'], { type: 'image/png' })); });
+    const b = makeFile('root1:b.png', 'b.png');
+    b.handle.getFile
+      .mockResolvedValueOnce(new Blob(['x'], { type: 'image/png' })) // index pass 1
+      .mockImplementationOnce(() => held)                            // extraction held across the refresh
+      .mockResolvedValue(new Blob(['x'], { type: 'image/png' }));    // index pass 2 / re-extract / URL fetch
+    folderContents = [makeFile('root1:a.png', 'a.png'), b];
+    render(<AssetsManagerPage />);
+    await waitFor(() => expect(screen.getByText('2 IMAGES')).toBeTruthy());
+    fireEvent.contextMenu(screen.getByTestId('asset-grid'));
+    fireEvent.click(await screen.findByText('Refresh'));
+    await waitFor(() => expect(listFolderFilesMock.mock.calls.length).toBeGreaterThanOrEqual(2));
+    await waitFor(() => expect(screen.getByText('2 IMAGES')).toBeTruthy());
+    // Let index flushes land so nothing can re-trigger the extraction after the
+    // stale task aborts — the fresh generation must own it instead.
+    await new Promise(r => setTimeout(r, 100));
+    releaseB();
+    await waitFor(() => expect(screen.queryByText(/Loading assets/)).toBeNull(), { timeout: 4000 });
+  }, 10000);
+
+  it('losing the granted root mid-listing clears the scanning overlay', async () => {
+    const root2 = { id: 'root2', name: 'OtherRoot', handle: {}, addedAt: 2, status: 'denied' as const };
+    listRootsMock
+      .mockResolvedValueOnce([{ id: 'root1', name: 'RootFolder', handle: {}, addedAt: 1, status: 'granted' as const }, root2])
+      .mockResolvedValue([root2]);
+    render(<AssetsManagerPage />);
+    await waitFor(() => expect(screen.getByText('2 IMAGES')).toBeTruthy());
+    // Pending listing is consumed by the 'sub' click below, not the initial render.
+    listFolderFilesMock.mockImplementationOnce(() => new Promise(() => { /* listing never finishes */ }));
+    fireEvent.click(screen.getByText('sub'));
+    await screen.findByText(/Scanning folder/);
+    // Roots list renders before the tree, so index 0 is root1's entry.
+    fireEvent.contextMenu(screen.getAllByText('RootFolder')[0]);
+    fireEvent.click(await screen.findByText('Remove Root'));
+    await waitFor(() => expect(screen.queryByText(/Scanning folder/)).toBeNull(), { timeout: 4000 });
+  }, 8000);
 });

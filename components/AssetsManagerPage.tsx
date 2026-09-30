@@ -6,7 +6,7 @@ import { useObjectUrls } from '../utils/useObjectUrls';
 import { listRoots, addRoot, addRootFromHandle, removeRoot, requestRootPermission, ensureWritable } from '../services/assets/assetRootManager';
 import { scanDirectoryTree, listFolderFiles } from '../services/assets/directoryScanner';
 import { transferFiles, resolveDir, resolveFile, moveOne, type ConflictPolicy, type Transferred } from '../services/assets/fileOps';
-import { extractFacts, gridThumbTarget, indexFiles, putCachedFacts, RAW_EXTS, relocateCachedFacts, type AssetFacts } from '../services/assets/assetFacts';
+import { extractFacts, gridThumbTarget, indexFiles, putCachedFacts, RAW_EXTS, relocateCachedFacts, scaledThumbSize, type AssetFacts } from '../services/assets/assetFacts';
 import {
   getLibrary, getLibraryStatus, subscribeLibrary, loadLibrary, updateMeta, updateMetaMany, relocate, copyMeta, deleteCollection,
   type ColorLabel, type FilterCriteria, type AssetMeta,
@@ -47,6 +47,9 @@ const VIDEO_EDITOR_EXT_SET = new Set(SUPPORTED_SOURCE_EXTS);
 // ponytail: page cap keeps 10k+ image folders from choking the grid; bump if
 // virtualization is ever needed instead.
 const PAGE_SIZE = 200;
+// Concurrent card extractions: each reads the whole file (RAW decodes too),
+// so unbounded fan-out on a 10k folder thrashes the disk.
+const EXTRACT_CONCURRENCY = 6;
 // Bridge keys: 1–5 rate, 0 clears; 6–9 red/yellow/green/blue.
 const LABEL_KEYS: Record<string, ColorLabel> = { '6': 'red', '7': 'yellow', '8': 'green', '9': 'blue' };
 
@@ -116,6 +119,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   // refs) — a ref survives the drag gesture without triggering re-renders.
   const draggedFileIdsRef = useRef<string[]>([]);
   const visibleExtractRef = useRef<Set<string>>(new Set());
+  const extractQueueRef = useRef<{ jobs: Array<() => Promise<void>>; active: number }>({ jobs: [], active: 0 });
   const fullIndexRef = useRef<Promise<void> | null>(null);
   const draggedFolderRef = useRef<{ path: string; rootId: string } | null>(null);
   const folderCancelRef = useRef(false);
@@ -254,7 +258,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
     if (view.kind === 'collection') {
       // A collection spans folders and roots: resolve each member by path.
       const collection = library.collections.find(c => c.id === view.id);
-      if (!collection) { setFolderFiles([]); return; }
+      if (!collection) { setFolderFiles([]); setIsListingFolder(false); setListProgress(null); return; }
       setIsListingFolder(true);
       void (async () => {
         const files: AssetFile[] = [];
@@ -274,18 +278,28 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
         setFolderFiles(files);
         setMissingInCollection(missing);
         setIsListingFolder(false);
-      })();
+      })().catch(() => {
+        // Never leave the "Scanning folder…" overlay up on a resolve error.
+        if (myGeneration !== generationRef.current) return;
+        setIsListingFolder(false);
+      });
       return;
     }
 
     if (!selectedRoot || selectedRoot.status !== 'granted' || !tree) {
       setFolderFiles([]);
+      // A listing may have been in flight when the root vanished — the
+      // generation guard above stops its .then from clearing the flag.
+      setIsListingFolder(false);
+      setListProgress(null);
       return;
     }
 
     const targetNode = findNodeByPath(tree, selectedFolderPath);
     if (!targetNode) {
       setFolderFiles([]);
+      setIsListingFolder(false);
+      setListProgress(null);
       return;
     }
     setIsListingFolder(true);
@@ -299,6 +313,14 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       setIsListingFolder(false);
       setListProgress(null);
       if (truncated) showGlobalFeedback?.('Folder listing stopped early — permission or read error.');
+    }).catch(() => {
+      // A rejected listing (permission error, onProgress throwing outside
+      // listFolderFiles' try) must still terminate the overlay — an
+      // unhandled rejection here also trips the fatal boot overlay.
+      if (myGeneration !== generationRef.current) return;
+      setIsListingFolder(false);
+      setListProgress(null);
+      showGlobalFeedback?.('Folder listing failed — check folder permissions.');
     });
     // Collection membership changes re-list only when that collection is open.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -388,26 +410,49 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   }, [entries, folderFiles, library.stacks, expandedStacks, criteria, sortKey, descending]);
 
   const visibleFiles = useMemo(() => shownEntries.slice(0, visibleCount).map(e => e.file), [shownEntries, visibleCount]);
-  const loadedThumbCount = visibleFiles.filter(f => objectUrls.has(f.id) || (facts.get(f.id)?.extracted && !facts.get(f.id)!.thumb && !BROWSER_SHOWS.has(f.ext))).length;
+  const loadedThumbCount = visibleFiles.filter(f => {
+    const row = facts.get(f.id);
+    // Settled = has a URL, or no thumb is expected (non-previewable format),
+    // or the file failed (badge instead of a spinner) — never count an
+    // in-flight full-file fetch as done.
+    return objectUrls.has(f.id) || (!!row?.extracted && !row.thumb && (!BROWSER_SHOWS.has(f.ext) || !!row.failed));
+  }).length;
   const isDecodingThumbs = !isListingFolder && visibleFiles.length > 0 && loadedThumbCount < visibleFiles.length;
   const decodePercent = visibleFiles.length > 0 ? Math.round((loadedThumbCount / visibleFiles.length) * 100) : 0;
   const folderExts = useMemo(() => [...new Set(folderFiles.map(f => f.ext))].sort(), [folderFiles]);
   const vocabulary = useMemo(() => [...new Set(Object.values(library.assets).flatMap(m => m.tags ?? []))].sort(), [library.assets]);
 
-  // Card images for the visible slice (Jev lazy split): extract or upgrade
+  // ── Card images for the visible slice (Jev lazy split): extract or upgrade
   // first, then the cached thumb — else (facts known, no thumbnail) the file
   // itself if the browser can show it.
+
+  const pumpExtractQueue = () => {
+    const q = extractQueueRef.current;
+    while (q.active < EXTRACT_CONCURRENCY && q.jobs.length > 0) {
+      const job = q.jobs.shift()!;
+      q.active++;
+      void job().finally(() => { q.active--; pumpExtractQueue(); });
+    }
+  };
+
   useEffect(() => {
     const myGeneration = generationRef.current;
     const add = (id: string, url: string) => setObjectUrls(prev => { const next = new Map(prev); next.set(id, url); return next; });
     const ensureFacts = (file: AssetFile, f: AssetFacts | undefined) => {
-      if (visibleExtractRef.current.has(file.id)) return;
+      // Generation-scoped guard: a queued job from a previous folder switch
+      // must not block the current generation from re-extracting the same file.
+      const guardKey = `${myGeneration}:${file.id}`;
+      if (visibleExtractRef.current.has(guardKey)) return;
       const target = gridThumbTarget();
       const needsExtract = !f?.extracted;
-      const needsUpgrade = !!f?.extracted && f.thumb !== undefined && (f.thumbW ?? 0) < target;
+      // "At spec" means the encoded width matches what scaling the stored
+      // dimensions to the target would produce — never the raw target, which
+      // loops forever on any image narrower than it (portraits, small files).
+      const wantW = f?.width != null && f?.height != null ? scaledThumbSize(f.width, f.height, target).tw : target;
+      const needsUpgrade = !!f?.extracted && f.thumb !== undefined && (f.thumbW ?? 0) < wantW;
       if (!needsExtract && !needsUpgrade) return;
-      visibleExtractRef.current.add(file.id);
-      void (async () => {
+      visibleExtractRef.current.add(guardKey);
+      extractQueueRef.current.jobs.push(async () => {
         try {
           const src = await file.handle.getFile();
           const fresh = await extractFacts(src, file.ext, f).catch((): AssetFacts => ({ size: src.size, mtime: src.lastModified, extracted: true }));
@@ -426,12 +471,22 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
           }
           setFacts(prev => { const next = new Map(prev); next.set(file.id, fresh); return next; });
         } catch {
-          // File moved/renamed/removed under a stale card — the rescan will
-          // replace folderFiles; never let this reject (fatal overlay).
+          // Unreadable file (moved/removed under us): settle as failed so the
+          // loader terminates and the card shows its type badge — in-memory
+          // only, never persisted, so a later rescan retries.
+          if (myGeneration !== generationRef.current) return;
+          setFacts(prev => {
+            const cur = prev.get(file.id);
+            if (cur?.failed) return prev;
+            const next = new Map(prev);
+            next.set(file.id, { ...(cur ?? { size: 0, mtime: 0 }), extracted: true, failed: true });
+            return next;
+          });
         } finally {
-          visibleExtractRef.current.delete(file.id);
+          visibleExtractRef.current.delete(guardKey);
         }
-      })();
+      });
+      pumpExtractQueue();
     };
     visibleFiles.forEach(file => {
       ensureFacts(file, facts.get(file.id));
@@ -442,14 +497,27 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
         const url = track(URL.createObjectURL(f.thumb));
         objectUrlsRef.current.set(file.id, url);
         add(file.id, url);
-      } else if (BROWSER_SHOWS.has(file.ext)) {
+      } else if (BROWSER_SHOWS.has(file.ext) && !f.failed) {
         objectUrlsRef.current.set(file.id, '');
         void file.handle.getFile().then(blob => {
           if (myGeneration !== generationRef.current) return; // stale — folder switched under us
           const url = track(URL.createObjectURL(blob));
           objectUrlsRef.current.set(file.id, url);
           add(file.id, url);
-        }).catch(() => { /* unreadable file — card shows its type badge */ });
+        }).catch(() => {
+          // Unreadable file: release the in-flight marker (otherwise this
+          // ref blocks every retry) and settle as failed — the card shows
+          // its type badge and the loader counts the file as done.
+          objectUrlsRef.current.delete(file.id);
+          if (myGeneration !== generationRef.current) return;
+          setFacts(prev => {
+            const cur = prev.get(file.id);
+            if (cur?.failed) return prev;
+            const next = new Map(prev);
+            next.set(file.id, { ...(cur ?? { size: 0, mtime: 0 }), extracted: true, failed: true });
+            return next;
+          });
+        });
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1561,7 +1629,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                           url={objectUrls.get(file.id) || undefined}
                           width={facts.get(file.id)?.width}
                           height={facts.get(file.id)?.height}
-                          noPreview={!!facts.get(file.id)?.extracted && !facts.get(file.id)!.thumb && !BROWSER_SHOWS.has(file.ext)}
+                          noPreview={!!facts.get(file.id)?.extracted && !facts.get(file.id)!.thumb && (!BROWSER_SHOWS.has(file.ext) || !!facts.get(file.id)!.failed)}
                           meta={library.assets[file.id]}
                           stack={stackInfo.get(file.id)}
                           onToggleStack={id => setExpandedStacks(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; })}

@@ -50,6 +50,10 @@ export interface AssetFacts {
   extracted?: boolean;
   /** True when the thumbnail came from a RAW's embedded JPEG preview. */
   fromPreview?: boolean;
+  /** Extraction or the full-file fetch failed (unreadable file). In-memory
+   *  only — never persisted, so the next session retries once. Settles the
+   *  loader and switches the card to its type badge. */
+  failed?: boolean;
 }
 
 /** Camera RAW extensions the Assets Manager lists (thumbnails from embedded JPEGs). */
@@ -151,6 +155,18 @@ export function gridThumbTarget(): number {
   return Math.round(Math.min(640, Math.max(320, (gridW / cols) * 2)));
 }
 
+/**
+ * Thumb dimensions for an image at a long-side target: preserves aspect
+ * ratio and never upscales. Shared by `thumbAndHash` and the upgrade check
+ * so both agree on when a thumbnail is already "at spec" — comparing the
+ * encoded width directly against the target would loop forever on any image
+ * narrower than the target (portraits, small files).
+ */
+export function scaledThumbSize(width: number, height: number, targetW: number): { tw: number; th: number } {
+  const k = Math.min(1, targetW / Math.max(width, height));
+  return { tw: Math.max(1, Math.round(width * k)), th: Math.max(1, Math.round(height * k)) };
+}
+
 async function readExif(file: File): Promise<ExifSummary | undefined> {
   try {
     const head = new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer());
@@ -161,8 +177,7 @@ async function readExif(file: File): Promise<ExifSummary | undefined> {
 }
 
 async function thumbAndHash(bmp: ImageBitmap, targetW: number): Promise<{ thumb?: Blob; thumbW?: number; dhash?: string }> {
-  const k = Math.min(1, targetW / Math.max(bmp.width, bmp.height));
-  const tw = Math.max(1, Math.round(bmp.width * k)), th = Math.max(1, Math.round(bmp.height * k));
+  const { tw, th } = scaledThumbSize(bmp.width, bmp.height, targetW);
   const tc = new OffscreenCanvas(tw, th);
   tc.getContext('2d')!.drawImage(bmp, 0, 0, tw, th);
   const thumb = await tc.convertToBlob({ type: 'image/webp', quality: 0.85 }).catch(() => undefined);
