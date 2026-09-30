@@ -17,6 +17,7 @@ vi.mock('idb', () => ({
     const storeApi = (name: 'projects' | 'media') => ({
       get: async (key: string) => stores[name].get(key),
       getAll: async () => Array.from(stores[name].values()),
+      getAllKeys: async () => Array.from(stores[name].keys()),
       put: async (val: unknown, key: string) => { stores[name].set(key, val); },
       delete: async (key: string) => { stores[name].delete(key); },
     });
@@ -45,6 +46,7 @@ import {
   duplicateProject,
   estimateStorage,
   listProjects,
+  sweepOrphanedMedia,
 } from './index';
 import { makeMedia, makeProject } from '../actions/fixtures';
 import type { EditorState, Project } from '../types';
@@ -247,5 +249,25 @@ describe('estimateStorage', () => {
     vi.stubGlobal('navigator', {});
     expect(await estimateStorage()).toBeNull();
     vi.unstubAllGlobals();
+  });
+});
+
+describe('sweepOrphanedMedia', () => {
+  beforeEach(() => resetFakeDb());
+
+  it('removes blobs no saved project references and keeps shared and used ones', async () => {
+    await saveProject(makeProject({ id: 'p1', media: [makeMedia('used'), makeMedia('shared')] }));
+    await saveProject(makeProject({ id: 'p2', media: [makeMedia('shared')] }));
+    // A blob left behind when 'gone' was removed from p1 before a later save.
+    fakeStores().media.set('gone', { blob: new Blob(['x']) });
+
+    expect(await sweepOrphanedMedia()).toBe(1);
+    expect([...fakeStores().media.keys()].sort()).toEqual(['shared', 'used']);
+    expect(await sweepOrphanedMedia()).toBe(0);
+  });
+
+  it('with no projects saved, clears the media store', async () => {
+    fakeStores().media.set('a', { blob: new Blob(['x']) });
+    expect(await sweepOrphanedMedia()).toBe(1);
   });
 });

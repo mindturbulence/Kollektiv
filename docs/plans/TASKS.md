@@ -72,7 +72,7 @@ Boundary: Assets Manager = external multi-root browser; Vault gallery = ingested
 ## 5. Video Editor
 
 - [ ] Make WebGPU the preview renderer — **waits until a GPU-only effect or transition is exposed in the UI**. Checked 2026-09-29: the UI only offers color grade, chroma key and crossfade, which the WebGPU renderer runs on the same CPU/Canvas2D paths, so switching adds readbacks and risk for no visible gain (Jev: defer 0.97). **M**
-- [ ] Background media GC sweep (today GC runs only on project delete). **S**
+- [x] Media GC sweep — `sweepOrphanedMedia` deletes blobs no saved project references, in one transaction with the project read (no autosave race); runs silently when the project list opens (Jev unsure 0.15 → Claude's call: automatic, no grace period, no button). (2026-09-30)
 
 ## 6. Converter (deferred ideas)
 

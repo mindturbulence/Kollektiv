@@ -9,6 +9,7 @@ const autosaveMock = vi.hoisted(() => ({
   renameProject: vi.fn().mockResolvedValue(undefined),
   duplicateProject: vi.fn().mockResolvedValue('new-id'),
   estimateStorage: vi.fn().mockResolvedValue(null),
+  sweepOrphanedMedia: vi.fn().mockResolvedValue(0),
 }));
 vi.mock('../../core/autosave', () => autosaveMock);
 
@@ -99,5 +100,15 @@ describe('ProjectList', () => {
     const onError = vi.fn();
     render(<ProjectList onOpen={vi.fn()} onError={onError} />);
     await waitFor(() => expect(onError).toHaveBeenCalledWith('boom'));
+  });
+
+  it('sweeps orphaned media before listing, and a failed sweep never blocks the list or raises an error', async () => {
+    autosaveMock.sweepOrphanedMedia.mockRejectedValueOnce(new Error('no idb'));
+    autosaveMock.listProjects.mockResolvedValue(summaries);
+    const onError = vi.fn();
+    render(<ProjectList onOpen={vi.fn()} onError={onError} />);
+    await screen.findByText('Beach edit');
+    expect(autosaveMock.sweepOrphanedMedia).toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
   });
 });

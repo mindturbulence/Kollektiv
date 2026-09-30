@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   listProjects,
   deleteProject,
+  sweepOrphanedMedia,
   renameProject,
   duplicateProject,
   estimateStorage,
@@ -69,7 +70,9 @@ const ProjectList: React.FC<ProjectListProps> = ({ onOpen, onError, currentProje
   }, [onError]);
 
   useEffect(() => {
-    void refresh();
+    // Sweep first, then list, so the storage figure shown is the cleaned one.
+    // Failure to clean is never worth an error banner.
+    void sweepOrphanedMedia().catch(() => undefined).then(refresh);
   }, [refresh]);
 
   const startRename = (p: ProjectSummary) => {
