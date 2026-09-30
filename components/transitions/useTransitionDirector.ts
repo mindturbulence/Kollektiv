@@ -155,7 +155,7 @@ export const useTransitionDirector = (opts: DirectorOpts) => {
             pendingRef.current = null;
             optsRef.current.contentRef.current?.removeAttribute('data-fx');
         }
-    }, [clearEnterFx]);
+    }, [clearEnterFx, withDeadline]);
 
     const navigate = useCallback((tab: ActiveTab) => {
         const { getActiveTab } = optsRef.current;

@@ -127,6 +127,9 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
     
         void loadMedia();
         return () => { isMounted = false; };
+        // Runs on navigation only. `mediaBlobUrl` is read as the *previous* image for the
+        // crossfade; listing it would re-run the load every time it changes (a loop).
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [itemGroup, currentImageIndex]);
 
     useEffect(() => {

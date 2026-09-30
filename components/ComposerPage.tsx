@@ -326,6 +326,8 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
         return () => obs.disconnect();
     }, [width, height]);
 
+    const frameInsets = useMemo(() => getFrameInsets(frameStyle, frameMatting, parseInt(width) || 1024), [frameStyle, frameMatting, width]);
+
     // --- GSAP INTEGRATION FOR PHOTO FRAMER ---
     useLayoutEffect(() => {
         if (mode === 'frame' && framePaddingRef.current) {
@@ -342,7 +344,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                 overwrite: 'auto'
             });
         }
-    }, [mode, frameStyle, frameMatting, width, previewMetrics.scale]);
+    }, [mode, frameStyle, frameMatting, width, previewMetrics.scale, frameInsets]);
 
     // Handle 50% Spacing Restriction
     const handleGapChange = (val: number) => {
@@ -448,7 +450,6 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
         return { cw, ch, gap };
     }, [mode, previewMetrics, gridCols, gridRows, gridGap]);
 
-    const frameInsets = useMemo(() => getFrameInsets(frameStyle, frameMatting, parseInt(width) || 1024), [frameStyle, frameMatting, width]);
 
     const applyGridSize = (cols: number, rows: number) => {
         const size = cols * rows;

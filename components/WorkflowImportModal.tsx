@@ -146,6 +146,19 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
 
   // ── File handling ────────────────────────────────────────────────────
 
+  const initMapping = useCallback((json: Record<string, any>) => {
+    const auto = autoDetectTargets(json);
+    const newMapping: Record<ParamKey, string[]> = {
+      positivePrompt: auto.positivePrompt.map(targetToNodeKey),
+      negativePrompt: auto.negativePrompt.map(targetToNodeKey),
+      seed: auto.seed.map(targetToNodeKey),
+      steps: auto.steps.map(targetToNodeKey),
+      cfg: auto.cfg.map(targetToNodeKey),
+      samplerName: auto.samplerName.map(targetToNodeKey),
+    };
+    setMapping(newMapping);
+  }, []);
+
   const processFile = useCallback((file: File) => {
     setError(null);
     if (!file.name.endsWith('.json')) {
@@ -186,20 +199,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
     };
     reader.onerror = () => setError('Failed to read file.');
     reader.readAsText(file);
-  }, []);
-
-  const initMapping = useCallback((json: Record<string, any>) => {
-    const auto = autoDetectTargets(json);
-    const newMapping: Record<ParamKey, string[]> = {
-      positivePrompt: auto.positivePrompt.map(targetToNodeKey),
-      negativePrompt: auto.negativePrompt.map(targetToNodeKey),
-      seed: auto.seed.map(targetToNodeKey),
-      steps: auto.steps.map(targetToNodeKey),
-      cfg: auto.cfg.map(targetToNodeKey),
-      samplerName: auto.samplerName.map(targetToNodeKey),
-    };
-    setMapping(newMapping);
-  }, []);
+  }, [initMapping]);
 
   const handleResetAuto = useCallback(() => {
     if (!rawJson) return;

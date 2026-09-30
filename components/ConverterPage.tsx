@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import { evaluateConversion, isKnownSourceExt, getTargetsForSource, type RegistryRejectReason } from '../services/convert/convertRegistry';
@@ -40,6 +40,10 @@ const REJECT_COPY: Record<RegistryRejectReason, string> = {
   'video-too-large': 'Video exceeds 500MB limit',
   'video-too-long': 'Video exceeds 10min limit',
 };
+
+const ALL_TARGETS_BY_ID = new Map<string, ConverterFormatDef>(
+  [...IMAGE_TARGET_FORMATS, ...AUDIO_TARGET_FORMATS, ...VIDEO_TARGET_FORMATS].map(f => [f.id, f]),
+);
 
 let rowSeq = 0;
 function nextRowId(): string {
@@ -183,24 +187,10 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
 
   // ── Conversion ──────────────────────────────────────────────────────
 
-  const convertOne = useCallback(
-    async (row: QueueRow, targetId: string, verdict: { engine?: 'magick' | 'ffmpeg' }): Promise<Partial<QueueRow>> => {
-      const started = performance.now();
-      const buffer = await row.file.arrayBuffer();
-      const req = { id: row.id, data: buffer, fileName: row.file.name, targetId, quality, maxEdge: maxEdge || undefined };
-      const result =
-        verdict.engine === 'ffmpeg'
-          ? await audioVideoConverter.convert(req)
-          : await getManager().convert(req);
-      return finishOk(row, result, targetId, started);
-    },
-    [getManager, quality, maxEdge],
-  );
-
   // Output-name collisions within the batch → -2/-3 suffixes (plan failure table).
   const takenNamesRef = useRef(new Set<string>());
 
-  const finishOk = (
+  const finishOk = useCallback((
     row: QueueRow,
     result: { data: ArrayBuffer; mime: string; byteLength: number },
     targetId: string,
@@ -208,7 +198,7 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
   ): Partial<QueueRow> => {
     const blob = new Blob([result.data], { type: result.mime });
     const url = track(URL.createObjectURL(blob));
-    const target = allTargetsById.get(targetId);
+    const target = ALL_TARGETS_BY_ID.get(targetId);
     const outExt = target?.ext ?? 'bin';
     // Collision handling against all outputs already produced this session.
     let candidate = `${row.base}.${outExt}`;
@@ -226,7 +216,21 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
       outputSize: result.byteLength,
       durationMs: Math.round(performance.now() - started),
     };
-  };
+  }, [track]);
+
+  const convertOne = useCallback(
+    async (row: QueueRow, targetId: string, verdict: { engine?: 'magick' | 'ffmpeg' }): Promise<Partial<QueueRow>> => {
+      const started = performance.now();
+      const buffer = await row.file.arrayBuffer();
+      const req = { id: row.id, data: buffer, fileName: row.file.name, targetId, quality, maxEdge: maxEdge || undefined };
+      const result =
+        verdict.engine === 'ffmpeg'
+          ? await audioVideoConverter.convert(req)
+          : await getManager().convert(req);
+      return finishOk(row, result, targetId, started);
+    },
+    [getManager, quality, maxEdge, finishOk],
+  );
 
   // Effective target: per-row override, else the global target when valid for
   // this source, else the first valid target for the source's category
@@ -318,12 +322,6 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
   }, []);
 
   // ── Derived ─────────────────────────────────────────────────────────
-
-  const allTargetsById = useMemo(() => {
-    const map = new Map<string, ConverterFormatDef>();
-    [...IMAGE_TARGET_FORMATS, ...AUDIO_TARGET_FORMATS, ...VIDEO_TARGET_FORMATS].forEach(f => map.set(f.id, f));
-    return map;
-  }, []);
 
   const doneRows = rows.filter(r => r.status === 'done' && r.outputBlob);
   const doneCount = doneRows.length;

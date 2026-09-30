@@ -101,6 +101,9 @@ const TransitionalMedia: React.FC<{
         };
         void load();
         return () => { isMounted = false; };
+        // `displayUrl` is read as the previous image for the crossfade; as a dependency it
+        // would re-run the load whenever it changes (a loop). Runs when `url` changes.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [url]);
 
     useEffect(() => {

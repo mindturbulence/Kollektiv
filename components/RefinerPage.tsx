@@ -80,10 +80,12 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
         settings.modifierWeights ?? {}
     );
 
-    // Persist modifierWeights on change
+    // Persist modifierWeights on change. `settings` is read (latest render) but deliberately not a
+    // dependency: saving on every unrelated settings change would rewrite settings needlessly.
     useEffect(() => {
         const updated = { ...settings, modifierWeights };
         saveLLMSettings(updated);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [modifierWeights]);
 
     // --- Preset Management State ---
@@ -344,7 +346,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
             setIsLoadingRefine(false);
             setIsBusy(false);
         }
-    }, [refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, isMidjourney, referenceImages, buildModifierCatalog, setIsBusy]);
+    }, [refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, isMidjourney, referenceImages, buildModifierCatalog, setIsBusy, modifierWeights]);
 
     const handleDirectGenerate = async () => {
         setIsBusy(true);

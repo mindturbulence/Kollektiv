@@ -370,6 +370,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
     prompt, negativePrompt, width, height, steps, cfgScale,
     seedText, randomizeSeed, sampler, model, state.phase,
     generate, settings, activeWorkflowId, workflowEntries, backendId, additionalModulesText,
+    initImage, denoisingStrength, // a changed reference image / strength must reach the next generation
   ]);
 
   const handleWorkflowImported = useCallback((entry: SavedWorkflowEntry) => {
