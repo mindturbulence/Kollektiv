@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import { ScramblingText } from './FullscreenViewer';
 import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import { useObjectUrls } from '../utils/useObjectUrls';
 import { listRoots, addRoot, addRootFromHandle, removeRoot, requestRootPermission, ensureWritable } from '../services/assets/assetRootManager';
@@ -24,7 +25,7 @@ import { appEventBus } from '../utils/eventBus';
 import { largestEmbeddedJpeg } from '../utils/jpegScan';
 import { setPendingFiles, type HandoffTarget } from '../utils/pendingHandoff';
 import { openInVideoEditor } from '../video-editor/bridge/openInVideoEditor';
-import { FolderClosedIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon, CloseIcon, ChevronLeftIcon, CenterIcon, DownloadIcon, CheckIcon, DeleteIcon, RefreshIcon, EditIcon, FilmIcon, AspectRatioIcon, SparklesIcon, ArchiveIcon, MenuIcon } from './icons';
+import { FolderClosedIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon, CloseIcon, ChevronLeftIcon, CenterIcon, DownloadIcon, CheckIcon, DeleteIcon, RefreshIcon, EditIcon, FilmIcon, AspectRatioIcon, SparklesIcon, ArchiveIcon, MenuIcon, UndoIcon, CopyIcon, KeyboardIcon, GridViewIcon, ListViewIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import FilterBar, { LABEL_COLORS } from './assets/FilterBar';
 import AssetInspector from './assets/AssetInspector';
@@ -63,7 +64,7 @@ interface AssetsManagerPageProps {
   showGlobalFeedback?: (msg: string) => void;
 }
 
-type View = { kind: 'folder' } | { kind: 'collection'; id: string };
+type View = { kind: 'folder' } | { kind: 'collection'; id: string } | { kind: 'trash' };
 const VIEW_KEY = 'assets.viewPrefs';
 const GRID_SIZE_MIN = 120, GRID_SIZE_MAX = 420, GRID_SIZE_DEFAULT = 220;
 /** Per-viewer convenience (a remembered view), so a storage failure is harmless. */
@@ -310,7 +311,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       return;
     }
 
-    if (!selectedRoot || selectedRoot.status !== 'granted' || !tree) {
+    if (view.kind === 'trash' || !selectedRoot || selectedRoot.status !== 'granted' || !tree) {
       setFolderFiles([]);
       // A listing may have been in flight when the root vanished — the
       // generation guard above stops its .then from clearing the flag.
@@ -1383,7 +1384,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   }, [dialog, shownEntries, entryById]);
 
   const activeCollection = view.kind === 'collection' ? library.collections.find(c => c.id === view.id) : undefined;
-  const headerTitle = activeCollection ? `COLLECTION · ${activeCollection.name}` : (selectedFolderPath || (selectedRoot ? selectedRoot.name : 'NO FOLDER SELECTED'));
+  const headerTitle = view.kind === 'trash' ? 'TRASH' : activeCollection ? `COLLECTION · ${activeCollection.name}` : (selectedFolderPath || (selectedRoot ? selectedRoot.name : 'NO FOLDER SELECTED'));
   const folderNames = useMemo(() => folderFiles.map(f => f.name), [folderFiles]);
   const renameEntries = useMemo(() => shownEntries.filter(e => selectedIds.has(e.file.id)), [shownEntries, selectedIds]);
   const renameOthers = useMemo(() => {
@@ -1501,23 +1502,6 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                   }}
                 />
               )}
-              {selectedRoot && selectedRoot.status === 'granted' && (
-                <div className="mt-1 pt-1 border-t border-base-content/10">
-                  <TrashTreeNode
-                    entries={trashEntries}
-                    onContextMenu={e => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setCtxMenu({ x: e.clientX, y: e.clientY, items: buildTrashMenu() });
-                    }}
-                    onItemContextMenu={(entry, e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setCtxMenu({ x: e.clientX, y: e.clientY, items: buildTrashItemMenu(entry) });
-                    }}
-                  />
-                </div>
-              )}
               {!selectedRoot && !isScanningTree && (
                 <p className="text-2xs font-mono uppercase text-base-content/60 p-2">Select a root to browse.</p>
               )}
@@ -1538,6 +1522,20 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                 ))}
               </div>
             )}
+              {selectedRoot && selectedRoot.status === 'granted' && (
+                <div className="shrink-0 p-2 border-t border-base-content/10">
+                  <TrashTreeNode
+                    count={trashEntries.length}
+                    selected={view.kind === 'trash'}
+                    onSelect={() => setView({ kind: 'trash' })}
+                    onContextMenu={e => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setCtxMenu({ x: e.clientX, y: e.clientY, items: buildTrashMenu() });
+                    }}
+                  />
+                </div>
+              )}
           </div>
         </motion.aside>
 
@@ -1559,31 +1557,20 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                 <TerminalText text={headerTitle} delay={0.8} className="text-2xs font-black uppercase text-primary truncate" />
                 <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                   {undoEntry && (
-                    <button type="button" disabled={isBusy} className="form-btn h-7 px-2 text-2xs" title="Undo the last file operation (survives restarts)" onClick={() => void handleUndo()}>
-                      UNDO: {undoEntry.op.label}
+                    <button type="button" disabled={isBusy} className="form-btn h-7 w-7 px-0" aria-label={`UNDO: ${undoEntry.op.label}`} title={`Undo: ${undoEntry.op.label} (survives restarts)`} onClick={() => void handleUndo()}>
+                      <UndoIcon className="w-4 h-4" />
                     </button>
                   )}
-                  <div className="flex items-center gap-1" role="radiogroup" aria-label="View mode">
-                    {(['grid', 'list'] as const).map(m => (
-                      <button key={m} type="button" role="radio" aria-checked={viewPrefs.mode === m}
-                        className={`form-btn h-7 px-2 text-2xs ${viewPrefs.mode === m ? 'form-btn-primary' : ''}`}
-                        onClick={() => updateViewPrefs({ mode: m })}>{m.toUpperCase()}</button>
-                    ))}
-                  </div>
-                  {viewPrefs.mode === 'grid' && (
-                    <input type="range" aria-label="Thumbnail size" className="range range-xs range-primary w-24"
-                      min={GRID_SIZE_MIN} max={GRID_SIZE_MAX} step={10} value={viewPrefs.size}
-                      onChange={e => updateViewPrefs({ size: Number(e.target.value) })} />
-                  )}
-                  <button type="button" className="form-btn h-7 w-7 text-2xs" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={() => setDialog('shortcuts')}>?</button>
+                  <button type="button" className="form-btn h-7 w-7 px-0" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={() => setDialog('shortcuts')}><KeyboardIcon className="w-4 h-4" /></button>
                   <button
                     type="button"
                     disabled={folderFiles.length === 0 || isFullIndexing}
-                    className="form-btn h-7 px-2 text-2xs"
+                    className="form-btn h-7 w-7 px-0"
+                    aria-label="DUPLICATES"
                     title={isFullIndexing ? 'Indexing files…' : 'Find near-identical files'}
                     onClick={() => { void runFullIndex().then(() => setDialog('duplicates')); }}
                   >
-                    DUPLICATES
+                    <CopyIcon className="w-4 h-4" />
                   </button>
                   {selectedIds.size > 0 && (
                     <>
@@ -1632,7 +1619,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                     </>
                   )}
                   <span className="text-2xs font-mono font-bold text-base-content/60 uppercase">
-                    {folderFiles.length} IMAGE{folderFiles.length === 1 ? '' : 'S'}
+                    {view.kind === 'trash' ? `${trashEntries.length} ITEM${trashEntries.length === 1 ? '' : 'S'}` : `${folderFiles.length} IMAGE${folderFiles.length === 1 ? '' : 'S'}`}
                   </span>
                   {selectedIds.size > 0 && (
                     <span className="text-2xs font-mono font-black uppercase text-primary">{selectedIds.size} SELECTED</span>
@@ -1657,9 +1644,23 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                   {missingInCollection} item{missingInCollection === 1 ? '' : 's'} of this collection can't be found (moved outside the manager, or its root isn't connected).
                 </p>
               )}
-              <FilterBar criteria={criteria} onChange={c => { setCriteria(c); setVisibleCount(PAGE_SIZE); }} sort={sortKey} descending={descending}
+              {view.kind !== 'trash' && <FilterBar criteria={criteria} onChange={c => { setCriteria(c); setVisibleCount(PAGE_SIZE); }} sort={sortKey} descending={descending}
                 onSort={(k, d) => { setSortKey(k); setDescending(d); }} exts={folderExts} saved={library.filters}
-                shown={shownEntries.length} total={folderFiles.length} />
+                shown={shownEntries.length} total={folderFiles.length}
+                trailing={<>
+                  <div className="flex items-center gap-1" role="radiogroup" aria-label="View mode">
+                    {([['grid', GridViewIcon], ['list', ListViewIcon]] as const).map(([m, Icon]) => (
+                      <button key={m} type="button" role="radio" aria-checked={viewPrefs.mode === m} aria-label={m.toUpperCase()} title={`${m[0].toUpperCase()}${m.slice(1)} view`}
+                        className={`form-btn h-7 w-7 px-0 ${viewPrefs.mode === m ? 'form-btn-primary' : ''}`}
+                        onClick={() => updateViewPrefs({ mode: m })}><Icon className="w-4 h-4" /></button>
+                    ))}
+                  </div>
+                  {viewPrefs.mode === 'grid' && (
+                    <input type="range" aria-label="Thumbnail size" className="range range-xs range-primary w-24"
+                      min={GRID_SIZE_MIN} max={GRID_SIZE_MAX} step={10} value={viewPrefs.size}
+                      onChange={e => updateViewPrefs({ size: Number(e.target.value) })} />
+                  )}
+                </>} />}
               <motion.div variants={contentVariants} custom={2.2} initial="hidden" animate="visible" className="flex-grow overflow-y-auto p-3" aria-live="polite"
                 onContextMenu={e => {
                   if ((e.target as HTMLElement).closest('button')) return;
@@ -1671,7 +1672,20 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                   setCtxMenu({ x: kb ? rect.left + 8 : e.clientX, y: kb ? rect.top + 8 : e.clientY, items: buildGridMenu() });
                 }}
               >
-                {isListingFolder ? (
+                {view.kind === 'trash' ? (
+                  <TrashPanel
+                    entries={trashEntries}
+                    busy={isBusy}
+                    onRestore={entries => void handleRestoreFromTrash(entries)}
+                    onDeleteForever={entries => void handleTrashDeleteForever(entries)}
+                    onEmpty={() => void handleEmptyTrash()}
+                    onItemContextMenu={(entry, e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setCtxMenu({ x: e.clientX, y: e.clientY, items: buildTrashItemMenu(entry) });
+                    }}
+                  />
+                ) : isListingFolder ? (
                   <div className="h-full min-h-[240px]" />
                 ) : shownEntries.length === 0 ? (
                   <div className="h-full min-h-[240px] flex flex-col items-center justify-center text-center opacity-30">
@@ -1967,55 +1981,57 @@ const FolderTreeNode: React.FC<{
   );
 };
 
+/** Like Windows' Recycle Bin: one row, no children — selecting it opens the contents in the main panel. */
 const TrashTreeNode: React.FC<{
-  entries: TrashedEntry[];
+  count: number;
+  selected: boolean;
+  onSelect: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
-  onItemContextMenu: (entry: TrashedEntry, e: React.MouseEvent) => void;
-}> = ({ entries, onContextMenu, onItemContextMenu }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const count = entries.length;
+}> = ({ count, selected, onSelect, onContextMenu }) => (
+  <div
+    className={`flex items-center gap-1.5 px-1.5 py-1.5 rounded cursor-pointer text-xs font-mono truncate transition-colors ${selected ? 'bg-primary/15 text-primary' : 'hover:bg-base-200/50 text-base-content/70'}`}
+    onClick={onSelect}
+    onContextMenu={onContextMenu}
+    title="Trash"
+  >
+    <DeleteIcon className="w-4 h-4 flex-shrink-0" />
+    <span className="truncate">Trash</span>
+    {count > 0 && <span className="ml-auto pl-1 text-2xs text-base-content/50">{count}</span>}
+  </div>
+);
 
-  return (
-    <div>
-      <div
-        className="flex items-center gap-1.5 px-1.5 py-1.5 rounded cursor-pointer text-xs font-mono truncate transition-colors hover:bg-base-200/50 text-base-content/70"
-        onClick={() => setIsOpen(v => !v)}
-        onContextMenu={onContextMenu}
-        title="Trash"
-      >
-        <button
-          type="button"
-          onClick={e => { e.stopPropagation(); setIsOpen(v => !v); }}
-          className="w-4 h-4 flex-shrink-0 flex items-center justify-center"
-          aria-label={isOpen ? 'Collapse trash' : 'Expand trash'}
-        >
-          {isOpen ? <ChevronDownIcon className="w-3.5 h-3.5" /> : <ChevronRightIcon className="w-3.5 h-3.5" />}
-        </button>
-        <DeleteIcon className="w-4 h-4 flex-shrink-0" />
-        <span className="truncate">Trash</span>
-        {count > 0 && <span className="ml-auto pl-1 text-2xs text-base-content/50">{count}</span>}
-      </div>
-      {isOpen && (
-        <div className="pl-3 ml-2 border-l border-base-content/10">
-          {count === 0 && (
-            <p className="px-1.5 py-1 text-2xs text-base-content/50">Trash is empty</p>
-          )}
-          {entries.map(entry => (
-            <div
-              key={`${entry.batchKey}:${entry.originalPath}`}
-              className="flex items-center gap-1.5 px-1.5 py-1.5 rounded text-xs font-mono truncate transition-colors hover:bg-base-200/50 text-base-content/70 cursor-default"
-              onContextMenu={e => onItemContextMenu(entry, e)}
-              title={entry.originalPath}
-            >
-              <span className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate">{entry.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
+const TrashPanel: React.FC<{
+  entries: TrashedEntry[];
+  busy: boolean;
+  onRestore: (entries: TrashedEntry[]) => void;
+  onDeleteForever: (entries: TrashedEntry[]) => void;
+  onEmpty: () => void;
+  onItemContextMenu: (entry: TrashedEntry, e: React.MouseEvent) => void;
+}> = ({ entries, busy, onRestore, onDeleteForever, onEmpty, onItemContextMenu }) => entries.length === 0 ? (
+  <div className="h-full min-h-[240px] flex flex-col items-center justify-center text-center opacity-30">
+    <p className="text-xs font-black uppercase tracking-[0.4em]">Trash Is Empty</p>
+  </div>
+) : (
+  <div className="flex flex-col gap-1" data-testid="trash-list">
+    <div className="flex items-center gap-2 pb-2">
+      <button type="button" disabled={busy} className="form-btn h-7 px-2 text-2xs" onClick={() => onRestore(entries)}>RESTORE ALL</button>
+      <button type="button" disabled={busy} className="form-btn h-7 px-2 text-2xs text-error" onClick={onEmpty}>EMPTY TRASH</button>
     </div>
-  );
-};
+    {entries.map(entry => (
+      <div
+        key={`${entry.batchKey}:${entry.originalPath}`}
+        className="flex items-center gap-3 px-2 py-1.5 rounded text-xs font-mono hover:bg-base-200/50"
+        onContextMenu={e => onItemContextMenu(entry, e)}
+      >
+        <span className="truncate w-1/3" title={entry.name}>{entry.name}</span>
+        <span className="truncate flex-grow text-base-content/50" title={entry.originalPath}>{entry.originalPath}</span>
+        <span className="text-2xs text-base-content/50 flex-shrink-0">{new Date(entry.trashedAt).toLocaleString()}</span>
+        <button type="button" disabled={busy} className="form-btn h-6 px-2 text-2xs" onClick={() => onRestore([entry])}>Restore</button>
+        <button type="button" disabled={busy} className="form-btn h-6 px-2 text-2xs text-error" onClick={() => onDeleteForever([entry])}>Delete forever</button>
+      </div>
+    ))}
+  </div>
+);
 
 const AssetCard: React.FC<{
   file: AssetFile;
@@ -2162,6 +2178,21 @@ const AssetCard: React.FC<{
 // transform otherwise re-anchors "fixed" to that box, not the screen) —
 // edge-docked prev/next zones, wheel zoom, drag-to-pan, double-click zoom,
 // download, reset, top-right controls.
+const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+const aspectRatio = (w: number, h: number) => `${w / gcd(w, h)}:${h / gcd(w, h)}`;
+const formatBytes = (n: number) => {
+  if (n === 0) return '0 B';
+  const i = Math.min(3, Math.floor(Math.log(n) / Math.log(1024)));
+  return `${parseFloat((n / 1024 ** i).toFixed(2))} ${['B', 'KB', 'MB', 'GB'][i]}`;
+};
+
+const LightboxSpec: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <span className="flex items-center gap-2 whitespace-nowrap">
+    <span className="text-white/30">{label}:</span>
+    <ScramblingText className="text-white tracking-tighter" text={value} />
+  </span>
+);
+
 const Lightbox: React.FC<{
   files: AssetFile[];
   urls: Map<string, string>;
@@ -2173,9 +2204,24 @@ const Lightbox: React.FC<{
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0 });
+  const [dir, setDir] = useState<1 | -1>(1);
+  const [info, setInfo] = useState<{ id: string; w?: number; h?: number; size?: number; modified?: number }>({ id: '' });
 
   const file = files[index];
   const url = file ? urls.get(file.id) : undefined;
+  const fileId = file?.id;
+  const handle = file?.handle;
+
+  // Size + modified date come from the file itself; dimensions from the decoded <img>.
+  useEffect(() => {
+    if (!fileId || !handle) return;
+    let cancelled = false;
+    setInfo({ id: fileId });
+    void handle.getFile().then(f => {
+      if (!cancelled) setInfo(i => (i.id === fileId ? { ...i, size: f.size, modified: f.lastModified } : i));
+    }).catch(() => { /* info bar just shows less */ });
+    return () => { cancelled = true; };
+  }, [fileId, handle]);
 
   const resetView = useCallback(() => {
     setZoom(1);
@@ -2184,11 +2230,13 @@ const Lightbox: React.FC<{
 
   const goNext = useCallback(() => {
     resetView();
+    setDir(1);
     onIndexChange((index + 1) % files.length);
   }, [index, files.length, onIndexChange, resetView]);
 
   const goPrev = useCallback(() => {
     resetView();
+    setDir(-1);
     onIndexChange((index - 1 + files.length) % files.length);
   }, [index, files.length, onIndexChange, resetView]);
 
@@ -2255,29 +2303,52 @@ const Lightbox: React.FC<{
       role="dialog"
       aria-modal="true"
     >
-      <div className="absolute inset-0 flex items-center justify-center overflow-hidden" onWheel={handleWheel}>
-        {url ? (
-          <img
-            src={url}
-            alt={file.name}
-            className="transition-transform duration-100 ease-out select-none"
-            style={{
-              translate: `${position.x}px ${position.y}px`,
-              scale: `${zoom}`,
-              maxHeight: '100%',
-              maxWidth: 'none',
-              width: 'auto',
-              height: 'auto',
-              cursor: isPanning ? 'grabbing' : zoom > 1 ? 'grab' : 'default',
+      <div className="absolute inset-0 overflow-hidden" onWheel={handleWheel}>
+        {/* Same slide as the Vault viewer: incoming from the travel side, outgoing shrinks away. The exiting
+            layer keeps its already-decoded <img>, so a revoked blob URL can't break it mid-slide. */}
+        <AnimatePresence initial={false} custom={dir}>
+          <motion.div
+            key={file.id}
+            custom={dir}
+            variants={{
+              enter: (d: number) => ({ x: `${d * 100}%`, scale: 1.1, opacity: 0 }),
+              center: { x: 0, scale: 1, opacity: 1 },
+              exit: (d: number) => ({ x: `${d * -40}%`, scale: 0.8, opacity: 0, transition: { duration: 0.5, ease: [0.76, 0, 0.24, 1] } }),
             }}
-            onClick={e => e.stopPropagation()}
-            onMouseDown={handleMouseDown}
-            onDoubleClick={handleDoubleClick}
-            draggable={false}
-          />
-        ) : (
-          <LoadingSpinner size={32} />
-        )}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.5, ease: [0.76, 0, 0.24, 1] }}
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          >
+            {url ? (
+              <img
+                src={url}
+                alt={file.name}
+                className="transition-transform duration-100 ease-out select-none pointer-events-auto"
+                style={{
+                  translate: `${position.x}px ${position.y}px`,
+                  scale: `${zoom}`,
+                  maxHeight: '100%',
+                  maxWidth: 'none',
+                  width: 'auto',
+                  height: 'auto',
+                  cursor: isPanning ? 'grabbing' : zoom > 1 ? 'grab' : 'default',
+                }}
+                onClick={e => e.stopPropagation()}
+                onMouseDown={handleMouseDown}
+                onDoubleClick={handleDoubleClick}
+                onLoad={e => {
+                  const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
+                  setInfo(i => (i.id === file.id ? { ...i, w, h } : i));
+                }}
+                draggable={false}
+              />
+            ) : (
+              <LoadingSpinner size={32} />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Edge-docked prev/next — same pattern as FullscreenViewer, always vertically centered on the true viewport. */}
@@ -2316,11 +2387,26 @@ const Lightbox: React.FC<{
         </button>
       </div>
 
-      {files.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-raised text-2xs font-mono uppercase bg-black/40 py-1 px-3 rounded-full text-white/70">
-          {index + 1} / {files.length}
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+        className="absolute bottom-0 left-0 right-0 z-raised bg-gradient-to-t from-black/80 to-transparent pointer-events-none flex items-end px-10 pb-5 h-20"
+      >
+        <div className="w-full flex items-center justify-between gap-8 pointer-events-auto translate-y-2">
+          <span className="min-w-0 text-xs font-mono uppercase tracking-widest text-white truncate" title={file.path}>
+            <ScramblingText text={file.path} />
+          </span>
+          <div className="flex items-center gap-8 shrink-0 text-2xs font-mono uppercase tracking-widest">
+            {info.w ? <LightboxSpec label="Resolution" value={`${info.w} × ${info.h}`} /> : null}
+            {info.w && info.h ? <LightboxSpec label="Aspect Ratio" value={aspectRatio(info.w, info.h)} /> : null}
+            {info.size !== undefined ? <LightboxSpec label="File Size" value={formatBytes(info.size)} /> : null}
+            {info.modified ? <LightboxSpec label="Modified" value={new Date(info.modified).toLocaleDateString()} /> : null}
+            <LightboxSpec label="Format" value={file.ext} />
+            <span className="text-white tracking-tighter">{String(index + 1).padStart(2, '0')} / {String(files.length).padStart(2, '0')}</span>
+          </div>
         </div>
-      )}
+      </motion.div>
     </motion.div>
   );
 

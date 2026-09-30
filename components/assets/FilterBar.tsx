@@ -21,7 +21,9 @@ const FilterBar: React.FC<{
   saved: SavedFilter[];
   shown: number;
   total: number;
-}> = ({ criteria, onChange, sort, descending, onSort, exts, saved, shown, total }) => {
+  /** Controls docked at the row's right edge (view mode, thumbnail size). */
+  trailing?: React.ReactNode;
+}> = ({ criteria, onChange, sort, descending, onSort, exts, saved, shown, total, trailing }) => {
   const [naming, setNaming] = useState<string | null>(null);
   const set = (patch: Partial<FilterCriteria>) => onChange({ ...criteria, ...patch });
   const toggleLabel = (l: ColorLabel) => {
@@ -33,7 +35,7 @@ const FilterBar: React.FC<{
     <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 border-b border-base-content/10" role="search" aria-label="Filter assets">
       <input
         type="search" value={criteria.text ?? ''} placeholder="Search name, tags, caption…" aria-label="Search assets"
-        className="form-input h-7 text-xs w-48" onChange={e => set({ text: e.target.value })}
+        className="form-input h-7 text-xs flex-1 min-w-48" onChange={e => set({ text: e.target.value })}
       />
       <select aria-label="Minimum rating" className="form-select h-7 text-2xs w-32" value={criteria.minRating ?? 0}
         onChange={e => set({ minRating: Number(e.target.value) || undefined })}>
@@ -93,6 +95,7 @@ const FilterBar: React.FC<{
         </span>
       ))}
       <span className="ml-auto text-2xs font-mono text-base-content/60 uppercase">{shown === total ? `${total}` : `${shown} of ${total}`}</span>
+      {trailing}
     </div>
   );
 };

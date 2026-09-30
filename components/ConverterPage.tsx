@@ -386,25 +386,13 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
         }}
       />
 
-      {/* ① DROP STRIP */}
-      <motion.button
-        variants={panelVariants}
-        initial="hidden"
-        animate={isExiting ? 'exit' : 'visible'}
-        onClick={() => fileInputRef.current?.click()}
-        className={`mx-6 mt-4 flex-shrink-0 border border-dashed px-6 py-5 text-left transition-colors ${isDragging ? 'border-primary bg-primary/10' : 'border-base-content/20 hover:border-primary/50'}`}
-      >
-        <TerminalText text="DROP FILES OR CLICK TO BROWSE — IMAGES · AUDIO · VIDEO" delay={0.3} className="text-2xs font-black uppercase tracking-widest text-primary" centered />
-        <p className="text-2xs font-mono uppercase tracking-[0.3em] text-base-content/60 mt-2 text-center">nothing leaves this machine</p>
-      </motion.button>
-
       {capWarning && (
         <div className="mx-6 mt-2 text-2xs font-mono uppercase tracking-widest text-warning" role="alert">
           ⚠ {capWarning}
         </div>
       )}
 
-      <div className="flex-grow flex min-h-0 px-6 py-4 gap-4">
+      <div className={`flex-grow flex min-h-0 px-6 pt-4 pb-1 gap-4 transition-colors ${isDragging ? 'bg-primary/5' : ''}`}>
         {/* ② BATCH QUEUE */}
         <motion.section
           variants={panelVariants}
@@ -426,13 +414,18 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
               className="p-4 bg-base-100/10 flex justify-between items-center"
             >
               <TerminalText text="BATCH QUEUE" delay={1.0} className="text-2xs font-black uppercase text-primary" />
-              <span className="text-2xs font-mono font-bold text-base-content/60 uppercase">{rows.length} FILES</span>
+              <div className="flex items-center gap-3">
+                <span className="text-2xs font-mono font-bold text-base-content/60 uppercase">{rows.length} FILES</span>
+                <button type="button" className="form-btn h-7 px-3 btn-primary" onClick={() => fileInputRef.current?.click()}>
+                  + Add files
+                </button>
+              </div>
             </motion.header>
             <motion.div variants={contentVariants} custom={2.2} initial="hidden" animate="visible" className="flex-grow overflow-y-auto p-3" aria-live="polite">
               {rows.length === 0 ? (
                 <div className="h-full min-h-[240px] flex flex-col items-center justify-center text-center opacity-30">
                   <p className="text-xs font-black uppercase tracking-[0.4em]">Queue is Empty</p>
-                  <p className="text-2xs font-mono uppercase tracking-widest mt-2">Drop media above to begin</p>
+                  <p className="text-2xs font-mono uppercase tracking-widest mt-2">Drop media here or use Add files</p>
                 </div>
               ) : (
                 <ul className="flex flex-col gap-px">
@@ -571,7 +564,7 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
       </div>
 
       {/* ④ STATUS BAR */}
-      <div className="flex-shrink-0 px-6 py-2 border-t border-base-content/10 flex items-center justify-between text-2xs font-mono uppercase tracking-widest">
+      <div className="flex-shrink-0 px-6 py-2 flex items-center justify-between text-2xs font-mono uppercase tracking-widest">
         <span className="text-base-content/60">
           {doneCount}/{totalCount} converted
           {isRunning && <span className="text-primary animate-pulse"> · RUNNING</span>}
