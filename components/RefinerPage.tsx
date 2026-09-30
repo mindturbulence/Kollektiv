@@ -24,6 +24,7 @@ import {
 import { MODIFIER_CATEGORIES } from '../constants/modifierRegistry';
 import { TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 import type { LLMSettings } from '../types';
+import Modal from './Modal';
 
 type MediaMode = 'image' | 'video' | 'audio';
 
@@ -872,7 +873,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
 
             {/* Modals */}
             {isSavePresetModalOpen && (
-                <div className="fixed inset-0 z-system flex items-center justify-center">
+                <Modal isOpen onClose={() => setIsSavePresetModalOpen(false)} title="Register preset" bare size="7xl" className="">
                     <div className="bg-base-200/95 backdrop-blur-xl p-8 border border-primary/20 shadow-[0_0_60px_oklch(var(--p)/0.2)] max-w-md w-full mx-4 relative corner-frame">
                         <div className="flex items-center justify-between mb-6">
                             <span className="text-sm font-black uppercase tracking-widest text-primary">REGISTER PRESET</span>
@@ -889,7 +890,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                 className="btn btn-sm btn-primary btn-snake-primary">{isSavingPreset ? 'SAVING...' : 'CONFIRM'}</button>
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {isDeletePresetModalOpen && (

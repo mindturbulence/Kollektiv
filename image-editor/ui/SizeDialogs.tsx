@@ -1,11 +1,10 @@
 // ─── Kollektiv Image Editor — Size Dialogs (M5 item 6) ──────────────────────
 // Image Size (resample the active layer) and Canvas Size (grow/shrink the
 // document with an anchor). Portal-rendered modals using the editor's existing
-// panel/form-btn chrome (the shared Modal migration is D2; these follow the
-// same structure so that migration is a drop-in).
+// panel/form-btn chrome, on the shared Modal.
 
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
+import Modal from '../../components/Modal';
 import { useSyncExternalStore } from 'react';
 import { getSnapshot, subscribe } from '../core/store';
 import { findLayerById } from '../core/layers/layerTree';
@@ -20,36 +19,13 @@ interface DialogShellProps {
   footer: React.ReactNode;
 }
 
-/** Shared modal shell (portal, backdrop, panel chrome). */
-const DialogShell: React.FC<DialogShellProps> = ({ title, onClose, children, footer }) => {
-  const content = (
-    <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-xl z-modal flex items-center justify-center p-4 animate-fade-in"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        className="bg-base-100/95 backdrop-blur-xl w-full max-w-sm rounded-none border border-base-content/10 overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="panel-header h-9 px-4">
-          <h3 className="self-center text-xs font-display uppercase tracking-widest text-base-content/80">{title}</h3>
-          <div className="flex-1" />
-          <button type="button" className="self-center p-1 text-base-content/60 hover:text-base-content" onClick={onClose} aria-label="Close">
-            ✕
-          </button>
-        </header>
-        <div className="p-4 flex flex-col gap-4">{children}</div>
-        <footer className="panel-footer h-11 p-1.5 gap-1.5">{footer}</footer>
-      </div>
-    </div>
-  );
-  if (typeof window !== 'undefined' && window.document?.body) {
-    return createPortal(content, window.document.body);
-  }
-  return null;
-};
+/** Shared dialog shell: the app's Modal (portal, focus trap, Escape) plus body and footer. */
+const DialogShell: React.FC<DialogShellProps> = ({ title, onClose, children, footer }) => (
+  <Modal isOpen onClose={onClose} title={title} size="sm">
+    <div className="p-4 flex flex-col gap-4">{children}</div>
+    <footer className="panel-footer h-11 p-1.5 gap-1.5">{footer}</footer>
+  </Modal>
+);
 
 const DimensionInputs: React.FC<{
   width: number;

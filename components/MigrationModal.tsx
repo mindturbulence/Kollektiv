@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import Modal from './Modal';
 import { audioService } from '../services/audioService';
 
 interface MigrationModalProps {
@@ -47,8 +47,6 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   const handleClose = () => {
     audioService.playModalClose();
     onClose();
@@ -62,20 +60,10 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
   const isPush = syncDirection === 'push';
 
   const modalContent = (
-    <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-xl z-modal flex items-center justify-center p-4 animate-fade-in"
-      onClick={handleClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="migration-title"
-    >
-      <div
-        className="flex flex-col bg-transparent w-full max-w-lg mx-auto relative p-[3px] corner-frame overflow-visible"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal isOpen={isOpen} onClose={handleClose} title={isPush ? 'Migration' : 'Pull sync'} bare size="lg" className="flex flex-col bg-transparent relative p-[3px] corner-frame overflow-visible">
         <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
           <header className="px-8 py-4 bg-transparent relative flex-shrink-0">
-              <h3 id="migration-title" className="text-xl font-black tracking-tighter text-primary leading-none uppercase">
+              <h3 className="text-xl font-black tracking-tighter text-primary leading-none uppercase">
                 {isPush ? 'MIGRATION' : 'PULL SYNC'}
                 <span className="text-base-content/60">.</span>
               </h3>
@@ -271,15 +259,10 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
         <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
         <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
         <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-      </div>
-    </div>
+    </Modal>
   );
 
-  if (typeof (window as any).document !== 'undefined' && (window as any).document.body) {
-    return createPortal(modalContent, (window as any).document.body);
-  }
-
-  return null;
+  return modalContent;
 };
 
 export default MigrationModal;

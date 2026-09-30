@@ -19,6 +19,7 @@ import {
     DownloadIcon, CloseIcon, CheckIcon, RefreshIcon,
     AlertTriangleIcon, PhotoIcon,
 } from '../icons';
+import Modal from '../Modal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -230,12 +231,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
     // ── Modal JSX (portalled to document.body so it floats above everything) ─
 
     const modalContent = converterOpen ? (
-        <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xl z-modal flex items-center justify-center p-4 animate-fade-in"
-            onClick={phase === 'scanning' || phase === 'converting' ? undefined : handleClose}
-            role="dialog"
-            aria-modal="true"
-        >
+        <Modal isOpen={true} onClose={() => { if (phase !== 'scanning' && phase !== 'converting') handleClose(); }} title="Bulk convert" bare size="7xl" className="" backdropClassName="bg-black/60 backdrop-blur-xl">
             <div
                 className="flex flex-col bg-transparent w-full max-w-[560px] mx-auto relative p-[3px] corner-frame overflow-visible"
                 onClick={e => e.stopPropagation()}
@@ -471,7 +467,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                     </footer>
                 </div>
             </div>
-        </div>
+        </Modal>
     ) : null;
 
     const portal = modalContent && typeof document !== 'undefined'

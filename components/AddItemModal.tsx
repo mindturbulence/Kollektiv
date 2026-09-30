@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import type { GalleryCategory } from '../types';
 import { UploadIcon, CloseIcon, ChevronLeftIcon, ChevronRightIcon } from './icons';
 import { fileToBase64 } from '../utils/fileUtils';
 import AutocompleteSelect from './AutocompleteSelect';
+import Modal from './Modal';
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -159,7 +159,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, onAddItem,
   const hasFiles = previews.length > 0;
 
 const modalContent = (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-modal flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+    <Modal isOpen={isOpen} onClose={onClose} title="Add item" bare size="5xl" className="">
       <div 
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
@@ -315,13 +315,10 @@ const modalContent = (
         <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
         <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
       </div>
-    </div>
+    </Modal>
 );
   
-  if (typeof (window as any).document !== 'undefined' && (window as any).document.body) {
-    return createPortal(modalContent, (window as any).document.body);
-  }
-  return null;
+  return modalContent;
 };
 
 export default AddItemModal;

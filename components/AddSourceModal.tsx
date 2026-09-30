@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useResearch } from '../contexts/ResearchContext';
-import { CloseIcon, BookOpenIcon } from './icons';
+import { BookOpenIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
+import Modal from './Modal';
 
 interface AddSourceModalProps {
   open: boolean;
@@ -74,16 +75,8 @@ export const AddSourceModal: React.FC<AddSourceModalProps> = ({ open, onClose })
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/50">
-      <div className="bg-base-200 border border-white/10 rounded-lg shadow-2xl w-full max-w-md mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-          <h3 className="text-sm font-mono uppercase tracking-wider">Add Source</h3>
-          <button onClick={onClose} className="btn btn-xs btn-ghost rounded-none p-1 opacity-60 hover:opacity-100">
-            <CloseIcon className="w-4 h-4" />
-          </button>
-        </div>
-
+    <Modal isOpen={open} onClose={onClose} title="Add source" size="md">
+      <div>
         {/* Tabs */}
         <div className="flex border-b border-white/5">
           {(['url', 'vault', 'upload'] as const).map(t => (
@@ -196,6 +189,6 @@ export const AddSourceModal: React.FC<AddSourceModalProps> = ({ open, onClose })
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };

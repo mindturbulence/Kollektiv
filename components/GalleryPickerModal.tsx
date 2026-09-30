@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import type { GalleryItem, GalleryCategory } from '../types';
 import { loadGalleryItems, loadCategories } from '../utils/galleryStorage';
 import { fileSystemManager } from '../utils/fileUtils';
@@ -8,6 +7,7 @@ import { CloseIcon, PhotoIcon, FilmIcon, CheckIcon, SearchIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import TreeView, { TreeViewItem } from './TreeView';
 import useLocalStorage from '../utils/useLocalStorage';
+import Modal from './Modal';
 
 interface GalleryPickerModalProps {
   isOpen: boolean;
@@ -248,8 +248,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
     if (!isOpen) return null;
 
     const modalContent = (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-modal flex items-center justify-center p-4 lg:p-12 animate-fade-in" onClick={onClose}>
-        <div className="w-full max-w-6xl h-[90vh] flex flex-col relative p-[3px] corner-frame overflow-visible shadow-2xl" onClick={e => e.stopPropagation()}>
+        <Modal isOpen={isOpen} onClose={onClose} title="Pick from gallery" bare size="6xl" className="h-[90vh] flex flex-col relative p-[3px] corner-frame overflow-visible shadow-2xl">
             <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full h-full flex flex-col overflow-hidden relative z-10">
                 <header className="px-8 py-4 panel-header bg-transparent relative flex-shrink-0 flex items-center justify-between">
                     <div className="flex flex-col">
@@ -377,14 +376,10 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
             <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
             <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
             <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-        </div>
-        </div>
+        </Modal>
     );
 
-    if (typeof (window as any).document !== 'undefined' && (window as any).document.body) {
-        return createPortal(modalContent, (window as any).document.body);
-    }
-    return null;
+  return modalContent;
 };
 
 export default GalleryPickerModal;

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { CloseIcon, YouTubeIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import { publishToYouTube, type YouTubeMetadata } from '../services/youtubeService';
 import { useSettings } from '../contexts/SettingsContext';
+import Modal from './Modal';
 
 interface YouTubePublishModalProps {
   isOpen: boolean;
@@ -67,8 +67,7 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
   if (!isOpen) return null;
 
   const modalContent = (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-modal flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-      <div className="w-full max-w-2xl mx-auto flex flex-col max-h-[90vh] relative p-[3px] corner-frame overflow-visible shadow-2xl" onClick={e => e.stopPropagation()}>
+    <Modal isOpen={isOpen} onClose={onClose} title="Publish to YouTube" bare size="2xl" className="flex flex-col max-h-[90vh] relative p-[3px] corner-frame overflow-visible shadow-2xl">
         <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full flex flex-col overflow-hidden relative z-10">
           <header className="px-8 py-4 panel-header bg-transparent relative flex-shrink-0 flex items-center justify-between">
               <div className="flex flex-col">
@@ -138,11 +137,10 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
         <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
         <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
         <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-      </div>
-    </div>
+      </Modal>
   );
 
-  return createPortal(modalContent, document.body);
+  return modalContent;
 };
 
 export default YouTubePublishModal;
