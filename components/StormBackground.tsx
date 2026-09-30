@@ -8,17 +8,23 @@ import React, { useEffect, useRef } from 'react';
  * below is ORIGINAL, written from scratch: their runtime is proprietary and
  * their repo AGPL-3.0 vs kollektiv GPL-3.0 — see CLAUDE.md "License hygiene"):
  *
- * 1. Base: rotated linear gradient #151515 -> black (their exact 0.0824 gray,
- *    rotation -2.649 rad, dither 0.005). NO cloud brightness — the "clouds" on
- *    onlook are just the wake being warped by noise.
+ * 1. Base: rotated gradient #151515 -> black (their exact 0.0824 gray,
+ *    rotation -2.649 rad, ping-pong position wrap, oklab ramp, dither 0.005).
+ *    Static: their runtime only advances the clock of `animating` layers.
+ *    NO cloud brightness — the "clouds" on onlook are just the wake being
+ *    warped by noise.
  * 2. Trail pass (ping-pong FBO at 0.5x): feedback buffer, capsule distance
- *    stroke (pow(s,6)), advection along stored motion direction, liquify swirl
- *    on the dissipating wake (their exact mix 0.25 / amp 0.0025), decay
- *    0.87^60/s ≈ 6.0, read out at x2.5 strength and ADDED over the base.
- * 3. Displacement: whole image sampled at uv + (f*2 + r*0.31) where r,f are
- *    fbm fields (6 octaves, amp 0.25, gain 0.594, rotate-scale 2.5/octave,
- *    drift t*0.0072, center 0.569/0.651) — this is what makes the light snake
- *    through "clouds".
+ *    stroke (pow(s,6)), advection along stored motion direction, per-frame
+ *    5-tap blur (0.005 uv), liquify curl on the dissipating wake (their exact
+ *    mix 0.25 / amp 0.0025, frozen phase), decay ~7.7/s visible, read out at
+ *    x2.5 strength and ADDED over the base. Stroke radius / decay were fitted
+ *    to a numeric model of their pass (their brush also weakens for very slow
+ *    pointer speeds; ours saturates instantly - not modelled).
+ * 3. Displacement (composite at 0.75x, their fbm-layer downsample): whole image
+ *    sampled at uv + (f*2 + r*0.31) where r,f are 3D fbm fields (z = time;
+ *    6 octaves, amp 0.25, gain 0.594, rotate 0.5 rad + scale 2.5 per octave,
+ *    center 0.569/0.651). Clock = 60*speed(0.15) = 9 units/s: drift 0.0072*9,
+ *    z-rate 0.025*9 - this is what makes the light snake through "clouds".
  *
  * Deviations from 1:1 (deliberate, user-approved twist + platform):
  * - Wake/bolt color = current theme's `primary` (oklch-probed, live) instead of
@@ -51,8 +57,7 @@ uniform float uDecay;
 uniform float uBrush;
 uniform float uRadius;
 uniform float uAdvect;
-uniform float uSwirl;
-uniform float uTime;
+uniform float uBlur;
 uniform float uLiqMix;
 uniform float uLiqAmp;
 
@@ -66,17 +71,19 @@ float capsuleDist(vec2 p, vec2 a, vec2 b){
 
 // Liquify swirl (onlook idiom): 5 rotation/sine-perturbation octaves. Rotation
 // steps sum to 3 full turns (net 0) so distortion stays local; ripple phase
-// travels along dir (the stored motion direction) so the dying wake ripples
-// the way it moved. Applied in proportion to DISSIPATED energy - the bright
-// core stays coherent, the fading wake curls into ripples.
-vec2 liquify(vec2 st, vec2 dir, float t){
+// is frozen (onlook's trail layer is not "animating", so its clock stays 0).
+// Applied in proportion to DISSIPATED energy - the bright core stays coherent,
+// the fading wake curls into ripples. Runs in aspect-corrected space.
+vec2 liquify(vec2 st){
+  st.x*=uAspect;
   for(int i=1;i<=5;i++){
     float fi=float(i);
     float ang=fi*1.2566371; // i/5 * 2PI
     float ca=cos(ang), sa=sin(ang);
     st=vec2(st.x*ca-st.y*sa, st.x*sa+st.y*ca);
-    st+=vec2(uLiqAmp*cos(fi*6.0*st.y+t*0.02*dir.x), uLiqAmp*sin(fi*6.0*st.x+t*0.02*dir.y));
+    st+=vec2(uLiqAmp*cos(fi*6.0*st.y), uLiqAmp*sin(fi*6.0*st.x));
   }
+  st.x/=uAspect;
   return st;
 }
 
@@ -89,12 +96,17 @@ void main(){
   dir=dirLen>1e-4?dir/dirLen:vec2(0.0,1.0);
 
   // Advection: pull intensity from upstream along its own flow direction,
-  // plus a slow swirl and the liquify curl on the dissipating wake.
-  vec2 swirl=vec2(cos(uTime*0.7+uv.y*6.0),sin(uTime*0.6+uv.x*6.0))*uSwirl*(1.0-inten);
-  vec2 baseUv=uv-dir*uAdvect*inten+swirl;
-  vec2 liqUv=liquify(baseUv-dir*0.005,dir,uTime);
+  // plus the liquify curl on the dissipating wake.
+  vec2 baseUv=uv-dir*uAdvect*inten;
+  vec2 liqUv=liquify(baseUv-dir*0.005);
   vec2 su=clamp(mix(baseUv,liqUv,(1.0-inten)*uLiqMix),vec2(0.001),vec2(0.999));
-  vec3 s=texture2D(uPrev,su).rgb;
+  // 5-tap cross blur per frame (onlook: radius 0.005 uv, centre weight 0.2)
+  // softens the wake into cloud instead of a hard streak.
+  vec3 s=texture2D(uPrev,su).rgb*0.2
+    +texture2D(uPrev,su+vec2(uBlur,0.0)).rgb*0.2
+    +texture2D(uPrev,su-vec2(uBlur,0.0)).rgb*0.2
+    +texture2D(uPrev,su+vec2(0.0,uBlur)).rgb*0.2
+    +texture2D(uPrev,su-vec2(0.0,uBlur)).rgb*0.2;
   inten=s.r;
   vec2 sdir=s.gb*2.0-1.0;
   float sl=length(sdir);
@@ -135,49 +147,62 @@ uniform float uDebug;
 
 const float PI = 3.14159265359;
 
-float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
 float rand01(vec2 co){return fract(sin(dot(co.xy,vec2(12.9898,78.233)))*43758.5453);}
 
-// Perlin-style gradient noise (public-domain idiom), signed output ~[-0.7,0.7]
-vec2 gdir(vec2 p){
-  float a=hash(p)*6.2831853;
-  return vec2(cos(a),sin(a));
+// 3D Perlin-style gradient noise (classic idiom), signed output ~[-0.9,0.9].
+// z is time: the field evolves in place instead of sliding, like onlook's.
+vec3 gdir(vec3 p){
+  p=vec3(dot(p,vec3(127.1,311.7,74.7)),dot(p,vec3(269.5,183.3,246.1)),dot(p,vec3(113.5,271.9,124.6)));
+  return -1.0+2.0*fract(sin(p)*43758.5453);
 }
-float pnoise(vec2 p){
-  vec2 i=floor(p),f=fract(p);
-  vec2 w=f*f*(3.0-2.0*f);
-  float a=dot(gdir(i),f);
-  float b=dot(gdir(i+vec2(1,0)),f-vec2(1,0));
-  float c=dot(gdir(i+vec2(0,1)),f-vec2(0,1));
-  float d=dot(gdir(i+vec2(1,1)),f-vec2(1,1));
-  return mix(mix(a,b,w.x),mix(c,d,w.x),w.y);
+float pnoise(vec3 p){
+  vec3 i=floor(p),f=fract(p);
+  vec3 w=f*f*(3.0-2.0*f);
+  float n000=dot(gdir(i),f);
+  float n100=dot(gdir(i+vec3(1,0,0)),f-vec3(1,0,0));
+  float n010=dot(gdir(i+vec3(0,1,0)),f-vec3(0,1,0));
+  float n110=dot(gdir(i+vec3(1,1,0)),f-vec3(1,1,0));
+  float n001=dot(gdir(i+vec3(0,0,1)),f-vec3(0,0,1));
+  float n101=dot(gdir(i+vec3(1,0,1)),f-vec3(1,0,1));
+  float n011=dot(gdir(i+vec3(0,1,1)),f-vec3(0,1,1));
+  float n111=dot(gdir(i+vec3(1,1,1)),f-vec3(1,1,1));
+  return mix(mix(mix(n000,n100,w.x),mix(n010,n110,w.x),w.y),
+             mix(mix(n001,n101,w.x),mix(n011,n111,w.x),w.y),w.z);
 }
 
 // fbm - onlook's structure: 6 octaves, amp 0.25, gain 0.594, each octave
-// rotate(1.25 rad) and scale 2.5, domain shifted by 100.
-// Matrix precomputed (cos(1.25), sin(1.25)) * 2.5 - GLSL ES 1.00 forbids
-// built-in calls in global const initializers.
-const mat2 OCT = mat2(0.7883060, 2.3724615, -2.3724615, 0.7883060);
-float fbm(vec2 st){
+// rotated 0.5 rad (opposite sense to the standard matrix) and scaled 2.5,
+// xy shifted by 100. Matrix precomputed (cos(0.5), sin(0.5)) * 2.5 - GLSL ES
+// 1.00 forbids built-in calls in global const initializers.
+const mat2 OCT = mat2(2.1939565, -1.1985638, 1.1985638, 2.1939565);
+float fbm(vec3 st){
   float value=0.0;
   float amp=0.25;
   for(int i=0;i<6;i++){
     value+=amp*pnoise(st);
-    st=OCT*st;
-    st+=100.0;
+    st.xy=OCT*st.xy;
+    st.xy+=100.0;
     amp*=0.594;
   }
   return value;
 }
 
 // Base: onlook layer 0 - rotated linear gradient 0x151515 -> black + dither.
+// Position runs through onlook's ping-pong wrap (gray on the high side of the
+// rotated axis), and gray->black is mixed in oklab, which for an achromatic
+// pair is a cube-root ramp on linear light (darker mid-ramp than an sRGB mix).
 vec3 gradientBase(vec2 uv){
   vec2 c=uv-0.5;
   float ang=(0.0783-0.5)*2.0*PI;
   float ca=cos(ang), sa=sin(ang);
   c=vec2(c.x*ca-c.y*sa, c.x*sa+c.y*ca);
-  float p=clamp(c.x+0.5,0.0,1.0);
-  vec3 col=mix(vec3(0.08235294117647059),vec3(0.0),clamp(p/0.5,0.0,1.0));
+  float pp=c.x+0.5;
+  float cyc=floor(pp);
+  float fr=pp-cyc;
+  float a=clamp((mod(cyc,2.0)==0.0?1.0-fr:fr)/0.5,0.0,1.0);
+  // 0.1602 = cbrt(linear(0x15/255)), 0.025 = oklab hue-shift term
+  float m=(1.0-a)*0.1602*(1.0+0.025*a*(1.0-a));
+  vec3 col=vec3(pow(m*m*m,1.0/2.2));
   col+=rand01(gl_FragCoord.xy)*0.005;
   return col;
 }
@@ -201,16 +226,17 @@ void main(){
   float multiplier=6.0*(0.15/((aspect+1.0)/2.0));
   vec2 pos=vec2(0.5685640362225097,0.6510996119016818);
   vec2 st=((uv-pos)*vec2(aspect,1.0))*multiplier*aspect;
-  float rotA=0.135*-1.0*2.0*PI;
+  // onlook's rot(a)*st with a = -0.135*2PI turns the field by +0.848 rad
+  float rotA=0.135*2.0*PI;
   float rc=cos(rotA), rs=sin(rotA);
   st=vec2(st.x*rc-st.y*rs, st.x*rs+st.y*rc);
   vec2 drift=vec2(t*0.005)*1.44;
   float tt=t*0.025;
   vec2 r=vec2(
-    fbm(st-drift+vec2(1.7,9.2)+tt),
-    fbm(st-drift+vec2(8.2,1.3)+tt)
+    fbm(vec3(st-drift+vec2(1.7,9.2),tt)),
+    fbm(vec3(st-drift+vec2(8.2,1.3),tt))
   );
-  float f=fbm(st+r-drift+tt)*0.31;
+  float f=fbm(vec3(st+r-drift,tt))*0.31;
   vec2 offset=f*2.0+r*0.31;
 
   // Trail sampled through the displacement (onlook displaces the composite).
@@ -394,10 +420,11 @@ const StormBackground: React.FC = () => {
             const knobs = {
                 fps: 60,            // onlook runs 60
                 brush: 1.0,         // stroke strength (saturates instantly)
-                radius: 0.18,       // stroke radius (their effective ~0.32 in aspect space)
-                trailDecay: 6.0,    // their 0.87^60/s
+                radius: 0.15,       // stroke radius, fitted to a simulation of their trail pass (halo width)
+                trailDecay: 7.7,    // visible decay/s: their 0.87/frame is applied in linear light, read back gamma-encoded (measured 7.2-7.7)
                 advect: 0.03,       // flow per unit intensity
-                swirl: 0.006,       // curl in the flow
+                blur: 0.005,        // per-frame cross-blur radius (uv) - their exact value
+                fbmSpeed: 9,        // fbm clock: their runtime adds 60*speed(0.15)/fps per frame = 9 units/s
                 liquifyMix: 0.25,   // their exact value
                 liquifyAmp: 0.0025, // their exact value
                 trailGain: 1.0,     // composite brightness of the trail
@@ -409,7 +436,8 @@ const StormBackground: React.FC = () => {
                 debug: 0,           // 1 = render raw trail buffer (dev diagnostics)
             };
 
-            // Render sizes: composite at 1x CSS pixels (onlook dpi:1), trail at 0.5x.
+            // Render sizes: composite at 0.75x CSS pixels (onlook's fbm layer
+            // userDownsample), trail at 0.5x CSS pixels.
             let needsRepaint = true;
             let W = 1, H = 1, TW = 1, TH = 1;
             let targets: { tex: WebGLTexture; fbo: WebGLFramebuffer }[] = [];
@@ -422,15 +450,15 @@ const StormBackground: React.FC = () => {
                 targets = [];
             };
             const resize = () => {
-                const w = Math.max(1, Math.round(canvas.clientWidth));
-                const h = Math.max(1, Math.round(canvas.clientHeight));
+                const w = Math.max(1, Math.round(canvas.clientWidth * 0.75));
+                const h = Math.max(1, Math.round(canvas.clientHeight * 0.75));
                 if (w === W && h === H && targets.length === 2) return;
                 W = w; H = h;
                 canvas.width = W;
                 canvas.height = H;
                 destroyTargets();
-                TW = Math.max(1, W >> 1);
-                TH = Math.max(1, H >> 1);
+                TW = Math.max(1, Math.round(W * (2 / 3)));
+                TH = Math.max(1, Math.round(H * (2 / 3)));
                 targets = [makeTarget(TW, TH), makeTarget(TW, TH)];
                 readIdx = 0;
                 needsRepaint = true;
@@ -465,9 +493,8 @@ const StormBackground: React.FC = () => {
                 currPos: uni(trailProg, 'uCurrPos'), dt: uni(trailProg, 'uDt'),
                 aspect: uni(trailProg, 'uAspect'), decay: uni(trailProg, 'uDecay'),
                 brush: uni(trailProg, 'uBrush'), radius: uni(trailProg, 'uRadius'),
-                advect: uni(trailProg, 'uAdvect'), swirl: uni(trailProg, 'uSwirl'),
+                advect: uni(trailProg, 'uAdvect'), blur: uni(trailProg, 'uBlur'),
                 liqMix: uni(trailProg, 'uLiqMix'), liqAmp: uni(trailProg, 'uLiqAmp'),
-                time: uni(trailProg, 'uTime'),
             };
             const compUni = {
                 trail: uni(compProg, 'uTrail'), time: uni(compProg, 'uTime'),
@@ -499,10 +526,9 @@ const StormBackground: React.FC = () => {
                 gl.uniform1f(trailUni.brush, pointerMoved ? knobs.brush : 0);
                 gl.uniform1f(trailUni.radius, knobs.radius);
                 gl.uniform1f(trailUni.advect, knobs.advect);
-                gl.uniform1f(trailUni.swirl, knobs.swirl);
+                gl.uniform1f(trailUni.blur, knobs.blur);
                 gl.uniform1f(trailUni.liqMix, knobs.liquifyMix);
                 gl.uniform1f(trailUni.liqAmp, knobs.liquifyAmp);
-                gl.uniform1f(trailUni.time, simT);
                 gl.drawArrays(gl.TRIANGLES, 0, 3);
                 gl.bindFramebuffer(gl.FRAMEBUFFER, null);
                 lastStroke.x = pointer.x;
@@ -518,7 +544,7 @@ const StormBackground: React.FC = () => {
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, targets[readIdx].tex);
                 gl.uniform1i(compUni.trail, 0);
-                gl.uniform1f(compUni.time, simT);
+                gl.uniform1f(compUni.time, simT * knobs.fbmSpeed);
                 gl.uniform2f(compUni.res, W, H);
                 gl.uniform3f(compUni.bolt, boltColor[0], boltColor[1], boltColor[2]);
                 gl.uniform1f(compUni.gain, knobs.trailGain);
