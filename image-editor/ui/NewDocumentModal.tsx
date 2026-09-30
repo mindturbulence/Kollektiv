@@ -1,25 +1,35 @@
 // ─── Kollektiv Image Editor — New Document Modal ───────────────────────────
 // Entry point when the editor opens without a payload: open an existing image
 // (picker or drop) or create a blank canvas. Shell is the shared Modal.
+//
+// Layout contract: every section sits in the same 16px gutter (p-4, matching the Modal header), controls
+// use the app's standard 40px size (form-input / form-btn, no h-/px- overrides —
+// those classes are unlayered and beat utilities), and choices are segmented
+// buttons so nothing depends on native radio metrics.
 
 import React, { useState } from 'react';
 import Modal from '../../components/Modal';
 import { UploadIcon } from '../../components/icons';
 import { MAX_DIM } from '../core/io/FileIO';
 
-type Background = 'white' | 'transparent' | 'foreground';
+type Background = 'white' | 'transparent';
 
-interface Preset {
-  label: string;
-  width: number;
-  height: number;
-}
-
-const PRESETS: Preset[] = [
+const PRESETS = [
   { label: '1024 × 1024', width: 1024, height: 1024 },
   { label: '1920 × 1080', width: 1920, height: 1080 },
   { label: '512 × 512', width: 512, height: 512 },
+] as const;
+
+const BACKGROUNDS: { value: Background; label: string }[] = [
+  { value: 'white', label: 'White' },
+  { value: 'transparent', label: 'Transparent' },
 ];
+
+const FIELD_LABEL = 'text-2xs font-mono uppercase tracking-widest text-base-content/60';
+const segment = (active: boolean) =>
+  `h-9 px-2 py-0 border text-2xs font-mono tracking-wider whitespace-nowrap transition-colors ${
+    active ? 'border-primary text-primary bg-primary/10' : 'border-base-content/15 text-base-content/70 hover:border-base-content/40 hover:text-base-content'
+  }`;
 
 interface NewDocumentModalProps {
   isOpen: boolean;
@@ -36,9 +46,11 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
   const [isCreating, setIsCreating] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // H13: the HTML max attribute is advisory only — enforce in code.
+  const isValidSize = width >= 1 && height >= 1 && width <= MAX_DIM && height <= MAX_DIM;
+
   const handleCreate = async () => {
-    // H13: the HTML max=8192 attribute is advisory only — enforce in code.
-    if (width < 1 || height < 1 || width > MAX_DIM || height > MAX_DIM || isCreating) return;
+    if (!isValidSize || isCreating) return;
     setIsCreating(true);
     try {
       await onCreate(Math.round(width), Math.round(height), background);
@@ -49,10 +61,10 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Open or Create">
-      <div className="p-4 flex flex-col gap-4">
+      <div className="p-4 flex flex-col gap-5">
         <button
           type="button"
-          className={`w-full flex flex-col items-center justify-center gap-2 py-6 border border-dashed transition-colors ${
+          className={`w-full h-32 flex flex-col items-center justify-center gap-1.5 py-0 border border-dashed transition-colors ${
             isDragOver ? 'border-primary bg-primary/10 text-primary' : 'border-base-content/20 text-base-content/70 hover:border-primary/50 hover:text-primary'
           }`}
           onClick={onOpenImage}
@@ -66,49 +78,48 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
             if (file) onDropFile(file);
           }}
         >
-          <UploadIcon className="w-5 h-5" />
-          <span className="text-sm font-display">Open image…</span>
-          <span className="text-xs text-base-content/60">or drop a file here · Ctrl+O</span>
+          <UploadIcon className="w-6 h-6" />
+          <span className="text-xs font-bold tracking-widest">Open image…</span>
+          <span className="text-2xs font-mono tracking-widest text-base-content/60">or drop a file here · Ctrl+O</span>
         </button>
 
-        <div className="flex items-center gap-3 text-xs font-mono uppercase tracking-wide text-base-content/60">
+        <div className={`flex items-center gap-3 ${FIELD_LABEL}`}>
           <span className="flex-1 border-t border-base-content/10" />
           or start blank
           <span className="flex-1 border-t border-base-content/10" />
         </div>
 
-        <div className="flex items-center gap-3">
-          <label className="flex-1 flex flex-col gap-1 text-xs font-mono uppercase tracking-wide text-base-content/60">
-            Width
-            <input
-              type="number"
-              min={1}
-              max={8192}
-              className="input input-sm input-bordered rounded-none font-mono"
-              value={width}
-              onChange={(e) => setWidth(Number(e.target.value))}
-            />
-          </label>
-          <span className="mt-4 text-base-content/60">×</span>
-          <label className="flex-1 flex flex-col gap-1 text-xs font-mono uppercase tracking-wide text-base-content/60">
-            Height
-            <input
-              type="number"
-              min={1}
-              max={8192}
-              className="input input-sm input-bordered rounded-none font-mono"
-              value={height}
-              onChange={(e) => setHeight(Number(e.target.value))}
-            />
-          </label>
+        <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-1.5 items-center">
+          <label htmlFor="new-doc-width" className={FIELD_LABEL}>Width</label>
+          <span />
+          <label htmlFor="new-doc-height" className={FIELD_LABEL}>Height</label>
+          <input
+            id="new-doc-width"
+            type="number"
+            min={1}
+            max={MAX_DIM}
+            className="form-input w-full font-mono"
+            value={width}
+            onChange={(e) => setWidth(Number(e.target.value))}
+          />
+          <span className="text-base-content/60 text-center" aria-hidden="true">×</span>
+          <input
+            id="new-doc-height"
+            type="number"
+            min={1}
+            max={MAX_DIM}
+            className="form-input w-full font-mono"
+            value={height}
+            onChange={(e) => setHeight(Number(e.target.value))}
+          />
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {PRESETS.map((preset) => (
             <button
               key={preset.label}
               type="button"
-              className="px-2.5 py-1 text-xs font-mono border border-base-content/15 text-base-content/60 hover:text-primary hover:border-primary/40 transition-colors"
+              className={segment(width === preset.width && height === preset.height)}
               onClick={() => {
                 setWidth(preset.width);
                 setHeight(preset.height);
@@ -120,37 +131,32 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-mono uppercase tracking-wide text-base-content/60">Background</span>
-          <div className="flex gap-4">
-            {(['white', 'transparent'] as Background[]).map((bg) => (
-              <label key={bg} className="flex items-center gap-1.5 text-sm text-base-content/80 cursor-pointer">
-                <input
-                  type="radio"
-                  name="new-document-background"
-                  className="radio radio-xs radio-primary"
-                  checked={background === bg}
-                  onChange={() => setBackground(bg)}
-                />
-                {bg === 'white' ? 'White' : 'Transparent'}
-              </label>
+          <span className={FIELD_LABEL} id="new-doc-background-label">Background</span>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-labelledby="new-doc-background-label">
+            {BACKGROUNDS.map((bg) => (
+              <button
+                key={bg.value}
+                type="button"
+                role="radio"
+                aria-checked={background === bg.value}
+                className={segment(background === bg.value)}
+                onClick={() => setBackground(bg.value)}
+              >
+                {bg.label}
+              </button>
             ))}
           </div>
         </div>
       </div>
 
-      <footer className="panel-footer h-11 p-1.5 gap-1.5">
-        <button type="button" className="form-btn flex-1 rounded-none" onClick={onClose} disabled={isCreating}>
+      <div className="flex gap-3 px-4 py-4 border-t border-base-content/10">
+        <button type="button" className="form-btn flex-1" onClick={onClose} disabled={isCreating}>
           Cancel
         </button>
-        <button
-          type="button"
-          className="form-btn form-btn-primary flex-1 rounded-none"
-          onClick={handleCreate}
-          disabled={isCreating || width < 1 || height < 1 || width > MAX_DIM || height > MAX_DIM}
-        >
+        <button type="button" className="form-btn form-btn-primary flex-1" onClick={handleCreate} disabled={isCreating || !isValidSize}>
           {isCreating ? 'Creating…' : 'Create Blank'}
         </button>
-      </footer>
+      </div>
     </Modal>
   );
 };

@@ -32,7 +32,7 @@ const FilterBar: React.FC<{
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 border-b border-base-content/10" role="search" aria-label="Filter assets">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 border-b border-base-content/10" role="search" aria-label="Filter assets">
       <input
         type="search" value={criteria.text ?? ''} placeholder="Search name, tags, caption…" aria-label="Search assets"
         className="form-input h-7 text-xs flex-1 min-w-48" onChange={e => set({ text: e.target.value })}
@@ -42,7 +42,7 @@ const FilterBar: React.FC<{
         <option value={0}>Any rating</option>
         {[1, 2, 3, 4, 5].map(r => <option key={r} value={r}>{'★'.repeat(r)}+</option>)}
       </select>
-      <div className="flex items-center gap-1" role="group" aria-label="Colour labels">
+      <div className="flex items-center gap-2" role="group" aria-label="Colour labels">
         {COLOR_LABELS.map(l => (
           <button key={l} type="button" aria-pressed={criteria.labels?.includes(l) ?? false} aria-label={`Label ${l}`} title={l}
             className={`w-5 h-5 rounded-full border-2 ${criteria.labels?.includes(l) ? 'border-base-content' : 'border-transparent opacity-60 hover:opacity-100'}`}
