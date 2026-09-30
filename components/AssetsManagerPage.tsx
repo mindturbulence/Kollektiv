@@ -1557,15 +1557,15 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                 <TerminalText text={headerTitle} delay={0.8} className="text-2xs font-black uppercase text-primary truncate" />
                 <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                   {undoEntry && (
-                    <button type="button" disabled={isBusy} className="form-btn h-7 w-7 px-0" aria-label={`UNDO: ${undoEntry.op.label}`} title={`Undo: ${undoEntry.op.label} (survives restarts)`} onClick={() => void handleUndo()}>
+                    <button type="button" disabled={isBusy} className="form-btn form-btn-icon" aria-label={`UNDO: ${undoEntry.op.label}`} title={`Undo: ${undoEntry.op.label} (survives restarts)`} onClick={() => void handleUndo()}>
                       <UndoIcon className="w-4 h-4" />
                     </button>
                   )}
-                  <button type="button" className="form-btn h-7 w-7 px-0" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={() => setDialog('shortcuts')}><KeyboardIcon className="w-4 h-4" /></button>
+                  <button type="button" className="form-btn form-btn-icon" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={() => setDialog('shortcuts')}><KeyboardIcon className="w-4 h-4" /></button>
                   <button
                     type="button"
                     disabled={folderFiles.length === 0 || isFullIndexing}
-                    className="form-btn h-7 w-7 px-0"
+                    className="form-btn form-btn-icon"
                     aria-label="DUPLICATES"
                     title={isFullIndexing ? 'Indexing files…' : 'Find near-identical files'}
                     onClick={() => { void runFullIndex().then(() => setDialog('duplicates')); }}
@@ -1577,31 +1577,31 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                       <div className="w-px h-4 bg-base-content/10 mx-1" />
                       <div role="toolbar" aria-label="Selection actions" className="flex items-center gap-2 flex-wrap">
                         <div className="hidden lg:flex items-center gap-1.5">
-                          <button disabled={isBusy} onClick={() => void handleExport()} className="form-btn h-7 w-7 px-0" aria-label="EXPORT" title="Export">
+                          <button disabled={isBusy} onClick={() => void handleExport()} className="form-btn form-btn-icon" aria-label="EXPORT" title="Export">
                             <DownloadIcon className="w-4 h-4" />
                           </button>
-                          <button disabled={isBusy} onClick={() => void handleSendToConverter()} className="form-btn h-7 w-7 px-0" aria-label="CONVERT" title="Convert">
+                          <button disabled={isBusy} onClick={() => void handleSendToConverter()} className="form-btn form-btn-icon" aria-label="CONVERT" title="Convert">
                             <RefreshIcon className="w-4 h-4" />
                           </button>
-                          <button disabled={isBusy || selectedIds.size !== 1} onClick={() => void handleEditInImageEditor()} className="form-btn h-7 w-7 px-0" aria-label="EDIT" title="Edit in image editor">
+                          <button disabled={isBusy || selectedIds.size !== 1} onClick={() => void handleEditInImageEditor()} className="form-btn form-btn-icon" aria-label="EDIT" title="Edit in image editor">
                             <EditIcon className="w-4 h-4" />
                           </button>
-                          <button disabled={isBusy || !getSelectedFiles().every(f => VIDEO_EDITOR_EXT_SET.has(f.ext))} onClick={() => void handleOpenInVideoEditor()} className="form-btn h-7 w-7 px-0" aria-label="VIDEO" title="Open in video editor">
+                          <button disabled={isBusy || !getSelectedFiles().every(f => VIDEO_EDITOR_EXT_SET.has(f.ext))} onClick={() => void handleOpenInVideoEditor()} className="form-btn form-btn-icon" aria-label="VIDEO" title="Open in video editor">
                             <FilmIcon className="w-4 h-4" />
                           </button>
-                          <button disabled={isBusy} onClick={() => void handleSendTo('resizer')} className="form-btn h-7 w-7 px-0" aria-label="RESIZE" title="Resize">
+                          <button disabled={isBusy} onClick={() => void handleSendTo('resizer')} className="form-btn form-btn-icon" aria-label="RESIZE" title="Resize">
                             <AspectRatioIcon className="w-4 h-4" />
                           </button>
-                          <button disabled={isBusy || selectedIds.size !== 1} onClick={() => void handleSendTo('media_analyzer')} className="form-btn h-7 w-7 px-0" aria-label="ANALYZE" title="Analyze">
+                          <button disabled={isBusy || selectedIds.size !== 1} onClick={() => void handleSendTo('media_analyzer')} className="form-btn form-btn-icon" aria-label="ANALYZE" title="Analyze">
                             <SparklesIcon className="w-4 h-4" />
                           </button>
-                          <button disabled={isBusy} onClick={() => setDialog('vault')} className="form-btn h-7 w-7 px-0" aria-label="To Vault" title="Save to Vault">
+                          <button disabled={isBusy} onClick={() => setDialog('vault')} className="form-btn form-btn-icon" aria-label="To Vault" title="Save to Vault">
                             <ArchiveIcon className="w-4 h-4" />
                           </button>
                         </div>
                         <button
                           type="button"
-                          className="lg:hidden form-btn h-7 w-7 px-0"
+                          className="lg:hidden form-btn form-btn-icon"
                           aria-label="More selection actions"
                           aria-haspopup="menu"
                           title="More selection actions"
@@ -1612,7 +1612,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                         >
                           <MenuIcon className="w-4 h-4" />
                         </button>
-                        <button onClick={clearSelection} className="form-btn h-7 w-7 px-0 text-base-content/60 hover:text-error" aria-label="Deselect all" title="Deselect all">
+                        <button onClick={clearSelection} className="form-btn form-btn-icon text-base-content/60 hover:text-error" aria-label="Deselect all" title="Deselect all">
                           <CloseIcon className="w-4 h-4" />
                         </button>
                       </div>
@@ -1648,10 +1648,10 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                 onSort={(k, d) => { setSortKey(k); setDescending(d); }} exts={folderExts} saved={library.filters}
                 shown={shownEntries.length} total={folderFiles.length}
                 trailing={<>
-                  <div className="flex items-center gap-1" role="radiogroup" aria-label="View mode">
+                  <div className="flex items-center gap-1.5" role="radiogroup" aria-label="View mode">
                     {([['grid', GridViewIcon], ['list', ListViewIcon]] as const).map(([m, Icon]) => (
                       <button key={m} type="button" role="radio" aria-checked={viewPrefs.mode === m} aria-label={m.toUpperCase()} title={`${m[0].toUpperCase()}${m.slice(1)} view`}
-                        className={`form-btn h-7 w-7 px-0 ${viewPrefs.mode === m ? 'form-btn-primary' : ''}`}
+                        className={`form-btn form-btn-icon ${viewPrefs.mode === m ? 'form-btn-primary' : ''}`}
                         onClick={() => updateViewPrefs({ mode: m })}><Icon className="w-4 h-4" /></button>
                     ))}
                   </div>

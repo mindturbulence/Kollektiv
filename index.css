@@ -431,6 +431,14 @@ button:disabled,
   border-style: dashed;
 }
 
+/* Square icon-only variant. Must follow .form-btn: its padding/height would
+   otherwise beat px-0/h-7 utilities and squeeze the icon to zero width. */
+.form-btn-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+}
+
 .form-btn-primary {
   background-color: oklch(var(--p));
   color: oklch(var(--pc));

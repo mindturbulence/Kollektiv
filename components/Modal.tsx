@@ -98,13 +98,15 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, classNa
               ? `w-full ${SIZE_CLASS[size]} outline-none ${className}`
               : `bg-base-100/95 backdrop-blur-xl w-full ${SIZE_CLASS[size]} rounded-none border border-base-content/10 overflow-hidden outline-none ${className}`}
           >
+            {/* Themes stretch .panel-header children to the bar (align-self: stretch, button height 100%),
+                so title and close button centre their own content instead of relying on self-center. */}
             {!bare && (
-              <header className="panel-header h-9 px-4">
-                <h3 id={titleId} className="self-center text-xs font-display uppercase tracking-widest text-base-content/80">
+              <header className="panel-header flex items-center h-9 px-4">
+                <h3 id={titleId} className="flex items-center text-xs font-display uppercase tracking-widest text-base-content/80">
                   {title}
                 </h3>
                 <div className="flex-1" />
-                <button type="button" className="self-center p-1 text-base-content/60 hover:text-base-content" onClick={onClose} aria-label="Close">
+                <button type="button" className="flex items-center justify-center px-1 py-0 text-base-content/60 hover:text-base-content" onClick={onClose} aria-label="Close">
                   <CloseIcon className="w-4 h-4" />
                 </button>
               </header>

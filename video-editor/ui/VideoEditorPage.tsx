@@ -44,13 +44,19 @@ interface NewProjectPanelProps {
   onError: (message: string) => void;
 }
 
+// Same layout contract as the image editor's NewDocumentModal: one 16px gutter (matches the header)
+// for every section, standard 40px controls (form-input / form-btn, no h-/px-
+// overrides — those classes are unlayered and beat utilities), equal-height cards.
+const FIELD_LABEL = 'text-2xs font-mono uppercase tracking-widest text-base-content/60';
+const GLYPH_BOX = 28;
+
 const NewProjectPanel: React.FC<NewProjectPanelProps> = ({ onCreate, recent, onResume, onError }) => {
   const [name, setName] = useState('Untitled project');
   const [presetIndex, setPresetIndex] = useState(0);
   const preset = PROJECT_PRESETS[presetIndex];
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-base-100 overflow-y-auto">
+    <div className="flex-1 flex flex-col items-center justify-center gap-5 p-6 bg-base-100 overflow-y-auto">
       <form
         className="w-full max-w-md bg-base-200/60 border border-base-content/10"
         aria-label="New project"
@@ -59,40 +65,45 @@ const NewProjectPanel: React.FC<NewProjectPanelProps> = ({ onCreate, recent, onR
           onCreate(name, preset.width, preset.height);
         }}
       >
-        <header className="panel-header h-9 px-4 flex items-center">
-          <h2 className="text-xs font-display uppercase tracking-widest text-base-content/80">New project</h2>
+        <header className="panel-header flex items-center h-9 px-4">
+          <h2 className="flex items-center text-xs font-display uppercase tracking-widest text-base-content/80">New project</h2>
         </header>
-        <div className="p-4 space-y-4">
-          <label className="block">
-            <span className="text-2xs font-mono text-base-content/60 uppercase tracking-widest">Name</span>
-            <input className="mt-1.5 w-full bg-base-100 border border-base-content/10 px-2 h-8 text-sm outline-none focus:border-primary/60"
-              value={name} onChange={(e) => setName(e.target.value)} />
-          </label>
-          <div>
-            <p className="text-2xs font-mono text-base-content/60 uppercase tracking-widest mb-2">Format</p>
-            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Format">
+
+        <div className="p-4 flex flex-col gap-5">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="new-project-name" className={FIELD_LABEL}>Name</label>
+            <input id="new-project-name" className="form-input w-full" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span id="new-project-format" className={FIELD_LABEL}>Format</span>
+            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-labelledby="new-project-format">
               {PROJECT_PRESETS.map((p, i) => (
                 <button key={p.label} type="button" role="radio" aria-checked={i === presetIndex}
-                  className={`flex flex-col items-center gap-2 py-3 border ${i === presetIndex ? 'border-primary text-primary bg-primary/10' : 'border-base-content/20 text-base-content/60 hover:border-base-content/40'}`}
+                  className={`h-28 px-1 py-0 flex flex-col items-center justify-center gap-2 border transition-colors ${i === presetIndex ? 'border-primary text-primary bg-primary/10' : 'border-base-content/15 text-base-content/70 hover:border-base-content/40 hover:text-base-content'}`}
                   onClick={() => setPresetIndex(i)}>
-                  {/* Aspect glyph drawn to the preset's own proportions. */}
-                  <span className="border border-current" style={{ width: (p.width / Math.max(p.width, p.height)) * 28, height: (p.height / Math.max(p.width, p.height)) * 28 }} />
-                  <span className="text-2xs font-mono uppercase">{p.label}</span>
-                  <span className="text-2xs font-mono text-base-content/60">{p.width}×{p.height}</span>
+                  {/* Fixed glyph box keeps the labels on one line across cards; the glyph is drawn to the preset's proportions. */}
+                  <span className="flex items-center justify-center" style={{ width: GLYPH_BOX, height: GLYPH_BOX }}>
+                    <span className="border border-current" style={{ width: (p.width / Math.max(p.width, p.height)) * GLYPH_BOX, height: (p.height / Math.max(p.width, p.height)) * GLYPH_BOX }} />
+                  </span>
+                  <span className="text-2xs font-mono tracking-wider uppercase whitespace-nowrap">{p.label}</span>
+                  <span className="text-2xs font-mono tracking-wider text-base-content/60">{p.width}×{p.height}</span>
                 </button>
               ))}
             </div>
           </div>
+
           <p className="text-2xs font-mono text-base-content/60">{DEFAULT_FPS} fps · tracks: Video 1, Video 2, Audio 1, Text 1</p>
         </div>
-        <footer className="panel-footer h-11 p-1.5 gap-1.5">
+
+        <div className="flex gap-3 px-4 py-4 border-t border-base-content/10">
           {recent && (
-            <button type="button" className="form-btn flex-1 rounded-none truncate" onClick={() => onResume(recent.id)}>
-              Resume {recent.name}
+            <button type="button" className="form-btn flex-1 min-w-0" onClick={() => onResume(recent.id)}>
+              <span className="truncate">Resume {recent.name}</span>
             </button>
           )}
-          <button type="submit" className="form-btn form-btn-primary flex-1 rounded-none">Create project</button>
-        </footer>
+          <button type="submit" className="form-btn form-btn-primary flex-1">Create project</button>
+        </div>
       </form>
       {recent && (
         <div className="w-full max-w-md">
