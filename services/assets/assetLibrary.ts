@@ -23,6 +23,7 @@ export interface AssetMeta {
   tags?: string[];
   caption?: string;
   copyright?: string;
+  sortOrder?: number;
 }
 
 export interface FilterCriteria {
@@ -70,6 +71,7 @@ export function parseLibrary(raw: any): LibraryData | null {
     if (!m || typeof m !== 'object') continue;
     const meta: AssetMeta = {};
     if (typeof m.rating === 'number' && m.rating >= 1 && m.rating <= 5) meta.rating = Math.round(m.rating);
+    if (typeof m.sortOrder === 'number' && Number.isFinite(m.sortOrder)) meta.sortOrder = m.sortOrder;
     if ((COLOR_LABELS as readonly unknown[]).includes(m.label)) meta.label = m.label;
     const tags = strList(m.tags);
     if (tags.length) meta.tags = tags;
@@ -174,6 +176,17 @@ export function updateMeta(ids: string[], patch: Partial<AssetMeta> | ((m: Asset
   for (const id of ids) {
     const cur = assets[id] ?? {};
     const next = typeof patch === 'function' ? patch(cur) : { ...cur, ...patch };
+    const cleaned = Object.fromEntries(Object.entries(next).filter(([, v]) => v !== undefined && !(Array.isArray(v) && !v.length) && v !== '')) as AssetMeta;
+    if (Object.keys(cleaned).length) assets[id] = cleaned; else delete assets[id];
+  }
+  commit({ ..._data, assets });
+}
+
+export function updateMetaMany(updates: Record<string, Partial<AssetMeta>>): void {
+  const assets = { ..._data.assets };
+  for (const [id, patch] of Object.entries(updates)) {
+    const cur = assets[id] ?? {};
+    const next = { ...cur, ...patch };
     const cleaned = Object.fromEntries(Object.entries(next).filter(([, v]) => v !== undefined && !(Array.isArray(v) && !v.length) && v !== '')) as AssetMeta;
     if (Object.keys(cleaned).length) assets[id] = cleaned; else delete assets[id];
   }

@@ -42,6 +42,11 @@ describe('assetLibrary', () => {
     expect(parseLibrary({ nope: true })).toBeNull();
   });
 
+  it('keeps sortOrder across a load so manual order survives restarts', () => {
+    const lib = parseLibrary({ assets: { 'r:b.jpg': { sortOrder: 1 }, 'r:a.jpg': { sortOrder: 2 }, 'r:c.jpg': { sortOrder: 'x' }, 'r:d.jpg': { sortOrder: Infinity } } })!;
+    expect(lib.assets).toEqual({ 'r:b.jpg': { sortOrder: 1 }, 'r:a.jpg': { sortOrder: 2 } });
+  });
+
   it('relocate re-keys metadata, collections and stacks', () => {
     const lib: LibraryData = { assets: { 'r:a': { rating: 5 } }, filters: [], collections: [{ id: 'c', name: 'C', ids: ['r:a', 'r:b'] }], stacks: [{ id: 's', ids: ['r:b', 'r:a'] }] };
     const out = relocateIn(lib, 'r:a', 'r:z');

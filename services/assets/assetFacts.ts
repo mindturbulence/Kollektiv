@@ -1,12 +1,17 @@
 /**
  * Assets Manager — recomputable facts per file (plan Tasks 5, 6, 20).
  *
- * Size, mtime, dimensions, an EXIF summary, a 256 px thumbnail and a dHash are
- * all derivable from the file, so they live in an IndexedDB cache keyed by the
- * asset id and stamped with `size:mtime` (a changed file re-extracts, an
- * unchanged one never decodes again). Only user-authored data goes to the vault
- * manifest (assetLibrary.ts). One decode per new file yields all three:
- * dimensions, thumbnail, dHash.
+ * Size, mtime, dimensions, an EXIF summary, an adaptive-width thumbnail and a
+ * dHash are all derivable from the file, so they live in an IndexedDB cache
+ * keyed by the asset id and stamped with `size:mtime` (a changed file
+ * re-extracts, an unchanged one never decodes again). Only user-authored data
+ * goes to the vault manifest (assetLibrary.ts).
+ *
+ * Extraction is lazy (Jev `assets-panel-media-caching`): the upfront pass only
+ * resolves cache hits and light size/mtime rows, so sorts work immediately;
+ * decoding happens when a card becomes visible, and cached thumbnails below
+ * the current grid target are re-encoded on first sight (mixed-quality
+ * upgrade — old rows keep serving until the user actually sees them).
  */
 import { openDB, type IDBPDatabase } from 'idb';
 import piexifModule from '../../utils/piexif';
@@ -37,8 +42,12 @@ export interface AssetFacts {
   exif?: ExifSummary;
   /** 64-bit difference hash as 16 hex chars (duplicates / find similar). */
   dhash?: string;
-  /** ≤256 px WebP thumbnail. */
+  /** WebP thumbnail at grid-target width (see `gridThumbTarget`). */
   thumb?: Blob;
+  /** Encoded width of `thumb`; drives the lazy upgrade to sharper specs. */
+  thumbW?: number;
+  /** True once a full extraction was attempted (distinguishes light rows). */
+  extracted?: boolean;
   /** True when the thumbnail came from a RAW's embedded JPEG preview. */
   fromPreview?: boolean;
 }
@@ -129,6 +138,19 @@ export function summariseExif(ex: any): ExifSummary | undefined {
 
 // ── Extraction ──────────────────────────────────────────────────────────
 
+/**
+ * Thumbnail target for the current grid layout: 2× a card's approximate CSS
+ * width (column count follows the viewport), clamped to 320–640 px so retina
+ * cards stay sharp without unbounded storage cost (Jev: adaptive spec, q0.85).
+ */
+export function gridThumbTarget(): number {
+  if (typeof window === 'undefined') return 480;
+  const w = window.innerWidth;
+  const cols = w >= 1536 ? 5 : w >= 1024 ? 4 : w >= 768 ? 3 : 2;
+  const gridW = Math.max(360, w - 400);
+  return Math.round(Math.min(640, Math.max(320, (gridW / cols) * 2)));
+}
+
 async function readExif(file: File): Promise<ExifSummary | undefined> {
   try {
     const head = new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer());
@@ -138,24 +160,27 @@ async function readExif(file: File): Promise<ExifSummary | undefined> {
   } catch { return undefined; }
 }
 
-async function thumbAndHash(bmp: ImageBitmap): Promise<{ thumb?: Blob; dhash?: string }> {
-  const k = Math.min(1, 256 / Math.max(bmp.width, bmp.height));
+async function thumbAndHash(bmp: ImageBitmap, targetW: number): Promise<{ thumb?: Blob; thumbW?: number; dhash?: string }> {
+  const k = Math.min(1, targetW / Math.max(bmp.width, bmp.height));
   const tw = Math.max(1, Math.round(bmp.width * k)), th = Math.max(1, Math.round(bmp.height * k));
   const tc = new OffscreenCanvas(tw, th);
   tc.getContext('2d')!.drawImage(bmp, 0, 0, tw, th);
-  const thumb = await tc.convertToBlob({ type: 'image/webp', quality: 0.8 }).catch(() => undefined);
+  const thumb = await tc.convertToBlob({ type: 'image/webp', quality: 0.85 }).catch(() => undefined);
   const hc = new OffscreenCanvas(9, 8);
   const hctx = hc.getContext('2d', { willReadFrequently: true })!;
   hctx.drawImage(tc, 0, 0, 9, 8);
   const px = hctx.getImageData(0, 0, 9, 8).data;
   const gray = new Array<number>(72);
   for (let i = 0; i < 72; i++) gray[i] = px[i * 4] * 0.299 + px[i * 4 + 1] * 0.587 + px[i * 4 + 2] * 0.114;
-  return { thumb, dhash: dhashFromGray(gray) };
+  return { thumb, thumbW: thumb ? tw : undefined, dhash: dhashFromGray(gray) };
 }
 
 /** Reads a file once and derives every fact. Undecodable formats (TIFF/HEIC
- *  in most browsers) still get size, mtime and EXIF — the card shows a type badge. */
-export async function extractFacts(file: File, ext: string): Promise<AssetFacts> {
+ *  in most browsers) still get size, mtime and EXIF — the card shows a type
+ *  badge. `prev` lets a re-extract keep the old dHash and EXIF summary
+ *  (stable duplicate groups, no piexif re-read) while re-encoding a sharper
+ *  thumbnail; always sets `extracted`. */
+export async function extractFacts(file: File, ext: string, prev?: AssetFacts): Promise<AssetFacts> {
   const facts: AssetFacts = { size: file.size, mtime: file.lastModified };
   let bmp: ImageBitmap | null = null;
   if (RAW_SET.has(ext)) {
@@ -164,39 +189,55 @@ export async function extractFacts(file: File, ext: string): Promise<AssetFacts>
   } else {
     bmp = await createImageBitmap(file).catch(() => null);
   }
-  if (ext === 'jpg' || ext === 'jpeg' || RAW_SET.has(ext)) facts.exif = await readExif(file);
+  if (ext === 'jpg' || ext === 'jpeg' || RAW_SET.has(ext)) facts.exif = prev?.exif ?? await readExif(file);
   if (bmp) {
     facts.width = bmp.width;
     facts.height = bmp.height;
-    Object.assign(facts, await thumbAndHash(bmp));
+    const t = await thumbAndHash(bmp, gridThumbTarget());
+    facts.thumb = t.thumb;
+    facts.thumbW = t.thumbW;
+    facts.dhash = prev?.dhash ?? t.dhash;
     bmp.close();
   }
+  facts.extracted = true;
   return facts;
 }
 
 /**
- * Facts for every file, cached ones first: the unchanged ones resolve from
- * IndexedDB without decoding, changed/new ones are extracted and cached.
+ * Facts for every file: pass 1 resolves size/mtime and cache hits in small
+ * parallel batches (sorts work immediately, no decoding); pass 2 extracts
+ * only when `extractMissing` — the default upfront path stays lazy and the
+ * on-demand path (dimensions sort, duplicates) fills the rest.
  * `onFacts` streams results; `isCancelled` stops between files (folder switch).
  */
 export async function indexFiles(
   files: { id: string; ext: string; handle: FileSystemFileHandle }[],
   onFacts: (id: string, facts: AssetFacts) => void,
   isCancelled: () => boolean,
+  extractMissing = true,
 ): Promise<void> {
   const pending: { id: string; ext: string; file: File }[] = [];
-  for (const f of files) {
-    if (isCancelled()) return;
-    const file = await f.handle.getFile().catch(() => null);
-    if (!file) continue;
-    const cached = await getCachedFacts(f.id, factsStamp(file.size, file.lastModified));
-    if (cached) onFacts(f.id, cached);
-    else pending.push({ id: f.id, ext: f.ext, file });
-  }
+  let next = 0;
+  const scanWorker = async () => {
+    while (next < files.length) {
+      if (isCancelled()) return;
+      const f = files[next++];
+      const file = await f.handle.getFile().catch(() => null);
+      if (!file) continue;
+      const cached = await getCachedFacts(f.id, factsStamp(file.size, file.lastModified));
+      if (cached) onFacts(f.id, cached);
+      else {
+        onFacts(f.id, { size: file.size, mtime: file.lastModified });
+        if (extractMissing) pending.push({ id: f.id, ext: f.ext, file });
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(12, Math.max(1, files.length)) }, scanWorker));
+  if (!extractMissing || isCancelled()) return;
   for (const p of pending) {
     if (isCancelled()) return;
     // A file the browser can't decode (or no canvas, as in tests) still gets size + mtime.
-    const facts = await extractFacts(p.file, p.ext).catch((): AssetFacts => ({ size: p.file.size, mtime: p.file.lastModified }));
+    const facts = await extractFacts(p.file, p.ext).catch((): AssetFacts => ({ size: p.file.size, mtime: p.file.lastModified, extracted: true }));
     await putCachedFacts(p.id, facts);
     if (isCancelled()) return;
     onFacts(p.id, facts);

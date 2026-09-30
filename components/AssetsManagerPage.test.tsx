@@ -236,7 +236,7 @@ describe('AssetsManagerPage', () => {
     fireEvent.click(cards[0], { ctrlKey: true });
     await screen.findByText('1 SELECTED');
 
-    fireEvent.click(screen.getByText('Export'));
+    fireEvent.click(screen.getByRole('button', { name: /export/i }));
     await waitFor(() => expect(downloadZipMock).not.toHaveBeenCalled());
   });
 
@@ -249,7 +249,7 @@ describe('AssetsManagerPage', () => {
     fireEvent.click(cards[1], { ctrlKey: true });
     await screen.findByText('2 SELECTED');
 
-    fireEvent.click(screen.getByText('Export'));
+    fireEvent.click(screen.getByRole('button', { name: /export/i }));
     await waitFor(() => expect(downloadZipMock).toHaveBeenCalledTimes(1));
     const entries = downloadZipMock.mock.calls[0]![0] as { name: string }[];
     expect(entries.map(e => e.name).sort()).toEqual(['a.png', 'b.png']);
@@ -264,7 +264,7 @@ describe('AssetsManagerPage', () => {
     fireEvent.click(cards[1], { ctrlKey: true });
     await screen.findByText('2 SELECTED');
 
-    fireEvent.click(screen.getByText('Convert'));
+    fireEvent.click(screen.getByRole('button', { name: /convert/i }));
     await waitFor(() => expect(emitMock).toHaveBeenCalledWith('openInConverter', expect.objectContaining({ files: expect.any(Array) })));
     const [, payload] = emitMock.mock.calls.find(c => c[0] === 'openInConverter')!;
     expect(payload.files).toHaveLength(2);
@@ -278,13 +278,13 @@ describe('AssetsManagerPage', () => {
     fireEvent.click(cards[0], { ctrlKey: true });
     fireEvent.click(cards[1], { ctrlKey: true });
     await screen.findByText('2 SELECTED');
-    expect(screen.getByText('Edit').closest('button')?.disabled).toBe(true);
+    expect((screen.getByRole('button', { name: /edit/i }) as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.click(cards[1], { ctrlKey: true }); // deselect one → back to 1
     await screen.findByText('1 SELECTED');
-    expect(screen.getByText('Edit').closest('button')?.disabled).toBe(false);
+    expect((screen.getByRole('button', { name: /edit/i }) as HTMLButtonElement).disabled).toBe(false);
 
-    fireEvent.click(screen.getByText('Edit'));
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }));
     await waitFor(() => expect(emitMock).toHaveBeenCalledWith('openInEditor', expect.objectContaining({ blob: expect.anything() })));
   });
 

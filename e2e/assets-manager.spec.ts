@@ -272,3 +272,237 @@ test('opt-in gallery conversion: saved images become WebP when the setting says 
     });
     expect(names.some(n => n.endsWith('.webp'))).toBe(true);
 });
+
+test('selection toolbar lives in the grid header; right-click copy pastes across folders', async ({ page }) => {
+    test.setTimeout(120_000);
+    await openPhotos(page);
+
+    // The selection toolbar is a single instance inside the grid's own <header>,
+    // not the global .app-header chrome (§5.1).
+    await card(page, 'a.png').click({ modifiers: ['Control'] });
+    const toolbar = page.getByRole('toolbar', { name: 'Selection actions' });
+    await expect(toolbar).toBeVisible();
+    expect(await toolbar.count()).toBe(1);
+    expect(await toolbar.evaluate(el => !!el.closest('header'))).toBe(true);
+    expect(await toolbar.evaluate(el => !!el.closest('.app-header'))).toBe(false);
+    await toolbar.getByRole('button', { name: 'Deselect all' }).click();
+    await expect(page.getByText(/\d+ SELECTED/)).toHaveCount(0);
+
+    // Shift+F10 opens the card menu from the keyboard (0,0 anchor → rect fallback).
+    await card(page, 'a.png').focus();
+    await page.keyboard.press('Shift+F10');
+    const kbMenu = page.getByRole('menu');
+    await expect(kbMenu).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(kbMenu).toHaveCount(0);
+
+    // Right-click → menu (selects the card it opened on) → Copy.
+    await card(page, 'a.png').click({ button: 'right' });
+    const menu = page.getByRole('menu');
+    await expect(menu).toContainText('Move to Trash');
+    await menu.getByRole('menuitem', { name: /^Copy(?! to)/ }).click();
+    await expect(menu).toHaveCount(0);
+
+    // Right-click the empty archive/ grid → Paste lands the file there.
+    await page.locator('[title="archive"]').click();
+    await expect(page.getByText('No Images Here')).toBeVisible({ timeout: 15_000 });
+    await page.getByText('No Images Here').click({ button: 'right' });
+    await page.getByRole('menu').getByRole('menuitem', { name: /^Paste(?! as)/ }).click();
+    await expect(page.getByText('1 IMAGE')).toBeVisible({ timeout: 15_000 });
+    await expect(card(page, 'a.png')).toBeVisible();
+    expect(await page.evaluate(async () => {
+        const archive = await (await navigator.storage.getDirectory()).getDirectoryHandle('archive');
+        try { await archive.getFileHandle('a.png'); return true; } catch { return false; }
+    })).toBe(true);
+});
+
+test('tree context menu: New Folder prompts for a name, Delete Folder removes it', async ({ page }) => {
+    test.setTimeout(120_000);
+    await openPhotos(page);
+
+    page.on('dialog', d => {
+        void d.accept(d.type() === 'prompt' ? 'holiday' : undefined);
+    });
+
+    // New Folder… under photos/ — the name comes from a prompt.
+    await page.locator('[title="photos"]').click({ button: 'right' });
+    await page.getByRole('menu').getByRole('menuitem', { name: 'New Folder…' }).click();
+    await expect(page.getByText('Created folder "holiday".')).toBeVisible({ timeout: 10_000 });
+    // photos gains its first child → the expand affordance appears; expand to see it.
+    await page.locator('[title="photos"]').getByRole('button', { name: 'Expand folder' }).click({ timeout: 15_000 });
+    await expect(page.locator('[title="photos/holiday"]')).toBeVisible();
+
+    // Delete Folder — empty folder deletes without a confirmation dialog.
+    await page.locator('[title="photos/holiday"]').click({ button: 'right' });
+    await page.getByRole('menu').getByRole('menuitem', { name: 'Delete Folder' }).click();
+    await expect(page.locator('[title="photos/holiday"]')).toHaveCount(0, { timeout: 15_000 });
+    await expect(page.getByText('Deleted folder "holiday".')).toBeVisible();
+});
+
+test('grid reorder: dropping a card switches to manual order and it survives a reload', async ({ page }) => {
+    test.setTimeout(120_000);
+    await openPhotos(page);
+
+    const gridOrder = () => page.locator('[data-testid="asset-grid"] button[aria-label^="Open"]').evaluateAll(
+        els => els.map(e => e.getAttribute('aria-label')));
+    expect(await gridOrder()).toEqual(['Open a.png', 'Open b.png', 'Open c.jpg']);
+
+    // Drop c.jpg onto the top half of a.png → 'before' → [c, a, b] + manual-order toast.
+    // Synthetic input doesn't start an HTML5 drag here — drive the chain directly,
+    // yielding between events so React flushes the dragover state the drop reads.
+    await page.evaluate(async () => {
+        const src = document.querySelector('[aria-label="Open c.jpg"]');
+        const tgt = document.querySelector('[aria-label="Open a.png"]');
+        if (!src || !tgt) throw new Error('cards not found');
+        const dt = new DataTransfer();
+        const fire = (el: Element, type: string, x: number, y: number) =>
+            el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, dataTransfer: dt }));
+        const r = tgt.getBoundingClientRect();
+        fire(src, 'dragstart', 0, 0);
+        await new Promise(res => setTimeout(res, 50));
+        fire(tgt, 'dragover', r.left + 24, r.top + 6);
+        await new Promise(res => setTimeout(res, 50));
+        fire(tgt, 'drop', r.left + 24, r.top + 6);
+        fire(src, 'dragend', r.left + 24, r.top + 6);
+    });
+    await expect(page.getByText('Switched to manual order.')).toBeVisible({ timeout: 10_000 });
+    await expect.poll(gridOrder, { timeout: 10_000 }).toEqual(['Open c.jpg', 'Open a.png', 'Open b.png']);
+
+    // The sortOrder data is committed to the vault manifest before we restart.
+    await expect.poll(() => page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory();
+        try { return await (await (await root.getFileHandle('kollektiv_assets_index.json')).getFile()).text(); } catch { return ''; }
+    }), { timeout: 10_000 }).toContain('"sortOrder"');
+
+    // Restart: sort resets to Name — re-selecting Manual restores the dropped order.
+    await page.reload();
+    const header = page.locator('.app-header');
+    const next = page.getByRole('button', { name: /^(SELECT_VAULT_FOLDER|RECONNECT_VAULT|CONTINUE)$/ });
+    for (let i = 0; i < 6 && !(await header.isVisible()); i++) {
+        await next.first().click({ timeout: 30_000 }).catch(() => {});
+        await page.waitForTimeout(500);
+    }
+    await expect(header).toBeVisible({ timeout: 30_000 });
+    await page.getByText('photos', { exact: true }).click({ timeout: 30_000 });
+    await expect(page.locator('[data-testid="asset-grid"] img')).toHaveCount(3, { timeout: 20_000 });
+    await page.getByLabel('Sort by').selectOption('manual');
+    await expect.poll(gridOrder, { timeout: 10_000 }).toEqual(['Open c.jpg', 'Open a.png', 'Open b.png']);
+});
+
+test('Move to Trash files the file away; the Trash node restores it and Empty Trash clears it', async ({ page }) => {
+    test.setTimeout(120_000);
+    await openPhotos(page);
+
+    page.on('dialog', d => { void d.accept(); }); // confirms: move to trash / empty trash
+    await card(page, 'a.png').click({ button: 'right' });
+    await page.getByRole('menu').getByRole('menuitem', { name: 'Move to Trash' }).click();
+
+    await expect(page.getByText('Moved 1 file to trash.')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('2 IMAGES')).toBeVisible({ timeout: 15_000 });
+    await expect(card(page, 'a.png')).toHaveCount(0);
+
+    // The file sits at .kollektiv-trash/<batch>/photos/a.png.
+    expect(await page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory();
+        try {
+            const trash = await root.getDirectoryHandle('.kollektiv-trash');
+            for await (const [batch] of (trash as any).entries()) {
+                try {
+                    const photos = await (await trash.getDirectoryHandle(batch)).getDirectoryHandle('photos');
+                    await photos.getFileHandle('a.png');
+                    return true;
+                } catch { /* try the next batch */ }
+            }
+            return false;
+        } catch { return false; }
+    })).toBe(true);
+
+    // The Trash node lists it; Restore puts it back where it was.
+    await page.locator('[title="Trash"]').getByRole('button', { name: 'Expand trash' }).click();
+    await expect(page.locator('[title="photos/a.png"]')).toBeVisible();
+    await page.locator('[title="photos/a.png"]').click({ button: 'right' });
+    await page.getByRole('menu').getByRole('menuitem', { name: 'Restore' }).click();
+    await expect(page.getByText('Restored "a.png".')).toBeVisible({ timeout: 10_000 });
+    await expect(card(page, 'a.png')).toBeVisible({ timeout: 15_000 });
+
+    // Trash it again, then Empty Trash from the node's own menu.
+    await card(page, 'a.png').click({ button: 'right' });
+    await page.getByRole('menu').getByRole('menuitem', { name: 'Move to Trash' }).click();
+    await expect(page.getByText('Moved 1 file to trash.')).toBeVisible({ timeout: 10_000 });
+    await page.locator('[title="Trash"]').click({ button: 'right' });
+    await page.getByRole('menu').getByRole('menuitem', { name: 'Empty Trash' }).click();
+    await expect(page.getByText('Emptied the trash (1 item).')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[title="photos/a.png"]')).toHaveCount(0);
+    await expect(card(page, 'a.png')).toHaveCount(0);
+
+    // Every batch is gone: the trash folder is empty (or gone entirely).
+    expect(await page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory();
+        try {
+            const trash = await root.getDirectoryHandle('.kollektiv-trash');
+            for await (const _ of (trash as any).entries()) return false;
+            return true;
+        } catch { return true; }
+    })).toBe(true);
+});
+
+test('folder drag: self-drop is blocked, dropping onto a sibling nests the folder and rescans the tree', async ({ page }) => {
+    test.setTimeout(120_000);
+    await openPhotos(page);
+
+    // Guard: dropping a folder onto itself must not move anything (plan §4.2).
+    await page.evaluate(async () => {
+        const src = document.querySelector('[title="photos"]');
+        if (!src) throw new Error('photos row not found');
+        const dt = new DataTransfer();
+        const fire = (el: Element, type: string) =>
+            el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: dt }));
+        fire(src, 'dragstart');
+        await new Promise(r => setTimeout(r, 50));
+        fire(src, 'dragover');
+        await new Promise(r => setTimeout(r, 50));
+        fire(src, 'drop');
+        fire(src, 'dragend');
+    });
+    await page.waitForTimeout(1000);
+    await expect(page.getByText(/^Moved folder/)).toHaveCount(0);
+    expect(await page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory();
+        try { await root.getDirectoryHandle('photos'); return true; } catch { return false; }
+    })).toBe(true);
+
+    // photos → archive: nests as archive/photos with both files, tree rescans.
+    // Synthetic input doesn't start an HTML5 drag here — drive the chain directly,
+    // yielding between events so React flushes the dragover state the drop reads.
+    await page.evaluate(async () => {
+        const src = document.querySelector('[title="photos"]');
+        const dst = document.querySelector('[title="archive"]');
+        if (!src || !dst) throw new Error('tree rows not found');
+        const dt = new DataTransfer();
+        const fire = (el: Element, type: string) =>
+            el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: dt }));
+        fire(src, 'dragstart');
+        await new Promise(r => setTimeout(r, 50));
+        fire(dst, 'dragover');
+        await new Promise(r => setTimeout(r, 50));
+        fire(dst, 'drop');
+        fire(src, 'dragend');
+    });
+
+    await expect(page.getByText('Moved folder "photos" to "archive" — 3 files.')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('[title="photos"]')).toHaveCount(0, { timeout: 15_000 });
+    await page.locator('[title="archive"]').getByRole('button', { name: 'Expand folder' }).click({ timeout: 15_000 });
+    await expect(page.locator('[title="archive/photos"]')).toBeVisible();
+    await page.locator('[title="archive/photos"]').click();
+    await expect(page.getByText('3 IMAGES')).toBeVisible({ timeout: 15_000 });
+
+    expect(await page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory();
+        try {
+            const photos = await (await root.getDirectoryHandle('archive')).getDirectoryHandle('photos');
+            await photos.getFileHandle('a.png');
+            await photos.getFileHandle('b.png');
+            try { await root.getDirectoryHandle('photos'); return false; } catch { return true; }
+        } catch { return false; }
+    })).toBe(true);
+});

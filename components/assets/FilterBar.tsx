@@ -60,6 +60,7 @@ const FilterBar: React.FC<{
         </select>
       )}
       <select aria-label="Sort by" className="form-select h-7 text-2xs w-36" value={sort} onChange={e => onSort(e.target.value as SortKey, descending)}>
+        <option value="manual">Manual order</option>
         <option value="name">Name</option>
         <option value="date">Date modified</option>
         <option value="size">File size</option>

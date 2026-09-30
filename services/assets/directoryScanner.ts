@@ -60,6 +60,11 @@ export async function listFolderFiles(
   path: string,
   onProgress?: (progress: ScanProgress) => void,
 ): Promise<ListFolderResult> {
+  const inTrash = path === TRASH_FOLDER_NAME || path.startsWith(`${TRASH_FOLDER_NAME}/`);
+  if (inTrash) {
+    onProgress?.({ scannedDirs: 1, scannedFiles: 0 });
+    return { files: [], truncated: false };
+  }
   const files: AssetFile[] = [];
   let scannedFiles = 0;
   let truncated = false;

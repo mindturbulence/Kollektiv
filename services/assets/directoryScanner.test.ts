@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { scanDirectoryTree, listFolderFiles } from './directoryScanner';
-import { MAX_SCAN_DEPTH } from './types';
+import { MAX_SCAN_DEPTH, TRASH_FOLDER_NAME } from './types';
 
 /** Minimal mock matching the FileSystemDirectoryHandle/FileSystemFileHandle shape this module reads. */
 function mockDir(name: string, entries: Array<{ kind: 'file' | 'directory'; name: string; children?: any[] }>) {
@@ -130,5 +130,17 @@ describe('listFolderFiles', () => {
     expect(files).toHaveLength(450);
     expect(onProgress).toHaveBeenCalled();
     expect(onProgress.mock.calls.at(-1)![0].scannedFiles).toBe(450);
+  });
+
+  it('never lists trash contents, whatever path it is asked for (review C1)', async () => {
+    const trash = mockDir(TRASH_FOLDER_NAME, [
+      { kind: 'file', name: 'a.png' },
+      { kind: 'directory', name: '1000', children: [{ kind: 'file', name: 'b.png' }] },
+    ]);
+    const atTrash = await listFolderFiles('root1', trash as any, TRASH_FOLDER_NAME);
+    expect(atTrash.files).toEqual([]);
+    expect(atTrash.truncated).toBe(false);
+    const inside = await listFolderFiles('root1', trash as any, `${TRASH_FOLDER_NAME}/1000`);
+    expect(inside.files).toEqual([]);
   });
 });

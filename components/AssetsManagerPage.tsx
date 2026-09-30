@@ -6,9 +6,9 @@ import { useObjectUrls } from '../utils/useObjectUrls';
 import { listRoots, addRoot, addRootFromHandle, removeRoot, requestRootPermission, ensureWritable } from '../services/assets/assetRootManager';
 import { scanDirectoryTree, listFolderFiles } from '../services/assets/directoryScanner';
 import { transferFiles, resolveDir, resolveFile, moveOne, type ConflictPolicy, type Transferred } from '../services/assets/fileOps';
-import { indexFiles, RAW_EXTS, relocateCachedFacts, type AssetFacts } from '../services/assets/assetFacts';
+import { extractFacts, gridThumbTarget, indexFiles, putCachedFacts, RAW_EXTS, relocateCachedFacts, type AssetFacts } from '../services/assets/assetFacts';
 import {
-  getLibrary, getLibraryStatus, subscribeLibrary, loadLibrary, updateMeta, relocate, copyMeta, deleteCollection,
+  getLibrary, getLibraryStatus, subscribeLibrary, loadLibrary, updateMeta, updateMetaMany, relocate, copyMeta, deleteCollection,
   type ColorLabel, type FilterCriteria, type AssetMeta,
 } from '../services/assets/assetLibrary';
 import { matches, sortEntries, type AssetEntry, type SortKey } from '../services/assets/assetFilter';
@@ -24,11 +24,16 @@ import { appEventBus } from '../utils/eventBus';
 import { largestEmbeddedJpeg } from '../utils/jpegScan';
 import { setPendingFiles, type HandoffTarget } from '../utils/pendingHandoff';
 import { openInVideoEditor } from '../video-editor/bridge/openInVideoEditor';
-import { FolderClosedIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon, CloseIcon, ChevronLeftIcon, CenterIcon, DownloadIcon, CheckIcon, EditIcon, RefreshIcon, FilmIcon } from './icons';
+import { FolderClosedIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon, CloseIcon, ChevronLeftIcon, CenterIcon, DownloadIcon, CheckIcon, DeleteIcon, RefreshIcon, EditIcon, FilmIcon, AspectRatioIcon, SparklesIcon, ArchiveIcon, MenuIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import FilterBar, { LABEL_COLORS } from './assets/FilterBar';
 import AssetInspector from './assets/AssetInspector';
 import { BatchRenameModal, CopyMoveModal, DuplicatesModal, VaultSaveModal } from './assets/AssetDialogs';
+import ContextMenu, { type MenuItem } from './ContextMenu';
+import { clipboardCopy, clipboardCut, clipboardContent, clipboardClear, clipboardHasContent } from '../services/assets/clipboard';
+import { createFolder, renameFolder, deleteFolder, FolderNotEmptyError } from '../services/assets/folderOps';
+import { moveToTrash, listTrash, restoreFromTrash, deleteForever, emptyTrash, purgeTrash, type TrashedEntry } from '../services/assets/trash';
+import { moveFolder, isInvalidFolderDrop, type FolderMoveProgress } from '../services/assets/folderMove';
 
 // ── Constants ─────────────────────────────────────────────────────────
 
@@ -67,6 +72,9 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   const [view, setView] = useState<View>({ kind: 'folder' });
   const [folderFiles, setFolderFiles] = useState<AssetFile[]>([]);
   const [isScanningTree, setIsScanningTree] = useState(false);
+  const [treeTick, setTreeTick] = useState(0);
+  const [trashEntries, setTrashEntries] = useState<TrashedEntry[]>([]);
+  const [trashTick, setTrashTick] = useState(0);
   const [isListingFolder, setIsListingFolder] = useState(false);
   const [listProgress, setListProgress] = useState<ScanProgress | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
@@ -76,8 +84,12 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<{ id: string; url: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [gridDragOverId, setGridDragOverId] = useState<string | null>(null);
+  const [gridDropPosition, setGridDropPosition] = useState<'before' | 'after' | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [dragOverPath, setDragOverPath] = useState<string | null>(null);
+  const [folderMoveProgress, setFolderMoveProgress] = useState<FolderMoveProgress | null>(null);
+  const [folderMoveCancelling, setFolderMoveCancelling] = useState(false);
   const [isDraggingRootDrop, setIsDraggingRootDrop] = useState(false);
   const [criteria, setCriteria] = useState<FilterCriteria>({});
   const [sortKey, setSortKey] = useState<SortKey>('name');
@@ -86,6 +98,8 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   const [dialog, setDialog] = useState<null | 'rename' | 'copymove' | 'duplicates' | 'vault'>(null);
   const [undoEntry, setUndoEntry] = useState<JournalEntry | null>(null);
   const [missingInCollection, setMissingInCollection] = useState(0);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const [isFullIndexing, setIsFullIndexing] = useState(false);
 
   const library = useSyncExternalStore(subscribeLibrary, getLibrary);
   const libStatus = useSyncExternalStore(subscribeLibrary, getLibraryStatus);
@@ -94,12 +108,18 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   // Generation counter guards against stale async resolutions (listing,
   // indexing, URL creation) landing after the user switched folders/roots.
   const generationRef = useRef(0);
+  const lastTreeRootIdRef = useRef<string | null>(null);
   const objectUrlsRef = useRef<Map<string, string>>(new Map());
   objectUrlsRef.current = objectUrls;
   const lastClickedIndexRef = useRef<number | null>(null);
   // Drag payload travels out-of-band (native dataTransfer can't carry object
   // refs) — a ref survives the drag gesture without triggering re-renders.
   const draggedFileIdsRef = useRef<string[]>([]);
+  const visibleExtractRef = useRef<Set<string>>(new Set());
+  const fullIndexRef = useRef<Promise<void> | null>(null);
+  const draggedFolderRef = useRef<{ path: string; rootId: string } | null>(null);
+  const folderCancelRef = useRef(false);
+  const lastProgressAtRef = useRef(0);
 
   const selectedRoot = useMemo(() => roots.find(r => r.id === selectedRootId) ?? null, [roots, selectedRootId]);
   const rootById = useCallback((id: string) => roots.find(r => r.id === id && r.status === 'granted') ?? null, [roots]);
@@ -178,18 +198,38 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       setTree(null);
       return;
     }
+    const isNewRoot = lastTreeRootIdRef.current !== selectedRoot.id;
+    lastTreeRootIdRef.current = selectedRoot.id;
     let cancelled = false;
     setIsScanningTree(true);
     void scanDirectoryTree(selectedRoot.id, selectedRoot.handle).then(result => {
       if (cancelled) return;
       setTree(result);
-      setSelectedFolderPath('');
+      if (isNewRoot) setSelectedFolderPath('');
       setIsScanningTree(false);
     });
     return () => {
       cancelled = true;
     };
-  }, [selectedRoot]);
+  }, [selectedRoot, treeTick]);
+
+  useEffect(() => {
+    if (!selectedRoot || selectedRoot.status !== 'granted') {
+      setTrashEntries([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try { await purgeTrash(selectedRoot.handle); } catch { /* best-effort, age-based cleanup */ }
+      try {
+        const entries = await listTrash(selectedRoot.handle);
+        if (!cancelled) setTrashEntries(entries);
+      } catch { /* trash unreadable — show nothing */ }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRoot, trashTick]);
 
   // ── Folder / collection listing + object URL lifecycle ───────────────
 
@@ -264,8 +304,9 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRoot, tree, selectedFolderPath, refreshTick, view, view.kind === 'collection' ? library.collections : null]);
 
-  // Index the listed files (plan Tasks 5/6): cached facts resolve at once,
-  // new/changed files decode once for dimensions, thumbnail and dHash.
+  // ── Indexing (Jev lazy split): upfront pass resolves cache hits and light
+  // size/mtime rows only; decoding happens per visible card, or on demand
+  // (dimensions sort, duplicates) via runFullIndex.
   useEffect(() => {
     const myGeneration = generationRef.current;
     let buffer = new Map<string, AssetFacts>();
@@ -280,9 +321,48 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
     void indexFiles(folderFiles, (id, f) => {
       buffer.set(id, f);
       timer ??= setTimeout(flush, 120);
-    }, () => myGeneration !== generationRef.current).then(flush);
+    }, () => myGeneration !== generationRef.current, false)
+      .then(flush)
+      .catch(() => { /* index is best-effort — never fatal */ });
     return () => { if (timer) clearTimeout(timer); };
   }, [folderFiles]);
+
+  const runFullIndex = useCallback((): Promise<void> => {
+    if (fullIndexRef.current) return fullIndexRef.current;
+    const myGeneration = generationRef.current;
+    let buffer = new Map<string, AssetFacts>();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const flush = () => {
+      timer = undefined;
+      if (myGeneration !== generationRef.current || buffer.size === 0) return;
+      const batch = buffer;
+      buffer = new Map();
+      setFacts(prev => { const next = new Map(prev); batch.forEach((v, k) => next.set(k, v)); return next; });
+    };
+    setIsFullIndexing(true);
+    const p = indexFiles(folderFiles, (id, f) => {
+      buffer.set(id, f);
+      timer ??= setTimeout(flush, 120);
+    }, () => myGeneration !== generationRef.current, true)
+      .then(flush)
+      .catch(() => { /* best-effort — callers must never see a rejection */ })
+      .finally(() => {
+        if (timer) clearTimeout(timer);
+        fullIndexRef.current = null;
+        setIsFullIndexing(false);
+      });
+    fullIndexRef.current = p;
+    return p;
+  }, [folderFiles]);
+
+  const allExtracted = useMemo(
+    () => folderFiles.length > 0 && folderFiles.every(f => facts.get(f.id)?.extracted === true),
+    [folderFiles, facts],
+  );
+
+  useEffect(() => {
+    if (sortKey === 'dimensions' && !allExtracted && folderFiles.length > 0) void runFullIndex();
+  }, [sortKey, allExtracted, folderFiles, runFullIndex]);
 
   // ── Entries: facts + metadata, stacks collapsed, filtered and sorted ──
 
@@ -308,21 +388,56 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   }, [entries, folderFiles, library.stacks, expandedStacks, criteria, sortKey, descending]);
 
   const visibleFiles = useMemo(() => shownEntries.slice(0, visibleCount).map(e => e.file), [shownEntries, visibleCount]);
-  const loadedThumbCount = visibleFiles.filter(f => objectUrls.has(f.id) || (facts.has(f.id) && !facts.get(f.id)!.thumb && !BROWSER_SHOWS.has(f.ext))).length;
+  const loadedThumbCount = visibleFiles.filter(f => objectUrls.has(f.id) || (facts.get(f.id)?.extracted && !facts.get(f.id)!.thumb && !BROWSER_SHOWS.has(f.ext))).length;
   const isDecodingThumbs = !isListingFolder && visibleFiles.length > 0 && loadedThumbCount < visibleFiles.length;
   const decodePercent = visibleFiles.length > 0 ? Math.round((loadedThumbCount / visibleFiles.length) * 100) : 0;
   const folderExts = useMemo(() => [...new Set(folderFiles.map(f => f.ext))].sort(), [folderFiles]);
   const vocabulary = useMemo(() => [...new Set(Object.values(library.assets).flatMap(m => m.tags ?? []))].sort(), [library.assets]);
 
-  // Card images for the visible slice: the cached thumbnail when there is one,
-  // else (facts known, no thumbnail) the file itself if the browser can show it.
+  // Card images for the visible slice (Jev lazy split): extract or upgrade
+  // first, then the cached thumb — else (facts known, no thumbnail) the file
+  // itself if the browser can show it.
   useEffect(() => {
     const myGeneration = generationRef.current;
     const add = (id: string, url: string) => setObjectUrls(prev => { const next = new Map(prev); next.set(id, url); return next; });
+    const ensureFacts = (file: AssetFile, f: AssetFacts | undefined) => {
+      if (visibleExtractRef.current.has(file.id)) return;
+      const target = gridThumbTarget();
+      const needsExtract = !f?.extracted;
+      const needsUpgrade = !!f?.extracted && f.thumb !== undefined && (f.thumbW ?? 0) < target;
+      if (!needsExtract && !needsUpgrade) return;
+      visibleExtractRef.current.add(file.id);
+      void (async () => {
+        try {
+          const src = await file.handle.getFile();
+          const fresh = await extractFacts(src, file.ext, f).catch((): AssetFacts => ({ size: src.size, mtime: src.lastModified, extracted: true }));
+          if (myGeneration !== generationRef.current) return;
+          await putCachedFacts(file.id, fresh);
+          if (myGeneration !== generationRef.current) return;
+          if (needsUpgrade) {
+            const oldUrl = objectUrlsRef.current.get(file.id);
+            if (oldUrl) { revoke(oldUrl); objectUrlsRef.current.delete(file.id); }
+            setObjectUrls(prev => {
+              if (!prev.has(file.id)) return prev;
+              const next = new Map(prev);
+              next.delete(file.id);
+              return next;
+            });
+          }
+          setFacts(prev => { const next = new Map(prev); next.set(file.id, fresh); return next; });
+        } catch {
+          // File moved/renamed/removed under a stale card — the rescan will
+          // replace folderFiles; never let this reject (fatal overlay).
+        } finally {
+          visibleExtractRef.current.delete(file.id);
+        }
+      })();
+    };
     visibleFiles.forEach(file => {
+      ensureFacts(file, facts.get(file.id));
       if (objectUrlsRef.current.has(file.id)) return;
       const f = facts.get(file.id);
-      if (!f) return;
+      if (!f?.extracted) return;
       if (f.thumb) {
         const url = track(URL.createObjectURL(f.thumb));
         objectUrlsRef.current.set(file.id, url);
@@ -410,35 +525,11 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       });
       return;
     }
-    setLightboxIndex(idx);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleFiles, selectedIds]);
+      setLightboxIndex(idx);
+    }, [visibleFiles, selectedIds]);
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
   const selectedEntries = useMemo(() => entries.filter(e => selectedIds.has(e.file.id)), [entries, selectedIds]);
-
-  // Keyboard (plan Tasks 10, 25): rate/label the selection, select all, clear.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement | null;
-      if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
-      if (lightboxIndex !== null || dialog) return;
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && visibleFiles.length) {
-        e.preventDefault();
-        setSelectedIds(new Set(visibleFiles.map(f => f.id)));
-        return;
-      }
-      if (e.ctrlKey || e.metaKey || e.altKey || selectedIds.size === 0) return;
-      const ids = [...selectedIds];
-      if (/^[0-5]$/.test(e.key)) updateMeta(ids, { rating: Number(e.key) || undefined });
-      else if (LABEL_KEYS[e.key]) updateMeta(ids, m => ({ ...m, label: ids.length === 1 && m.label === LABEL_KEYS[e.key] ? undefined : LABEL_KEYS[e.key] }));
-      else if (e.key === 'Escape') clearSelection();
-      else return;
-      e.preventDefault();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [selectedIds, visibleFiles, lightboxIndex, dialog, clearSelection]);
 
   // ── File operations (rename / copy / move / write-back / undo) ─────────
   // Each starts with the write-permission request, before any other await,
@@ -491,6 +582,254 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       setIsBusy(false);
     }
   }, [needWrite, rootById, applyTransfers, finishOp, showGlobalFeedback]);
+
+  const handlePaste = useCallback(async (destRootId: string, destPath: string, asCopy = false) => {
+    const cb = clipboardContent();
+    if (!cb) return;
+    const { fileIds, rootId: srcRootId, folderPath, mode } = cb;
+    const srcRoot = rootById(srcRootId);
+    if (!srcRoot) {
+      showGlobalFeedback?.('The source folder is no longer connected.');
+      return;
+    }
+    const destRoot = rootById(destRootId);
+    if (!destRoot) {
+      showGlobalFeedback?.('The destination folder is no longer connected.');
+      return;
+    }
+    const actualMode: 'copy' | 'move' = asCopy ? 'copy' : mode === 'cut' ? 'move' : 'copy';
+
+    try {
+      const srcDir = await resolveDir(srcRoot.handle, folderPath);
+      const destDir = await resolveDir(destRoot.handle, destPath);
+      const files: AssetFile[] = [];
+      for (const id of fileIds) {
+        const colon = id.indexOf(':');
+        const path = id.slice(colon + 1);
+        const name = path.includes('/') ? path.slice(path.lastIndexOf('/') + 1) : path;
+        const ext = name.includes('.') ? name.slice(name.lastIndexOf('.') + 1).toLowerCase() : '';
+        try {
+          const handle = await srcDir.getFileHandle(name);
+          files.push({ id, rootId: srcRootId, path, name, ext, handle });
+        } catch {
+          // File might be deleted or moved, ignore
+        }
+      }
+      if (!files.length) return;
+      await runTransfer(files, { rootId: destRootId, path: destPath, handle: destDir }, actualMode, 'keep-both', destPath || srcRoot.name || 'Root');
+      if (mode === 'cut' && !asCopy) clipboardClear();
+    } catch (e) {
+      showGlobalFeedback?.(`Could not paste: ${errText(e)}`);
+    }
+  }, [rootById, runTransfer, showGlobalFeedback]);
+
+  // Keyboard (plan Tasks 10, 25 + Phase 1): rate/label the selection, select
+  // all, clear, clipboard. Lives below handlePaste so the deps resolve.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+      if (lightboxIndex !== null || dialog) return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && visibleFiles.length) {
+        e.preventDefault();
+        setSelectedIds(new Set(visibleFiles.map(f => f.id)));
+        return;
+      }
+      if (e.altKey || selectedIds.size === 0) return;
+      const ids = [...selectedIds];
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        if (selectedRoot) {
+          clipboardCopy(ids, selectedRoot.id, selectedFolderPath);
+          showGlobalFeedback?.(`Copied ${ids.length} item${ids.length === 1 ? '' : 's'}.`);
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'x') {
+        if (selectedRoot) {
+          clipboardCut(ids, selectedRoot.id, selectedFolderPath);
+          showGlobalFeedback?.(`Cut ${ids.length} item${ids.length === 1 ? '' : 's'}.`);
+        }
+      } else if (!e.ctrlKey && !e.metaKey && /^[0-5]$/.test(e.key)) {
+        updateMeta(ids, { rating: Number(e.key) || undefined });
+      } else if (!e.ctrlKey && !e.metaKey && LABEL_KEYS[e.key]) {
+        updateMeta(ids, m => ({ ...m, label: ids.length === 1 && m.label === LABEL_KEYS[e.key] ? undefined : LABEL_KEYS[e.key] }));
+      } else if (!e.ctrlKey && !e.metaKey && e.key === 'Escape') {
+        clearSelection();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+        if (selectedRoot) {
+          void handlePaste(selectedRoot.id, selectedFolderPath, e.shiftKey);
+        }
+      } else {
+        return;
+      }
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedIds, visibleFiles, lightboxIndex, dialog, clearSelection, handlePaste, selectedRoot, selectedFolderPath, showGlobalFeedback]);
+
+  const handleMoveToTrash = useCallback(async (fileIds: Set<string>) => {
+    const root = selectedRoot;
+    if (!root || !(await needWrite([root.id]))) return;
+    const files = folderFiles.filter(f => fileIds.has(f.id));
+    if (!files.length) return;
+    const ok = files.length > 1
+      ? window.confirm(`Move ${files.length} files to trash?`)
+      : window.confirm(`Move "${files[0]?.name}" to trash?`);
+    if (!ok) return;
+    setIsBusy(true);
+    try {
+      await moveToTrash(root.handle, files);
+      clearSelection();
+      setRefreshTick(t => t + 1);
+      setTrashTick(t => t + 1);
+      finishOp(`Moved ${files.length} file${files.length === 1 ? '' : 's'} to trash.`);
+    } catch (e) { showGlobalFeedback?.(`Could not move to trash: ${errText(e)}`); }
+    finally { setIsBusy(false); }
+  }, [selectedRoot, folderFiles, needWrite, clearSelection, showGlobalFeedback, finishOp]);
+
+
+
+  const handleFolderCreate = useCallback(async (parentNode: DirectoryNode) => {
+    const root = roots.find(r => r.id === parentNode.rootId);
+    if (!root || !(await needWrite([root.id]))) return;
+    const name = window.prompt('New folder name:')?.trim();
+    if (!name) return;
+    try {
+      await createFolder(root.handle, parentNode.path, name);
+      setRefreshTick(t => t + 1);
+      setTreeTick(t => t + 1);
+      finishOp(`Created folder "${name}".`);
+    } catch (e) { showGlobalFeedback?.(`Could not create folder: ${errText(e)}`); }
+  }, [roots, needWrite, showGlobalFeedback, finishOp]);
+
+  const handleFolderRename = useCallback(async (node: DirectoryNode) => {
+    const root = roots.find(r => r.id === node.rootId);
+    if (!root || !(await needWrite([root.id]))) return;
+    const parts = node.path.split('/').filter(Boolean);
+    const oldName = parts[parts.length - 1] ?? node.name;
+    const parentPath = parts.slice(0, -1).join('/');
+    const newName = window.prompt('Rename folder to:', oldName)?.trim();
+    if (!newName || newName === oldName) return;
+    try {
+      await renameFolder(root.handle, parentPath, oldName, newName);
+      setRefreshTick(t => t + 1);
+      setTreeTick(t => t + 1);
+      finishOp(`Renamed folder to "${newName}".`);
+    } catch (e) { showGlobalFeedback?.(`Could not rename folder: ${errText(e)}`); }
+  }, [roots, needWrite, showGlobalFeedback, finishOp]);
+
+  const handleFolderDelete = useCallback(async (node: DirectoryNode) => {
+    const root = roots.find(r => r.id === node.rootId);
+    if (!root || !(await needWrite([root.id]))) return;
+    try {
+      await deleteFolder(root.handle, node.path, false);
+      setRefreshTick(t => t + 1);
+      setTreeTick(t => t + 1);
+      finishOp(`Deleted folder "${node.name}".`);
+    } catch (e) {
+      if (e instanceof FolderNotEmptyError) {
+        const ok = window.confirm(`"${node.name}" is not empty. Delete it and all its contents?`);
+        if (!ok) return;
+        try {
+          await deleteFolder(root.handle, node.path, true);
+          setRefreshTick(t => t + 1);
+          setTreeTick(t => t + 1);
+          finishOp(`Deleted folder "${node.name}" and its contents.`);
+        } catch (e2) { showGlobalFeedback?.(`Could not delete folder: ${errText(e2)}`); }
+      } else {
+        showGlobalFeedback?.(`Could not delete folder: ${errText(e)}`);
+      }
+    }
+  }, [roots, needWrite, showGlobalFeedback, finishOp]);
+
+  const handleRestoreFromTrash = useCallback(async (entries: TrashedEntry[]) => {
+    if (!selectedRoot || entries.length === 0 || !(await needWrite([selectedRoot.id]))) return;
+    setIsBusy(true);
+    try {
+      await restoreFromTrash(selectedRoot.handle, entries);
+      setTrashTick(t => t + 1);
+      finishOp(entries.length === 1 ? `Restored "${entries[0].name}".` : `Restored ${entries.length} files.`);
+    } catch (e) { showGlobalFeedback?.(`Could not restore: ${errText(e)}`); }
+    finally { setIsBusy(false); }
+  }, [selectedRoot, needWrite, finishOp, showGlobalFeedback]);
+
+  const handleTrashDeleteForever = useCallback(async (entries: TrashedEntry[]) => {
+    if (!selectedRoot || entries.length === 0 || !(await needWrite([selectedRoot.id]))) return;
+    const label = entries.length === 1 ? `"${entries[0].name}"` : `${entries.length} files`;
+    const ok = window.confirm(`Permanently delete ${label}? This cannot be undone.`);
+    if (!ok) return;
+    setIsBusy(true);
+    try {
+      const removed = await deleteForever(selectedRoot.handle, entries);
+      setTrashTick(t => t + 1);
+      finishOp(`Permanently deleted ${removed} item${removed === 1 ? '' : 's'}.`);
+    } catch (e) { showGlobalFeedback?.(`Could not delete: ${errText(e)}`); }
+    finally { setIsBusy(false); }
+  }, [selectedRoot, needWrite, finishOp, showGlobalFeedback]);
+
+  const handleEmptyTrash = useCallback(async () => {
+    const count = trashEntries.length;
+    if (!selectedRoot || count === 0 || !(await needWrite([selectedRoot.id]))) return;
+    const ok = window.confirm(`Empty the trash? ${count} item${count === 1 ? '' : 's'} will be permanently deleted.`);
+    if (!ok) return;
+    setIsBusy(true);
+    try {
+      await emptyTrash(selectedRoot.handle);
+      setTrashTick(t => t + 1);
+      finishOp(`Emptied the trash (${count} item${count === 1 ? '' : 's'}).`);
+    } catch (e) { showGlobalFeedback?.(`Could not empty the trash: ${errText(e)}`); }
+    finally { setIsBusy(false); }
+  }, [selectedRoot, trashEntries, needWrite, finishOp, showGlobalFeedback]);
+
+
+
+  const buildTreeMenu = useCallback((node: DirectoryNode): MenuItem[] => [
+    { kind: 'action', label: 'Open', onSelect: () => { setSelectedFolderPath(node.path); setView({ kind: 'folder' }); } },
+    { kind: 'action', label: 'New Folder…', onSelect: () => void handleFolderCreate(node) },
+    { kind: 'action', label: 'Paste', disabled: !clipboardHasContent(), onSelect: () => void handlePaste(node.rootId, node.path) },
+    { kind: 'action', label: 'Paste as Copy', disabled: !clipboardHasContent(), onSelect: () => void handlePaste(node.rootId, node.path, true) },
+    { kind: 'separator' },
+    { kind: 'action', label: 'Rename Folder…', onSelect: () => void handleFolderRename(node) },
+    { kind: 'separator' },
+    { kind: 'action', label: 'Delete Folder', danger: true, onSelect: () => void handleFolderDelete(node) },
+  ], [handlePaste, handleFolderCreate, handleFolderRename, handleFolderDelete]);
+
+  const buildTrashMenu = useCallback((): MenuItem[] => [
+    { kind: 'action', label: 'Refresh', onSelect: () => setTrashTick(t => t + 1) },
+    { kind: 'separator' },
+    { kind: 'action', label: 'Empty Trash', danger: true, disabled: trashEntries.length === 0, onSelect: () => void handleEmptyTrash() },
+  ], [trashEntries.length, handleEmptyTrash]);
+
+  const buildTrashItemMenu = useCallback((entry: TrashedEntry): MenuItem[] => [
+    { kind: 'action', label: 'Restore', onSelect: () => void handleRestoreFromTrash([entry]) },
+    { kind: 'separator' },
+    { kind: 'action', label: 'Delete Forever', danger: true, onSelect: () => void handleTrashDeleteForever([entry]) },
+  ], [handleRestoreFromTrash, handleTrashDeleteForever]);
+
+  const buildGridMenu = useCallback((): MenuItem[] => [
+    { kind: 'action', label: 'Paste', disabled: !clipboardHasContent(), shortcut: 'Ctrl+V', onSelect: () => { if (selectedRoot) void handlePaste(selectedRoot.id, selectedFolderPath); } },
+    { kind: 'action', label: 'Paste as Copy', disabled: !clipboardHasContent(), shortcut: 'Ctrl+Shift+V', onSelect: () => { if (selectedRoot) void handlePaste(selectedRoot.id, selectedFolderPath, true); } },
+    { kind: 'separator' },
+    { kind: 'action', label: 'Select All', shortcut: 'Ctrl+A', onSelect: () => setSelectedIds(new Set(visibleFiles.map(f => f.id))) },
+    { kind: 'action', label: 'Clear Selection', shortcut: 'Esc', disabled: selectedIds.size === 0, onSelect: clearSelection },
+    { kind: 'separator' },
+    { kind: 'submenu', label: 'Sort By', children: [
+      { kind: 'action', label: sortKey === 'manual' ? '• Manual order' : 'Manual order', onSelect: () => setSortKey('manual') },
+      { kind: 'action', label: sortKey === 'name' ? '• Name' : 'Name', onSelect: () => setSortKey('name') },
+      { kind: 'action', label: sortKey === 'date' ? '• Date' : 'Date', onSelect: () => setSortKey('date') },
+      { kind: 'action', label: sortKey === 'size' ? '• Size' : 'Size', onSelect: () => setSortKey('size') },
+      { kind: 'action', label: sortKey === 'rating' ? '• Rating' : 'Rating', onSelect: () => setSortKey('rating') },
+      { kind: 'separator' },
+      { kind: 'action', label: descending ? '• Descending' : 'Descending', onSelect: () => setDescending(true) },
+      { kind: 'action', label: !descending ? '• Ascending' : 'Ascending', onSelect: () => setDescending(false) },
+    ] },
+      { kind: 'action', label: 'Refresh', onSelect: () => { setRefreshTick(t => t + 1); setTreeTick(t => t + 1); } },
+  ], [handlePaste, selectedRoot, selectedFolderPath, visibleFiles, selectedIds.size, clearSelection, sortKey, descending]);
+
+  const buildRootMenu = useCallback((root: AssetRootState): MenuItem[] => [
+    { kind: 'action', label: 'Reconnect', disabled: root.status === 'granted', onSelect: () => void handleReconnect(root) },
+    { kind: 'separator' },
+    { kind: 'action', label: 'Remove Root', danger: true, onSelect: () => void handleRemoveRoot(root.id) },
+  ], [handleReconnect, handleRemoveRoot]);
 
   const handleRename = useCallback(async (plan: RenamePlanItem[]) => {
     const root = selectedRoot;
@@ -593,29 +932,114 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   // ── Drag-and-drop: move selected assets into a sidebar folder ────────
 
   const handleCardDragStart = useCallback((file: AssetFile, e: React.DragEvent) => {
+    draggedFolderRef.current = null;
     const ids = selectedIds.has(file.id) && selectedIds.size > 0 ? Array.from(selectedIds) : [file.id];
     draggedFileIdsRef.current = ids;
-    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.effectAllowed = 'copyMove';
     e.dataTransfer.setData('text/plain', ids.join(','));
+
+    if (ids.length > 1) {
+      const ghost = document.createElement('div');
+      ghost.textContent = `Dragging ${ids.length} items`;
+      ghost.className = 'px-3 py-1.5 bg-primary text-primary-content text-xs font-mono font-black uppercase rounded shadow-xl z-toast absolute top-[-1000px] left-[-1000px] pointer-events-none whitespace-nowrap';
+      document.body.appendChild(ghost);
+      e.dataTransfer.setDragImage(ghost, -10, -10);
+      setTimeout(() => document.body.removeChild(ghost), 0);
+    }
   }, [selectedIds]);
+
+  // ── Drag-and-drop: folder → folder move (plan §4.2 — background + progress) ─
+
+  const runFolderMove = useCallback(async (srcPath: string, targetNode: DirectoryNode) => {
+    if (!selectedRoot || folderMoveProgress) return;
+    if (!(await needWrite([selectedRoot.id]))) return;
+    const rootHandle = rootById(selectedRoot.id)?.handle;
+    if (!rootHandle) return;
+    const srcName = srcPath.split('/').filter(Boolean).pop() ?? srcPath;
+    const destPath = joinPath(targetNode.path, srcName);
+    folderCancelRef.current = false;
+    setFolderMoveCancelling(false);
+    setFolderMoveProgress({ moved: 0, total: 0, currentFile: '' });
+    lastProgressAtRef.current = 0;
+    try {
+      const res = await moveFolder(
+        selectedRoot.id, rootHandle, srcPath,
+        selectedRoot.id, rootHandle, destPath,
+        folderCancelRef,
+        p => {
+          const now = Date.now();
+          if (now - lastProgressAtRef.current < 250) return;
+          lastProgressAtRef.current = now;
+          setFolderMoveProgress({ moved: p.moved, total: p.total, currentFile: p.currentFile });
+        },
+      );
+      applyTransfers(res.moved, 'move');
+      if (selectedFolderPath === srcPath || selectedFolderPath.startsWith(srcPath + '/')) setSelectedFolderPath('');
+      setTreeTick(t => t + 1);
+      setRefreshTick(t => t + 1);
+      const n = res.moved.length;
+      const failedNote = res.failed.length ? ` ${res.failed.length} failed.` : '';
+      showGlobalFeedback?.(res.cancelled
+        ? `Cancelled — ${n} file${n === 1 ? '' : 's'} moved before cancel.${failedNote}`
+        : `Moved folder "${srcName}" to "${targetNode.path || targetNode.name}" — ${n} file${n === 1 ? '' : 's'}.${failedNote}`);
+    } catch (e) {
+      showGlobalFeedback?.(`Folder move failed: ${errText(e)}`);
+      setTreeTick(t => t + 1);
+      setRefreshTick(t => t + 1);
+    } finally {
+      setFolderMoveProgress(null);
+      setFolderMoveCancelling(false);
+    }
+  }, [selectedRoot, rootById, needWrite, folderMoveProgress, applyTransfers, selectedFolderPath, showGlobalFeedback]);
+
+  const handleFolderDragStart = useCallback((node: DirectoryNode, e: React.DragEvent) => {
+    draggedFileIdsRef.current = [];
+    draggedFolderRef.current = { path: node.path, rootId: selectedRoot?.id ?? '' };
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', node.path);
+  }, [selectedRoot]);
+
+  const handleFolderDragEnd = useCallback(() => { draggedFolderRef.current = null; }, []);
+
+  const canDropFolderOn = useCallback((destPath: string): boolean => {
+    const folder = draggedFolderRef.current;
+    if (!folder) return true;
+    if (selectedRoot && folder.rootId !== selectedRoot.id) return false;
+    return !isInvalidFolderDrop(folder.path, destPath);
+  }, [selectedRoot]);
+
+  const handleCancelFolderMove = useCallback(() => {
+    folderCancelRef.current = true;
+    setFolderMoveCancelling(true);
+  }, []);
 
   const handleFolderDrop = useCallback(async (targetNode: DirectoryNode, e: React.DragEvent) => {
     e.preventDefault();
     setDragOverPath(null);
+    const folder = draggedFolderRef.current;
     const ids = draggedFileIdsRef.current;
+    draggedFolderRef.current = null;
     draggedFileIdsRef.current = [];
+    if (folder) {
+      if (!selectedRoot || folder.rootId !== selectedRoot.id) return;
+      if (isInvalidFolderDrop(folder.path, targetNode.path)) return;
+      await runFolderMove(folder.path, targetNode);
+      return;
+    }
     if (ids.length === 0 || !selectedRoot) return;
     if (view.kind === 'folder' && targetNode.path === selectedFolderPath) return; // dropped on the folder they're already in
     const filesToMove = folderFiles.filter(f => ids.includes(f.id));
     if (filesToMove.length === 0) return;
-    await runTransfer(filesToMove, { rootId: selectedRoot.id, path: targetNode.path, handle: targetNode.handle }, 'move', 'keep-both', targetNode.name);
-  }, [selectedRoot, view.kind, selectedFolderPath, folderFiles, runTransfer]);
+    const op = e.shiftKey ? 'copy' : 'move';
+    await runTransfer(filesToMove, { rootId: selectedRoot.id, path: targetNode.path, handle: targetNode.handle }, op, 'keep-both', targetNode.name);
+  }, [selectedRoot, view.kind, selectedFolderPath, folderFiles, runTransfer, runFolderMove]);
 
   // ── Drag-and-drop: drop an OS folder onto the roots panel to add it ──
 
   const handleRootsDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingRootDrop(false);
+    if (draggedFileIdsRef.current.length || draggedFolderRef.current) return;
     const items = Array.from(e.dataTransfer.items);
     let added = 0;
     for (const item of items) {
@@ -741,6 +1165,106 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
     }
   }, [selectedEntries, showGlobalFeedback]);
 
+  /** Same actions as the inline toolbar, shaped for the mobile (below lg) ContextMenu dropdown (plan §5.1, Jev §2.5). */
+  const selectionDropdownItems = useCallback((): MenuItem[] => [
+    { kind: 'action', label: 'Export', disabled: isBusy, onSelect: () => void handleExport() },
+    { kind: 'action', label: 'Convert', disabled: isBusy, onSelect: () => void handleSendToConverter() },
+    { kind: 'action', label: 'Edit', disabled: isBusy || selectedIds.size !== 1, onSelect: () => void handleEditInImageEditor() },
+    { kind: 'action', label: 'Video', disabled: isBusy || !getSelectedFiles().every(f => VIDEO_EDITOR_EXT_SET.has(f.ext)), onSelect: () => void handleOpenInVideoEditor() },
+    { kind: 'action', label: 'Resize', disabled: isBusy, onSelect: () => void handleSendTo('resizer') },
+    { kind: 'action', label: 'Analyze', disabled: isBusy || selectedIds.size !== 1, onSelect: () => void handleSendTo('media_analyzer') },
+    { kind: 'action', label: 'To Vault', disabled: isBusy, onSelect: () => setDialog('vault') },
+    { kind: 'separator' },
+    { kind: 'action', label: 'Deselect', onSelect: clearSelection },
+  ], [isBusy, selectedIds.size, getSelectedFiles, handleExport, handleSendToConverter, handleEditInImageEditor, handleOpenInVideoEditor, handleSendTo, clearSelection]);
+
+  const buildCardMenu = useCallback((effectiveIds: Set<string>): MenuItem[] => {
+    const isSingle = effectiveIds.size === 1;
+    const files = folderFiles.filter(f => effectiveIds.has(f.id));
+    const canVideoEdit = files.length > 0 && files.every(f => VIDEO_EDITOR_EXT_SET.has(f.ext));
+
+    return [
+      { kind: 'action', label: 'Open', onSelect: () => setLightboxIndex(visibleFiles.findIndex(f => f.id === files[0]?.id)) },
+      { kind: 'action', label: 'Select All', shortcut: 'Ctrl+A', onSelect: () => setSelectedIds(new Set(visibleFiles.map(f => f.id))) },
+      { kind: 'action', label: 'Clear Selection', shortcut: 'Esc', disabled: effectiveIds.size === 0, onSelect: clearSelection },
+      { kind: 'separator' },
+      { kind: 'action', label: 'Rename…', shortcut: 'Ctrl+R', onSelect: () => setDialog('rename') },
+      { kind: 'action', label: 'Copy', shortcut: 'Ctrl+C', onSelect: () => { if (selectedRoot) clipboardCopy([...effectiveIds], selectedRoot.id, selectedFolderPath); } },
+      { kind: 'action', label: 'Cut', shortcut: 'Ctrl+X', onSelect: () => { if (selectedRoot) clipboardCut([...effectiveIds], selectedRoot.id, selectedFolderPath); } },
+      { kind: 'action', label: 'Paste', shortcut: 'Ctrl+V', disabled: !clipboardHasContent(), onSelect: () => { if (selectedRoot) void handlePaste(selectedRoot.id, selectedFolderPath); } },
+      { kind: 'separator' },
+      { kind: 'action', label: 'Copy to…', onSelect: () => setDialog('copymove') },
+      { kind: 'action', label: 'Move to…', onSelect: () => setDialog('copymove') },
+      { kind: 'separator' },
+      { kind: 'action', label: 'Export…', onSelect: () => void handleExport() },
+      { kind: 'action', label: 'Convert…', onSelect: () => void handleSendToConverter() },
+      { kind: 'action', label: 'Edit in Image Editor', disabled: !isSingle, onSelect: () => void handleEditInImageEditor() },
+      { kind: 'action', label: 'Open in Video Editor', disabled: !canVideoEdit, onSelect: () => void handleOpenInVideoEditor() },
+      { kind: 'action', label: 'Resize…', onSelect: () => void handleSendTo('resizer') },
+      { kind: 'action', label: 'Analyze…', disabled: !isSingle, onSelect: () => void handleSendTo('media_analyzer') },
+      { kind: 'separator' },
+      { kind: 'action', label: 'Save to Vault…', onSelect: () => setDialog('vault') },
+      { kind: 'action', label: 'Write Metadata to File', onSelect: () => void handleWriteMetadata() },
+      { kind: 'separator' },
+      { kind: 'action', label: 'Move to Trash', danger: true, onSelect: () => void handleMoveToTrash(effectiveIds) },
+    ];
+  }, [folderFiles, visibleFiles, clearSelection, selectedRoot, selectedFolderPath, handleExport, handleSendToConverter, handleEditInImageEditor, handleOpenInVideoEditor, handleSendTo, handleWriteMetadata, handlePaste, handleMoveToTrash]);
+
+  const handleGridDragOver = useCallback((e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!draggedFileIdsRef.current.length) return;
+    
+    e.dataTransfer.dropEffect = 'move';
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    setGridDragOverId(id);
+    setGridDropPosition(e.clientY < midY ? 'before' : 'after');
+  }, []);
+
+  const handleGridDrop = useCallback((e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setGridDragOverId(null);
+    setGridDropPosition(null);
+
+    const ids = draggedFileIdsRef.current;
+    if (!ids.length || !gridDropPosition) return;
+    
+    const targetIdx = shownEntries.findIndex(en => en.file.id === targetId);
+    if (targetIdx === -1) return;
+    
+    const draggedEntries = shownEntries.filter(en => ids.includes(en.file.id));
+    const nonDragged = shownEntries.filter(en => !ids.includes(en.file.id));
+    const newTargetIdx = nonDragged.findIndex(en => en.file.id === targetId);
+    if (newTargetIdx === -1) return;
+    
+    const spliceIdx = gridDropPosition === 'before' ? newTargetIdx : newTargetIdx + 1;
+    const newList = [...nonDragged.slice(0, spliceIdx), ...draggedEntries, ...nonDragged.slice(spliceIdx)];
+    
+    const updates: Record<string, Partial<AssetMeta>> = {};
+    newList.forEach((entry, idx) => {
+      updates[entry.file.id] = { sortOrder: idx };
+    });
+    
+    updateMetaMany(updates);
+    if (sortKey !== 'manual') {
+      setSortKey('manual');
+      setDescending(false);
+      showGlobalFeedback?.('Switched to manual order.');
+    }
+  }, [gridDropPosition, shownEntries, sortKey, showGlobalFeedback]);
+  
+  const handleGridDragLeave = useCallback((e: React.DragEvent) => {
+    // Ignore moves between the card's own children (img, badges) — otherwise
+    // the indicator flickers on every child boundary crossed.
+    const related = e.relatedTarget as Node | null;
+    if (related && e.currentTarget.contains(related)) return;
+    e.preventDefault();
+    setGridDragOverId(null);
+    setGridDropPosition(null);
+  }, []);
+
   const duplicateGroups = useMemo(() => {
     if (dialog !== 'duplicates') return [];
     const hashed = shownEntries.filter(e => e.facts?.dhash).map(e => ({ id: e.file.id, dhash: e.facts!.dhash! }));
@@ -776,20 +1300,20 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
           <PanelLine position="top" delay={0.4} />
           <PanelLine position="bottom" delay={0.5} />
           <div className="flex flex-col h-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-            <div className="p-4 bg-base-100/10 flex justify-between items-center">
-              <TerminalText text="ASSET ROOTS" delay={0.6} className="text-xs font-black uppercase text-primary" />
-              <div className="flex gap-1">
-                <button className="form-btn h-7 px-2 text-2xs" onClick={() => void handleAddVaultRoot()} aria-label="Add the vault gallery as a root" title="Browse the Vault gallery folder here">
-                  + VAULT
-                </button>
-                <button className="form-btn h-7 px-2 text-2xs" onClick={() => void handleAddRoot()} aria-label="Add folder root">
-                  + ADD
-                </button>
-              </div>
+            <div className="p-4 bg-base-100/10 flex gap-1">
+              <button className="form-btn h-7 flex-1 text-2xs" onClick={() => void handleAddVaultRoot()} aria-label="Add the vault gallery as a root" title="Browse the Vault gallery folder here">
+                + VAULT
+              </button>
+              <button className="form-btn h-7 flex-1 text-2xs" onClick={() => void handleAddRoot()} aria-label="Add folder root" title="Add a folder root">
+                + ADD
+              </button>
             </div>
             <div
               className={`overflow-y-auto p-2 border-b flex flex-col gap-1 transition-colors ${isDraggingRootDrop ? 'border-primary bg-primary/5' : 'border-base-content/10'}`}
-              onDragOver={e => { e.preventDefault(); setIsDraggingRootDrop(true); }}
+              onDragOver={e => {
+                if (draggedFileIdsRef.current.length || draggedFolderRef.current) return;
+                e.preventDefault(); setIsDraggingRootDrop(true);
+              }}
               onDragLeave={() => setIsDraggingRootDrop(false)}
               onDrop={e => void handleRootsDrop(e)}
               title="Drop a folder here to add it as a root"
@@ -802,6 +1326,11 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                   onSelect={() => { if (root.status === 'granted') { setSelectedRootId(root.id); setView({ kind: 'folder' }); } }}
                   onReconnect={() => void handleReconnect(root)}
                   onRemove={() => void handleRemoveRoot(root.id)}
+                  onContextMenu={(root, e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setCtxMenu({ x: e.clientX, y: e.clientY, items: buildRootMenu(root) });
+                  }}
                 />
               ))}
               {roots.length === 0 && (
@@ -809,6 +1338,34 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
               )}
             </div>
             <div className="flex-grow overflow-y-auto p-2 relative">
+              {folderMoveProgress && (
+                <div className="mb-2 p-2 rounded border border-primary/40 bg-primary/10" role="status" aria-label="Folder move progress">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-2xs font-mono uppercase text-base-content/80 truncate">
+                      {folderMoveProgress.total
+                        ? `Moving ${folderMoveProgress.moved}/${folderMoveProgress.total} files…`
+                        : 'Moving…'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleCancelFolderMove}
+                      disabled={folderMoveCancelling}
+                      className="form-btn h-6 px-2 text-2xs"
+                    >
+                      {folderMoveCancelling ? 'Cancelling…' : 'Cancel'}
+                    </button>
+                  </div>
+                  <div className="mt-1.5 h-1 bg-base-content/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary transition-[width]"
+                      style={{ width: folderMoveProgress.total ? `${Math.min(100, Math.round((folderMoveProgress.moved / folderMoveProgress.total) * 100))}%` : '0%' }}
+                    />
+                  </div>
+                  {folderMoveProgress.currentFile && (
+                    <p className="mt-1 text-2xs font-mono text-base-content/50 truncate">{folderMoveProgress.currentFile}</p>
+                  )}
+                </div>
+              )}
               {isScanningTree && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
                   <LoadingSpinner size={40} />
@@ -824,7 +1381,32 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                   dragOverPath={dragOverPath}
                   onDragOverNode={setDragOverPath}
                   onDropNode={(node, e) => void handleFolderDrop(node, e)}
+                  onFolderDragStart={handleFolderDragStart}
+                  onFolderDragEnd={handleFolderDragEnd}
+                  canDropFolderOn={canDropFolderOn}
+                  onContextMenu={(node, e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setCtxMenu({ x: e.clientX, y: e.clientY, items: buildTreeMenu(node) });
+                  }}
                 />
+              )}
+              {selectedRoot && selectedRoot.status === 'granted' && (
+                <div className="mt-1 pt-1 border-t border-base-content/10">
+                  <TrashTreeNode
+                    entries={trashEntries}
+                    onContextMenu={e => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setCtxMenu({ x: e.clientX, y: e.clientY, items: buildTrashMenu() });
+                    }}
+                    onItemContextMenu={(entry, e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setCtxMenu({ x: e.clientX, y: e.clientY, items: buildTrashItemMenu(entry) });
+                    }}
+                  />
+                </div>
               )}
               {!selectedRoot && !isScanningTree && (
                 <p className="text-2xs font-mono uppercase text-base-content/60 p-2">Select a root to browse.</p>
@@ -863,20 +1445,75 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
           <ScanLine delay={3.5} />
           <div className="flex h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
             <div className="flex flex-col flex-grow min-w-0">
-              <motion.header variants={sectionWipeVariants} custom={1.2} initial="hidden" animate="visible" className="p-4 bg-base-100/10 flex justify-between items-center gap-3">
+              <motion.header variants={sectionWipeVariants} custom={1.2} initial="hidden" animate="visible" className="p-4 bg-base-100/10 flex justify-between items-center gap-3 flex-wrap">
                 <TerminalText text={headerTitle} delay={0.8} className="text-2xs font-black uppercase text-primary truncate" />
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                   {undoEntry && (
                     <button type="button" disabled={isBusy} className="form-btn h-7 px-2 text-2xs" title="Undo the last file operation (survives restarts)" onClick={() => void handleUndo()}>
                       UNDO: {undoEntry.op.label}
                     </button>
                   )}
-                  <button type="button" disabled={!shownEntries.some(e => e.facts?.dhash)} className="form-btn h-7 px-2 text-2xs" onClick={() => setDialog('duplicates')}>
+                  <button
+                    type="button"
+                    disabled={folderFiles.length === 0 || isFullIndexing}
+                    className="form-btn h-7 px-2 text-2xs"
+                    title={isFullIndexing ? 'Indexing files…' : 'Find near-identical files'}
+                    onClick={() => { void runFullIndex().then(() => setDialog('duplicates')); }}
+                  >
                     DUPLICATES
                   </button>
+                  {selectedIds.size > 0 && (
+                    <>
+                      <div className="w-px h-4 bg-base-content/10 mx-1" />
+                      <div role="toolbar" aria-label="Selection actions" className="flex items-center gap-2 flex-wrap">
+                        <div className="hidden lg:flex items-center gap-1.5">
+                          <button disabled={isBusy} onClick={() => void handleExport()} className="form-btn h-7 w-7 px-0" aria-label="EXPORT" title="Export">
+                            <DownloadIcon className="w-4 h-4" />
+                          </button>
+                          <button disabled={isBusy} onClick={() => void handleSendToConverter()} className="form-btn h-7 w-7 px-0" aria-label="CONVERT" title="Convert">
+                            <RefreshIcon className="w-4 h-4" />
+                          </button>
+                          <button disabled={isBusy || selectedIds.size !== 1} onClick={() => void handleEditInImageEditor()} className="form-btn h-7 w-7 px-0" aria-label="EDIT" title="Edit in image editor">
+                            <EditIcon className="w-4 h-4" />
+                          </button>
+                          <button disabled={isBusy || !getSelectedFiles().every(f => VIDEO_EDITOR_EXT_SET.has(f.ext))} onClick={() => void handleOpenInVideoEditor()} className="form-btn h-7 w-7 px-0" aria-label="VIDEO" title="Open in video editor">
+                            <FilmIcon className="w-4 h-4" />
+                          </button>
+                          <button disabled={isBusy} onClick={() => void handleSendTo('resizer')} className="form-btn h-7 w-7 px-0" aria-label="RESIZE" title="Resize">
+                            <AspectRatioIcon className="w-4 h-4" />
+                          </button>
+                          <button disabled={isBusy || selectedIds.size !== 1} onClick={() => void handleSendTo('media_analyzer')} className="form-btn h-7 w-7 px-0" aria-label="ANALYZE" title="Analyze">
+                            <SparklesIcon className="w-4 h-4" />
+                          </button>
+                          <button disabled={isBusy} onClick={() => setDialog('vault')} className="form-btn h-7 w-7 px-0" aria-label="To Vault" title="Save to Vault">
+                            <ArchiveIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          className="lg:hidden form-btn h-7 w-7 px-0"
+                          aria-label="More selection actions"
+                          aria-haspopup="menu"
+                          title="More selection actions"
+                          onClick={e => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setCtxMenu({ x: rect.left, y: rect.bottom + 4, items: selectionDropdownItems() });
+                          }}
+                        >
+                          <MenuIcon className="w-4 h-4" />
+                        </button>
+                        <button onClick={clearSelection} className="form-btn h-7 w-7 px-0 text-base-content/60 hover:text-error" aria-label="Deselect all" title="Deselect all">
+                          <CloseIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </>
+                  )}
                   <span className="text-2xs font-mono font-bold text-base-content/60 uppercase">
                     {folderFiles.length} IMAGE{folderFiles.length === 1 ? '' : 'S'}
                   </span>
+                  {selectedIds.size > 0 && (
+                    <span className="text-2xs font-mono font-black uppercase text-primary">{selectedIds.size} SELECTED</span>
+                  )}
                 </div>
               </motion.header>
               {libStatus.kind !== 'saved' && (
@@ -894,7 +1531,17 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
               <FilterBar criteria={criteria} onChange={c => { setCriteria(c); setVisibleCount(PAGE_SIZE); }} sort={sortKey} descending={descending}
                 onSort={(k, d) => { setSortKey(k); setDescending(d); }} exts={folderExts} saved={library.filters}
                 shown={shownEntries.length} total={folderFiles.length} />
-              <motion.div variants={contentVariants} custom={2.2} initial="hidden" animate="visible" className="flex-grow overflow-y-auto p-3" aria-live="polite">
+              <motion.div variants={contentVariants} custom={2.2} initial="hidden" animate="visible" className="flex-grow overflow-y-auto p-3" aria-live="polite"
+                onContextMenu={e => {
+                  if ((e.target as HTMLElement).closest('button')) return;
+                  if ((e.target as HTMLElement).closest('.group.relative')) return;
+                  e.preventDefault();
+                  // Keyboard-triggered contextmenu arrives at 0,0 — anchor to the grid box.
+                  const kb = e.clientX === 0 && e.clientY === 0;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setCtxMenu({ x: kb ? rect.left + 8 : e.clientX, y: kb ? rect.top + 8 : e.clientY, items: buildGridMenu() });
+                }}
+              >
                 {isListingFolder ? (
                   <div className="h-full min-h-[240px]" />
                 ) : shownEntries.length === 0 ? (
@@ -912,21 +1559,44 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                           key={file.id}
                           file={file}
                           url={objectUrls.get(file.id) || undefined}
-                          noPreview={facts.has(file.id) && !facts.get(file.id)!.thumb && !BROWSER_SHOWS.has(file.ext)}
+                          width={facts.get(file.id)?.width}
+                          height={facts.get(file.id)?.height}
+                          noPreview={!!facts.get(file.id)?.extracted && !facts.get(file.id)!.thumb && !BROWSER_SHOWS.has(file.ext)}
                           meta={library.assets[file.id]}
                           stack={stackInfo.get(file.id)}
                           onToggleStack={id => setExpandedStacks(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
                           selected={selectedIds.has(file.id)}
                           hasSelection={selectedIds.size > 0}
                           onClick={e => handleCardClick(file, idx, e)}
+                          onContextMenu={e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            let effectiveIds = selectedIds;
+                            if (!selectedIds.has(file.id)) {
+                              effectiveIds = new Set([file.id]);
+                              setSelectedIds(effectiveIds);
+                            }
+                            // Shift+F10 / Menu key fires contextmenu at 0,0 — anchor to the card instead.
+                            const kb = e.clientX === 0 && e.clientY === 0;
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setCtxMenu({
+                              x: kb ? rect.left : e.clientX,
+                              y: kb ? rect.bottom : e.clientY,
+                              items: buildCardMenu(effectiveIds),
+                            });
+                          }}
                           onToggleSelect={() => setSelectedIds(prev => {
                             const next = new Set(prev);
                             if (next.has(file.id)) next.delete(file.id);
                             else next.add(file.id);
                             return next;
                           })}
-                          onDragStart={e => handleCardDragStart(file, e)}
-                        />
+                           onDragStart={e => handleCardDragStart(file, e)}
+                           onDragOver={e => handleGridDragOver(e, file.id)}
+                           onDrop={e => handleGridDrop(e, file.id)}
+                           onDragLeave={handleGridDragLeave}
+                           dropIndicator={gridDragOverId === file.id ? gridDropPosition : null}
+                         />
                       ))}
                     </div>
                     {visibleCount < shownEntries.length && (
@@ -983,22 +1653,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
         </motion.section>
       </div>
 
-      <AnimatePresence>
-        {selectedIds.size > 0 && (
-          <SelectionToolbar
-            count={selectedIds.size}
-            busy={isBusy}
-            onExport={() => void handleExport()}
-            onConvert={() => void handleSendToConverter()}
-            onEdit={selectedIds.size === 1 ? () => void handleEditInImageEditor() : undefined}
-            onOpenInVideoEditor={getSelectedFiles().every(f => VIDEO_EDITOR_EXT_SET.has(f.ext)) ? () => void handleOpenInVideoEditor() : undefined}
-            onResize={() => void handleSendTo('resizer')}
-            onAnalyze={selectedIds.size === 1 ? () => void handleSendTo('media_analyzer') : undefined}
-            onSaveToVault={() => setDialog('vault')}
-            onDeselect={clearSelection}
-          />
-        )}
-      </AnimatePresence>
+      {/* SelectionToolbar relocated to grid header — see motion.header above (plan Phase 5 / review §6). */}
 
       <AnimatePresence>
         {lightboxIndex !== null && (
@@ -1021,6 +1676,14 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
         onSave={categoryId => void handleSaveToVault(categoryId)} />
       <DuplicatesModal isOpen={dialog === 'duplicates'} groups={duplicateGroups} thumbUrl={id => objectUrls.get(id) || undefined}
         onClose={() => setDialog(null)} onSelectExtras={ids => { setSelectedIds(new Set(ids)); setDialog(null); }} />
+      {ctxMenu && (
+        <ContextMenu
+          items={ctxMenu.items}
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
     </div>
   );
 };
@@ -1056,12 +1719,14 @@ const RootRow: React.FC<{
   onSelect: () => void;
   onReconnect: () => void;
   onRemove: () => void;
-}> = ({ root, selected, onSelect, onReconnect, onRemove }) => (
+  onContextMenu?: (root: AssetRootState, e: React.MouseEvent) => void;
+}> = ({ root, selected, onSelect, onReconnect, onRemove, onContextMenu }) => (
   <div
     className={`group flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-xs font-mono uppercase transition-colors ${
       selected ? 'bg-primary/15 text-primary' : 'hover:bg-base-200/50 text-base-content/70'
     }`}
     onClick={onSelect}
+    onContextMenu={e => onContextMenu?.(root, e)}
   >
     <span
       className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${root.status === 'granted' ? 'bg-success' : root.status === 'missing' ? 'bg-error' : 'bg-warning'}`}
@@ -1096,7 +1761,11 @@ const FolderTreeNode: React.FC<{
   dragOverPath: string | null;
   onDragOverNode: (path: string | null) => void;
   onDropNode: (node: DirectoryNode, e: React.DragEvent) => void;
-}> = ({ node, selectedPath, onSelect, depth, dragOverPath, onDragOverNode, onDropNode }) => {
+  onContextMenu?: (node: DirectoryNode, e: React.MouseEvent) => void;
+  onFolderDragStart?: (node: DirectoryNode, e: React.DragEvent) => void;
+  onFolderDragEnd?: () => void;
+  canDropFolderOn?: (destPath: string) => boolean;
+}> = ({ node, selectedPath, onSelect, depth, dragOverPath, onDragOverNode, onDropNode, onContextMenu, onFolderDragStart, onFolderDragEnd, canDropFolderOn }) => {
   const [isOpen, setIsOpen] = useState(depth < 1);
   const isSelected = node.path === selectedPath;
   const isDragOver = dragOverPath === node.path;
@@ -1109,7 +1778,20 @@ const FolderTreeNode: React.FC<{
           isDragOver ? 'bg-primary/25 ring-1 ring-primary' : isSelected ? 'bg-primary/15 text-primary' : 'hover:bg-base-200/50 text-base-content/70'
         }`}
         onClick={() => onSelect(node.path)}
-        onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; onDragOverNode(node.path); }}
+        onContextMenu={e => onContextMenu?.(node, e)}
+        draggable
+        onDragStart={e => onFolderDragStart?.(node, e)}
+        onDragEnd={() => onFolderDragEnd?.()}
+        onDragOver={e => {
+          if (canDropFolderOn && !canDropFolderOn(node.path)) {
+            e.dataTransfer.dropEffect = 'none';
+            onDragOverNode(null);
+            return;
+          }
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          onDragOverNode(node.path);
+        }}
         onDragLeave={() => onDragOverNode(null)}
         onDrop={e => onDropNode(node, e)}
         title={node.path || node.name}
@@ -1140,7 +1822,61 @@ const FolderTreeNode: React.FC<{
               dragOverPath={dragOverPath}
               onDragOverNode={onDragOverNode}
               onDropNode={onDropNode}
+              onContextMenu={onContextMenu}
+              onFolderDragStart={onFolderDragStart}
+              onFolderDragEnd={onFolderDragEnd}
+              canDropFolderOn={canDropFolderOn}
             />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const TrashTreeNode: React.FC<{
+  entries: TrashedEntry[];
+  onContextMenu: (e: React.MouseEvent) => void;
+  onItemContextMenu: (entry: TrashedEntry, e: React.MouseEvent) => void;
+}> = ({ entries, onContextMenu, onItemContextMenu }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const count = entries.length;
+
+  return (
+    <div>
+      <div
+        className="flex items-center gap-1.5 px-1.5 py-1.5 rounded cursor-pointer text-xs font-mono truncate transition-colors hover:bg-base-200/50 text-base-content/70"
+        onClick={() => setIsOpen(v => !v)}
+        onContextMenu={onContextMenu}
+        title="Trash"
+      >
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); setIsOpen(v => !v); }}
+          className="w-4 h-4 flex-shrink-0 flex items-center justify-center"
+          aria-label={isOpen ? 'Collapse trash' : 'Expand trash'}
+        >
+          {isOpen ? <ChevronDownIcon className="w-3.5 h-3.5" /> : <ChevronRightIcon className="w-3.5 h-3.5" />}
+        </button>
+        <DeleteIcon className="w-4 h-4 flex-shrink-0" />
+        <span className="truncate">Trash</span>
+        {count > 0 && <span className="ml-auto pl-1 text-2xs text-base-content/50">{count}</span>}
+      </div>
+      {isOpen && (
+        <div className="pl-3 ml-2 border-l border-base-content/10">
+          {count === 0 && (
+            <p className="px-1.5 py-1 text-2xs text-base-content/50">Trash is empty</p>
+          )}
+          {entries.map(entry => (
+            <div
+              key={`${entry.batchKey}:${entry.originalPath}`}
+              className="flex items-center gap-1.5 px-1.5 py-1.5 rounded text-xs font-mono truncate transition-colors hover:bg-base-200/50 text-base-content/70 cursor-default"
+              onContextMenu={e => onItemContextMenu(entry, e)}
+              title={entry.originalPath}
+            >
+              <span className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{entry.name}</span>
+            </div>
           ))}
         </div>
       )}
@@ -1151,6 +1887,9 @@ const FolderTreeNode: React.FC<{
 const AssetCard: React.FC<{
   file: AssetFile;
   url: string | undefined;
+  /** Natural dimensions — reserve the box before the thumb decodes. */
+  width?: number;
+  height?: number;
   /** Facts are in and there's no preview the browser can show (TIFF/HEIC/…). */
   noPreview: boolean;
   meta: AssetMeta | undefined;
@@ -1159,21 +1898,37 @@ const AssetCard: React.FC<{
   selected: boolean;
   hasSelection: boolean;
   onClick: (e: React.MouseEvent) => void;
+  onContextMenu: (e: React.MouseEvent) => void;
   onToggleSelect: () => void;
   onDragStart: (e: React.DragEvent) => void;
-}> = ({ file, url, noPreview, meta, stack, onToggleStack, selected, hasSelection, onClick, onToggleSelect, onDragStart }) => (
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent) => void;
+  onDragLeave?: (e: React.DragEvent) => void;
+  /** Reorder indicator: insertion line at the top/bottom edge of this card. */
+  dropIndicator?: 'before' | 'after' | null;
+}> = ({ file, url, width, height, noPreview, meta, stack, onToggleStack, selected, hasSelection, onClick, onContextMenu, onToggleSelect, onDragStart, onDragOver, onDrop, onDragLeave, dropIndicator }) => (
   <button
     onClick={onClick}
+    onContextMenu={onContextMenu}
     draggable
     onDragStart={onDragStart}
+    onDragOver={onDragOver}
+    onDrop={onDrop}
+    onDragLeave={onDragLeave}
     className={`group relative block w-full mb-2 break-inside-avoid overflow-hidden rounded border transition-colors bg-base-200/30 ${
       selected ? 'border-primary ring-2 ring-primary/50' : 'border-base-content/10 hover:border-primary/50'
     }`}
     aria-label={`Open ${file.name}`}
     aria-pressed={selected}
   >
+    {dropIndicator === 'before' && (
+      <span aria-hidden className="absolute top-0 inset-x-0 z-10 h-0.5 bg-primary" />
+    )}
+    {dropIndicator === 'after' && (
+      <span aria-hidden className="absolute bottom-0 inset-x-0 z-10 h-0.5 bg-primary" />
+    )}
     {url ? (
-      <img src={url} alt={file.name} className="w-full h-auto object-cover" loading="lazy" draggable={false} />
+      <img src={url} alt={file.name} width={width} height={height} className="w-full h-auto object-cover" loading="lazy" draggable={false} />
     ) : noPreview ? (
       <div className="w-full aspect-square flex items-center justify-center text-sm font-mono font-black uppercase text-base-content/40">.{file.ext}</div>
     ) : (
@@ -1390,73 +2145,6 @@ const Lightbox: React.FC<{
   return createPortal(modalContent, document.body);
 };
 
-// Portaled for the same reason as the Lightbox: fixed positioning inside
-// App.tsx's transformed route-transition container isn't viewport-relative.
-const SelectionToolbar: React.FC<{
-  count: number;
-  busy: boolean;
-  onExport: () => void;
-  onConvert: () => void;
-  onEdit: (() => void) | undefined;
-  onOpenInVideoEditor: (() => void) | undefined;
-  onResize: () => void;
-  onAnalyze: (() => void) | undefined;
-  onSaveToVault: () => void;
-  onDeselect: () => void;
-}> = ({ count, busy, onExport, onConvert, onEdit, onOpenInVideoEditor, onResize, onAnalyze, onSaveToVault, onDeselect }) => {
-  const content = (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-overlay flex flex-wrap items-center justify-center gap-x-1 gap-y-1 max-w-[calc(100vw-3rem)] bg-base-300/95 backdrop-blur-xl border border-base-content/10 rounded-3xl px-4 py-2 shadow-xl"
-      role="toolbar"
-      aria-label="Selection actions"
-    >
-      <span className="text-2xs font-mono font-black uppercase text-primary pl-2">{count} SELECTED</span>
-      <div className="w-px h-5 bg-base-content/10" />
-      <button disabled={busy} onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40">
-        <DownloadIcon className="w-4 h-4" /> Export
-      </button>
-      <button disabled={busy} onClick={onConvert} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40">
-        <RefreshIcon className="w-4 h-4" /> Convert
-      </button>
-      <button
-        disabled={busy || !onEdit}
-        onClick={onEdit}
-        title={onEdit ? undefined : 'Select exactly one image to edit'}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40"
-      >
-        <EditIcon className="w-4 h-4" /> Edit
-      </button>
-      <button
-        disabled={busy || !onOpenInVideoEditor}
-        onClick={onOpenInVideoEditor}
-        title={onOpenInVideoEditor ? undefined : 'Select video, image or audio files to open in the video editor'}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40"
-      >
-        <FilmIcon className="w-4 h-4" /> Video Editor
-      </button>
-      <button disabled={busy} onClick={onResize} className="px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40">
-        Resize
-      </button>
-      <button disabled={busy || !onAnalyze} onClick={onAnalyze} title={onAnalyze ? undefined : 'Select exactly one image to analyze'}
-        className="px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40">
-        Analyze
-      </button>
-      <button disabled={busy} onClick={onSaveToVault} title="Save into the Vault gallery with tags and caption"
-        className="px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40">
-        To Vault
-      </button>
-      <div className="w-px h-5 bg-base-content/10" />
-      <button onClick={onDeselect} className="p-1.5 text-base-content/60 hover:text-error transition-colors" aria-label="Deselect all">
-        <CloseIcon className="w-4 h-4" />
-      </button>
-    </motion.div>
-  );
 
-  if (typeof document === 'undefined' || !document.body) return null;
-  return createPortal(content, document.body);
-};
 
 export default AssetsManagerPage;

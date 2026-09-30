@@ -8,7 +8,7 @@ import type { AssetFile } from './types';
 
 export interface AssetEntry { file: AssetFile; facts?: AssetFacts; meta?: AssetMeta }
 
-export type SortKey = 'name' | 'date' | 'size' | 'dimensions' | 'rating';
+export type SortKey = 'manual' | 'name' | 'date' | 'size' | 'dimensions' | 'rating';
 
 export function matches(e: AssetEntry, c: FilterCriteria): boolean {
   const m = e.meta ?? {};
@@ -34,6 +34,16 @@ export function isEmptyCriteria(c: FilterCriteria): boolean {
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 export function sortEntries(list: AssetEntry[], key: SortKey, descending = false): AssetEntry[] {
+  if (key === 'manual') {
+    const out = [...list].sort((a, b) => {
+      const oa = a.meta?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+      const ob = b.meta?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+      if (oa !== ob) return oa - ob;
+      return collator.compare(a.file.name, b.file.name);
+    });
+    return descending ? out.reverse() : out;
+  }
+
   const val = (e: AssetEntry): number | string => {
     switch (key) {
       case 'name': return e.file.name;
@@ -45,7 +55,7 @@ export function sortEntries(list: AssetEntry[], key: SortKey, descending = false
   };
   const out = [...list].sort((a, b) => {
     const va = val(a), vb = val(b);
-    const d = typeof va === 'string' ? collator.compare(va, vb as string) : (va as number) - (vb as number);
+    const d = typeof va === 'string' && typeof vb === 'string' ? collator.compare(va, vb) : Number(va) - Number(vb);
     return d !== 0 ? d : collator.compare(a.file.name, b.file.name);
   });
   return descending ? out.reverse() : out;
