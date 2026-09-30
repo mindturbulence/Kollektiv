@@ -104,7 +104,7 @@ describe('procedural LUTs and the built-in catalog', () => {
     const { getLut } = await import('../looks/lutRegistry');
     expect(getLut('proc:sepia')?.size).toBe(33);
     const orig = globalThis.fetch;
-    globalThis.fetch = (() => new Promise(() => {})) as typeof fetch; // never resolves
+    globalThis.fetch = (() => new Promise(() => {})); // never resolves
     expect(getLut('file:cold-vs-warm')).toBeUndefined();
     globalThis.fetch = orig;
   });

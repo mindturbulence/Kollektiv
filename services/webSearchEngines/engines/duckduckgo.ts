@@ -13,7 +13,7 @@ function unwrapDuckDuckGoUrl(href: string): string {
 
 function parseResults(html: string, maxResults: number): WebSearchResult[] {
   const dom = new JSDOM(html);
-  const anchors = Array.from(dom.window.document.querySelectorAll('a.result__a')) as HTMLAnchorElement[];
+  const anchors = Array.from(dom.window.document.querySelectorAll('a.result__a'));
   const results: WebSearchResult[] = [];
   for (const a of anchors) {
     if (results.length >= maxResults) break;

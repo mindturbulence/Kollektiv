@@ -137,12 +137,12 @@ export function applyTagFilters(tags: Record<string, any>, options: TagFilterOpt
     let result: Record<string, any> = JSON.parse(JSON.stringify(tags));
 
     if (options.byFolder) {
-        if (validInclude) result = applyFiltersToSubproperties(result, filterByTag, includeRegex as RegExp | string);
-        if (validExclude) result = applyFiltersToSubproperties(result, removeTags, excludeRegex as RegExp | string);
+        if (validInclude) result = applyFiltersToSubproperties(result, filterByTag, includeRegex);
+        if (validExclude) result = applyFiltersToSubproperties(result, removeTags, excludeRegex);
         if (options.count > 0) result = applyFiltersToSubproperties(result, filterTopN, options.count);
     } else {
-        if (validInclude) result = filterByTag(result, includeRegex as RegExp | string);
-        if (validExclude) result = removeTags(result, excludeRegex as RegExp | string);
+        if (validInclude) result = filterByTag(result, includeRegex);
+        if (validExclude) result = removeTags(result, excludeRegex);
         if (options.count > 0) result = filterTopN(result, options.count);
     }
     return result;

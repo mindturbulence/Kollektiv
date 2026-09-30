@@ -418,7 +418,7 @@ export class CanvasRenderer {
         // Corner/edge handles (filled squares)
         const EDGE_HANDLES: Array<keyof typeof handles> = ['tl','tc','tr','ml','mr','bl','bc','br'];
         for (const hid of EDGE_HANDLES) {
-          const pt = handles[hid as keyof typeof handles] as { x: number; y: number };
+          const pt = handles[hid] as { x: number; y: number };
           ctx.fillStyle = 'white';
           ctx.strokeStyle = '#C0F04C';
           ctx.lineWidth = 1;

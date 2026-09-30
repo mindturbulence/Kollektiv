@@ -67,7 +67,7 @@ export const comfyWorkflowTool: AssistantTool = {
     } else if (shouldValidate) {
       try {
         const { validateWorkflowOnComfy } = await import('../comfyWorkflowParser');
-        const result = await validateWorkflowOnComfy(workflow, comfyUrl!);
+        const result = await validateWorkflowOnComfy(workflow, comfyUrl);
         const errors = result.node_errors || {};
         const errorCount = Object.keys(errors).length;
         validationResult = errorCount === 0

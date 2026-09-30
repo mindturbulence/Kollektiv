@@ -68,10 +68,10 @@ describe('extractStoryAssetsTool', () => {
     expect(writeNoteMock).toHaveBeenCalledTimes(4);
     expect(savePresetMock).toHaveBeenCalledTimes(4);
 
-    const janeNote = writeNoteMock.mock.calls.find((c) => c[0].includes('character_jane'))![1] as string;
+    const janeNote = writeNoteMock.mock.calls.find((c) => c[0].includes('character_jane'))![1];
     expect(janeNote).toContain('[[KITCHEN]]');
 
-    const kitchenNote = writeNoteMock.mock.calls.find((c) => c[0].includes('location_kitchen'))![1] as string;
+    const kitchenNote = writeNoteMock.mock.calls.find((c) => c[0].includes('location_kitchen'))![1];
     expect(kitchenNote).toContain('[[JANE]]');
   });
 

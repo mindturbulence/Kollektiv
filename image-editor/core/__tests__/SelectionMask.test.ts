@@ -57,7 +57,7 @@ class FakeDOMMatrix {
 }
 
 function fakeBitmap(width = 32, height = 32): ImageBitmap {
-  return { width, height, close: vi.fn() } as unknown as ImageBitmap;
+  return { width, height, close: vi.fn() };
 }
 
 function makeLayer(width = 32, height = 32): ImageLayer {

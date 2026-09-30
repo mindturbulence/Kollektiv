@@ -7,7 +7,7 @@ import { undo } from '../history/HistoryManager';
 import type { EditorDocument, ImageLayer, Layer, Selection } from '../types';
 
 function fakeBitmap(width: number, height: number): ImageBitmap {
-  return { width, height, close: vi.fn() } as unknown as ImageBitmap;
+  return { width, height, close: vi.fn() };
 }
 
 function makeLayer(name = 'bg', width = 100, height = 100): ImageLayer {

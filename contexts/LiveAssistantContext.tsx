@@ -151,7 +151,7 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
         if (isStale()) return; // toggled away while the chunk was loading; nothing to tear down yet
         liveRef.current = live;
         try {
-            await live.connect(settings, handlers as any);
+            await live.connect(settings, handlers);
         } catch (e: any) {
             if (!isStale()) {
                 setStatus('error');

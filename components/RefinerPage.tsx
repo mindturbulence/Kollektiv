@@ -712,7 +712,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                                 {directMediaResult.type === 'video' ? (
                                                     <video src={directMediaResult.url} controls autoPlay loop className="w-full h-full object-contain" />
                                                 ) : (
-                                                    <img src={directMediaResult.url} alt="Generated result" className="w-full h-full object-contain" referrerPolicy="no-referrer" onError={(e) => { (e.currentTarget as HTMLImageElement).style.filter = 'grayscale(1)'; }} />
+                                                    <img src={directMediaResult.url} alt="Generated result" className="w-full h-full object-contain" referrerPolicy="no-referrer" onError={(e) => { (e.currentTarget).style.filter = 'grayscale(1)'; }} />
                                                 )}
                                             </div>
                                             <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-20">

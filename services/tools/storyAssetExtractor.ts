@@ -187,7 +187,7 @@ function seedCharacterModifiers(): Partial<PromptModifiers> {
     hairStyle: HAIR_STYLES[0],
     eyeColor: EYE_COLORS[0],
     clothing: CLOTHING_STYLES[0],
-  } as Partial<PromptModifiers>;
+  };
 }
 
 // ── Tool definition ────────────────────────────────────────────────────
@@ -284,7 +284,7 @@ export const extractStoryAssetsTool: AssistantTool = {
       try {
         await refinerPresetService.savePreset({
           name: char,
-          modifiers: seedCharacterModifiers() as PromptModifiers,
+          modifiers: seedCharacterModifiers(),
           targetAIModel: TARGET_IMAGE_AI_MODELS[0],
           mediaMode: 'image',
           promptLength: PROMPT_DETAIL_LEVELS.MEDIUM,
@@ -311,7 +311,7 @@ export const extractStoryAssetsTool: AssistantTool = {
       try {
         await refinerPresetService.savePreset({
           name: loc.name,
-          modifiers: {} as PromptModifiers,
+          modifiers: {},
           targetAIModel: TARGET_IMAGE_AI_MODELS[0],
           mediaMode: 'image',
           promptLength: PROMPT_DETAIL_LEVELS.MEDIUM,

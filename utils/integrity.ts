@@ -284,7 +284,7 @@ export const rebuildGalleryDatabase = async (onProgress: (msg: string) => void):
         
         const manifestStr = await fileSystemManager.readFile('kollektiv_gallery_manifest.json');
         
-        let manifest: any = { galleryItems: [], categories: [], pinnedIds: [] };
+        const manifest: any = { galleryItems: [], categories: [], pinnedIds: [] };
         if (manifestStr) {
             const parsed = forceParseJson(manifestStr);
             if (parsed && typeof parsed === 'object') {
@@ -365,7 +365,7 @@ export const rebuildPromptDatabase = async (onProgress: (msg: string) => void): 
         
         const manifestStr = await fileSystemManager.readFile('prompts_manifest.json');
         
-        let manifest: any = { prompts: [], categories: [] };
+        const manifest: any = { prompts: [], categories: [] };
         if (manifestStr) {
             const parsed = forceParseJson(manifestStr);
             if (parsed && typeof parsed === 'object') {

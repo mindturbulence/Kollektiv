@@ -45,7 +45,7 @@ export function sortEntries(list: AssetEntry[], key: SortKey, descending = false
   };
   const out = [...list].sort((a, b) => {
     const va = val(a), vb = val(b);
-    const d = typeof va === 'string' ? collator.compare(va, vb as string) : (va as number) - (vb as number);
+    const d = typeof va === 'string' ? collator.compare(va, vb as string) : (va) - (vb as number);
     return d !== 0 ? d : collator.compare(a.file.name, b.file.name);
   });
   return descending ? out.reverse() : out;

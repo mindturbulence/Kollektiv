@@ -21,14 +21,14 @@ const item = (overrides: Partial<GalleryItem> = {}): GalleryItem => ({
   id: 'item1', createdAt: 1, type: 'image', urls: ['x'], sources: ['x'],
   title: 'Untitled Group (1 image)', prompt: '', tags: [], isNsfw: false,
   ...overrides,
-} as GalleryItem);
+});
 
 const gen = (overrides: Partial<Generation> = {}): Generation => ({
   id: 'gen1', createdAt: 1, promptText: 'a fox', backendId: 'a1111',
   params: { prompt: 'a fox', width: 512, height: 512, steps: 20, cfgScale: 7 },
   resultItemIds: ['item1'], status: 'ok',
   ...overrides,
-} as Generation);
+});
 
 beforeEach(() => {
   vi.clearAllMocks();

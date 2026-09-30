@@ -554,7 +554,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                                     <select
                                         aria-label="Gallery convert format"
                                         value={settings.galleryConvertTarget ?? 'jpg'}
-                                        onChange={(e) => handleSettingsChange('galleryConvertTarget', e.target.value as 'jpg' | 'webp' | 'avif')}
+                                        onChange={(e) => handleSettingsChange('galleryConvertTarget', e.target.value)}
                                         className="form-select h-8 text-xs w-32"
                                     >
                                         <option value="jpg">JPG</option>

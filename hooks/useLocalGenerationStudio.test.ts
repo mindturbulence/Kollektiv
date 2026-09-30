@@ -133,7 +133,7 @@ describe('useLocalGenerationStudio', () => {
 
   it('generate goes idle -> generating -> done and ingests into the gallery', async () => {
     const { result } = renderHook(() => useLocalGenerationStudio('comfy'));
-    await act(async () => { await result.current.generate(PARAMS as any, {} as any); });
+    await act(async () => { await result.current.generate(PARAMS, {} as any); });
     await waitFor(() => expect(result.current.state.phase).toBe('done'));
     expect(result.current.state.resultUrl).toBe('data:image/png;base64,x');
     expect(result.current.state.resultSeed).toBe(42);
@@ -143,7 +143,7 @@ describe('useLocalGenerationStudio', () => {
   it('generate reports an error when the backend throws', async () => {
     mockBackend.generate.mockRejectedValueOnce(new Error('boom'));
     const { result } = renderHook(() => useLocalGenerationStudio('comfy'));
-    await act(async () => { await result.current.generate(PARAMS as any, {} as any); });
+    await act(async () => { await result.current.generate(PARAMS, {} as any); });
     expect(result.current.state.phase).toBe('error');
     expect(result.current.state.error).toBe('boom');
   });
@@ -157,7 +157,7 @@ describe('useLocalGenerationStudio', () => {
     );
     const { result } = renderHook(() => useLocalGenerationStudio('comfy'));
     let genPromise!: Promise<void>;
-    act(() => { genPromise = result.current.generate(PARAMS as any, {} as any); });
+    act(() => { genPromise = result.current.generate(PARAMS, {} as any); });
     await waitFor(() => expect(result.current.state.phase).toBe('generating'));
     act(() => result.current.cancel());
     await act(async () => { await genPromise; });
@@ -167,7 +167,7 @@ describe('useLocalGenerationStudio', () => {
 
   it('reset returns to the initial state', async () => {
     const { result } = renderHook(() => useLocalGenerationStudio('comfy'));
-    await act(async () => { await result.current.generate(PARAMS as any, {} as any); });
+    await act(async () => { await result.current.generate(PARAMS, {} as any); });
     act(() => result.current.reset());
     expect(result.current.state.phase).toBe('idle');
     expect(result.current.state.resultUrl).toBeNull();

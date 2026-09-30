@@ -124,7 +124,7 @@ export function summariseExif(ex: any): ExifSummary | undefined {
     artist: asText(z[I.Artist]), copyright: asText(z[I.Copyright]), description: asText(z[I.ImageDescription]),
   };
   const kept = Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined));
-  return Object.keys(kept).length ? kept as ExifSummary : undefined;
+  return Object.keys(kept).length ? kept : undefined;
 }
 
 // ── Extraction ──────────────────────────────────────────────────────────

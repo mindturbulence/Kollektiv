@@ -25,7 +25,7 @@ function program(gl: WebGL2RenderingContext, fs: string): WebGLProgram {
     if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) ?? 'shader error');
     return s;
   };
-  const p = gl.createProgram()!;
+  const p = gl.createProgram();
   gl.attachShader(p, make(gl.VERTEX_SHADER, VS));
   gl.attachShader(p, make(gl.FRAGMENT_SHADER, fs));
   gl.linkProgram(p);
@@ -50,7 +50,7 @@ function identityLut(n: number): Float32Array {
 }
 
 function uploadLut(gl: WebGL2RenderingContext, n: number, data: Float32Array): WebGLTexture {
-  const t = gl.createTexture()!;
+  const t = gl.createTexture();
   gl.activeTexture(gl.TEXTURE1);
   gl.bindTexture(gl.TEXTURE_3D, t);
   gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGBA16F, n, n, n, 0, gl.RGBA, gl.FLOAT, data);

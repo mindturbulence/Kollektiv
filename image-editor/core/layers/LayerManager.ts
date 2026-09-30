@@ -322,7 +322,7 @@ export function duplicateLayer(layerId: string): string {
   if (!doc) return '';
   const loc = findLayerLocation(doc.layers, layerId);
   if (!loc || loc.layer.type !== 'image') return '';
-  const source = loc.layer as ImageLayer;
+  const source = loc.layer;
 
   const clone: ImageLayer = {
     ...source,
@@ -490,7 +490,7 @@ export async function resizeLayer(layerId: string, targetWidth: number, targetHe
   if (!doc) return false;
   const loc = findLayerLocation(doc.layers, layerId);
   if (!loc || loc.layer.type !== 'image') return false;
-  const layer = loc.layer as ImageLayer;
+  const layer = loc.layer;
 
   const resampled = await resampleBitmap(layer.bitmap, targetWidth, targetHeight);
   const prevBitmap = layer.bitmap;
@@ -594,7 +594,7 @@ export async function fillSelection(color?: string): Promise<boolean> {
   if (!doc || !activeLayerId || !selection) return false;
   const loc = findLayerLocation(doc.layers, activeLayerId);
   if (!loc || loc.layer.type !== 'image') return false;
-  const layer = loc.layer as ImageLayer;
+  const layer = loc.layer;
   const layerId = activeLayerId;
 
   const prevBitmap = layer.bitmap;
@@ -633,7 +633,7 @@ export async function deleteInSelection(): Promise<boolean> {
   if (!doc || !activeLayerId || !selection) return false;
   const loc = findLayerLocation(doc.layers, activeLayerId);
   if (!loc || loc.layer.type !== 'image') return false;
-  const layer = loc.layer as ImageLayer;
+  const layer = loc.layer;
   const layerId = activeLayerId;
 
   const prevBitmap = layer.bitmap;
@@ -796,7 +796,7 @@ export function updateTextLayer(
   if (!doc) return false;
   const loc = findLayerLocation(doc.layers, layerId);
   if (!loc || loc.layer.type !== 'text') return false;
-  const layer = loc.layer as TextLayer;
+  const layer = loc.layer;
 
   // Re-measure bounds the same way addTextLayer does, but keep the layer's
   // transform (rotation/flip) and re-centre the new size on the old origin —

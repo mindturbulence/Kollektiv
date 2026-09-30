@@ -177,10 +177,10 @@ export class DemoFileSystemManager implements IFileSystemManager {
         for await (const [key] of (dir as any).entries()) {
           try {
             const child = await dir.getDirectoryHandle(key);
-            yield child as unknown as FileSystemHandle;
+            yield child;
           } catch {
             const child = await dir.getFileHandle(key);
-            yield child as unknown as FileSystemHandle;
+            yield child;
           }
         }
         return;

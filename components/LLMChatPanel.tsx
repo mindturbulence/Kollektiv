@@ -644,7 +644,7 @@ ${systemResponse}` };
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter' && !e.shiftKey) {
                                                             e.preventDefault();
-                                                            void handleSubmit(e as any);
+                                                            void handleSubmit(e);
                                                         }
                                                     }}
                                                     placeholder="Enter command directive..."

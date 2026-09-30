@@ -25,7 +25,7 @@ function mockThrowingDir(name: string) {
     name,
     values: async function* () {
       throw new Error('permission denied');
-      // eslint-disable-next-line no-unreachable
+       
       yield undefined as never;
     },
   };

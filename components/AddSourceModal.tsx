@@ -42,7 +42,7 @@ export const AddSourceModal: React.FC<AddSourceModalProps> = ({ open, onClose })
     try {
       const entries: VaultEntry[] = [];
       for await (const handle of fileSystemManager.listDirectoryContents(path)) {
-        entries.push({ name: handle.name, kind: handle.kind as 'file' | 'directory' });
+        entries.push({ name: handle.name, kind: handle.kind });
       }
       entries.sort((a, b) => (a.kind !== b.kind ? (a.kind === 'directory' ? -1 : 1) : a.name.localeCompare(b.name)));
       setVaultEntries(entries);

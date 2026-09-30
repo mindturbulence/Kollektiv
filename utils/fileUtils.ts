@@ -1014,7 +1014,7 @@ class LocalFileSystemManager implements IFileSystemManager {
                 const metadataPath = [...pathSegments, `${item.id}_metadata.json`].join('/');
 
                 // Build Google Drive metadata (referencing the converted .jpg paths)
-                let driveMetaObj = { ...item };
+                const driveMetaObj = { ...item };
                 driveMetaObj.urls = urlsToUploadInGDrive;
                 const driveMetaBlob = new Blob([JSON.stringify(driveMetaObj, null, 2)], { type: 'application/json' });
 
@@ -1509,7 +1509,7 @@ export async function extractFullMetadata(imageBlob: Blob): Promise<ParsedMetada
         const parametersKeyword = 'parameters';
         const paramsIndex = text.indexOf(parametersKeyword);
         if (paramsIndex !== -1) {
-            let block = text.substring(paramsIndex + parametersKeyword.length)
+            const block = text.substring(paramsIndex + parametersKeyword.length)
                             .replace(/^[\s\x00-\x1F]+/, ''); // Clean binary junk
             
             const parts = block.split('\nNegative prompt: ');
@@ -1568,7 +1568,7 @@ export async function extractFullMetadata(imageBlob: Blob): Promise<ParsedMetada
 
         if (promptResult || workflowResult) {
             let prompt = '', negativePrompt = '', rawText = '';
-            let params: Record<string, string> = { "Engine": "ComfyUI/JSON" };
+            const params: Record<string, string> = { "Engine": "ComfyUI/JSON" };
 
             if (promptResult) {
                 if (typeof promptResult.data === 'object') {

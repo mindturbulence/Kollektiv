@@ -11,7 +11,7 @@ import { TypeTool } from '../text/TypeTool';
 import type { EditorDocument, ImageLayer, Layer, Selection, TextLayer } from '../types';
 
 function fakeBitmap(width = 64, height = 64): ImageBitmap {
-  return { width, height, close: vi.fn() } as unknown as ImageBitmap;
+  return { width, height, close: vi.fn() };
 }
 
 function makeLayer(name = 'bg', width = 64, height = 64): ImageLayer {

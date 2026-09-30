@@ -11,7 +11,7 @@ import type { EditorDocument, HistoryCommand, ImageLayer, Layer } from '../types
 /** A fake ImageBitmap — jsdom has none, and we need to observe close(). */
 function fakeBitmap(width: number, height: number): ImageBitmap & { close: ReturnType<typeof vi.fn> } {
   const close = vi.fn();
-  return { width, height, close } as unknown as ImageBitmap & { close: ReturnType<typeof vi.fn> };
+  return { width, height, close };
 }
 
 function makeCommand(bitmaps: ImageBitmap[], label = 'cmd'): HistoryCommand & { bitmapRefs: Record<string, ImageBitmap> } {

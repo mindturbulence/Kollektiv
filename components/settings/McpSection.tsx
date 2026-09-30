@@ -256,7 +256,7 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
                                                         + Add Header
                                                     </button>
                                                 </div>
-                                                {sv.headers && Object.entries(sv.headers as Record<string,string>).map(([k, v], i) => (
+                                                {sv.headers && Object.entries(sv.headers).map(([k, v], i) => (
                                                     <div key={i} className="flex items-center gap-2">
                                                         <input
                                                             type="text"

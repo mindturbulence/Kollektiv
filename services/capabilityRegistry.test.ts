@@ -65,7 +65,7 @@ describe('capabilityRegistry', () => {
 
     it('skips caps missing an id with a warning', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const noId = makeCap({ id: '' as any });
+      const noId = makeCap({ id: '' });
       reg(noId);
       expect(capabilityRegistry.size).toBe(0);
       expect(warnSpy).toHaveBeenCalledWith(

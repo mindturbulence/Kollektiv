@@ -116,7 +116,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
   // Auto-scroll selected into view
   useEffect(() => {
     if (!listRef.current) return;
-    const el = listRef.current.querySelector(`[data-index="${selectedIndex}"]`) as HTMLElement | null;
+    const el = listRef.current.querySelector(`[data-index="${selectedIndex}"]`);
     el?.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex]);
 

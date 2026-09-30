@@ -60,7 +60,7 @@ describe('find_related_knowledge', () => {
     ]);
 
     const result = await tool.execute({ kind: 'memory', id: 'm1' }, {} as any);
-    const parsed = JSON.parse(result as string);
+    const parsed = JSON.parse(result);
 
     expect(parsed).toEqual(
       expect.arrayContaining([
@@ -78,7 +78,7 @@ describe('find_related_knowledge', () => {
     ]);
 
     const result = await tool.execute({ kind: 'memory', id: 'm1', max_results: 1 }, {} as any);
-    const parsed = JSON.parse(result as string);
+    const parsed = JSON.parse(result);
     expect(parsed).toHaveLength(1);
   });
 });

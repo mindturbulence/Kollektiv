@@ -411,7 +411,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       return;
     }
     setLightboxIndex(idx);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [visibleFiles, selectedIds]);
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);

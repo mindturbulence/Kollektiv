@@ -463,7 +463,7 @@ export const generateWithImagen = async (prompt: string, aspectRatio: string = '
             config: {
                 numberOfImages: 1,
                 outputMimeType: 'image/jpeg',
-                aspectRatio: aspectRatio as any,
+                aspectRatio: aspectRatio,
             },
         });
         const base64EncodeString = response.generatedImages?.[0]?.image?.imageBytes;
@@ -484,7 +484,7 @@ export const generateWithNanoBanana = async (prompt: string, referenceImages: st
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
             contents: { parts },
-            config: { imageConfig: { aspectRatio: aspectRatio as any } }
+            config: { imageConfig: { aspectRatio: aspectRatio } }
         });
         if (response.candidates?.[0]?.content?.parts) {
             for (const part of response.candidates[0].content.parts) {
@@ -508,7 +508,7 @@ export const generateWithVeo = async (prompt: string, onStatusUpdate?: (msg: str
         let operation = await ai.models.generateVideos({
             model: 'veo-3.1-lite-generate-preview',
             prompt: prompt,
-            config: { numberOfVideos: 1, resolution: '1080p', aspectRatio: finalAspectRatio as any }
+            config: { numberOfVideos: 1, resolution: '1080p', aspectRatio: finalAspectRatio }
         });
         while (!operation.done) {
             onStatusUpdate?.('Processing...');

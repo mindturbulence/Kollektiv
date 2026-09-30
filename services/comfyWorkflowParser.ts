@@ -160,8 +160,8 @@ export function autoDetectTargets(
 
   for (const [nodeId, node] of Object.entries(rawPromptJson)) {
     if (!node || typeof node !== 'object') continue;
-    const ct: string = (node as any).class_type || '';
-    const inputs: Record<string, any> = (node as any).inputs || {};
+    const ct: string = (node).class_type || '';
+    const inputs: Record<string, any> = (node).inputs || {};
 
     // CLIPTextEncode → prompt targets
     if (ct === 'CLIPTextEncode' && 'text' in inputs) {

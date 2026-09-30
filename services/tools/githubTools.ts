@@ -34,7 +34,7 @@ export const githubTools: AssistantTool[] = [
         source: 'fetch',
         engine: 'github',
         timestamp: Date.now(),
-      } as WebResult]);
+      }]);
       return JSON.stringify(data);
     },
   },
@@ -88,7 +88,7 @@ export const githubTools: AssistantTool[] = [
         source: 'fetch',
         engine: 'github',
         timestamp: Date.now(),
-      } as WebResult]);
+      }]);
       return `${data.content}${data.truncated ? '\n\n[...truncated]' : ''}`;
     },
   },

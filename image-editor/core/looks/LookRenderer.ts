@@ -341,7 +341,7 @@ export class LookRenderer {
       if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(`LookRenderer shader: ${gl.getShaderInfoLog(s)}`);
       return s;
     };
-    const p = gl.createProgram()!;
+    const p = gl.createProgram();
     gl.attachShader(p, sh(gl.VERTEX_SHADER, VS));
     gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs));
     gl.linkProgram(p);
@@ -351,7 +351,7 @@ export class LookRenderer {
 
   private tex(unit: number, target: number, filter: number): WebGLTexture {
     const gl = this.gl;
-    const t = gl.createTexture()!;
+    const t = gl.createTexture();
     gl.activeTexture(unit);
     gl.bindTexture(target, t);
     gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, filter);
@@ -373,7 +373,7 @@ export class LookRenderer {
       const tex = this.tex(gl.TEXTURE5, gl.TEXTURE_2D, gl.LINEAR);
       if (this.floatTargets) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, lw, lh, 0, gl.RGBA, gl.HALF_FLOAT, null);
       else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, lw, lh, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-      const fb = gl.createFramebuffer()!;
+      const fb = gl.createFramebuffer();
       gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
       pyr[i] = { tex, fb, w: lw, h: lh };

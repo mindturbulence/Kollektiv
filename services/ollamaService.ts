@@ -34,7 +34,7 @@ export const getOllamaConfig = (settings: LLMSettings) => {
     const rawBaseUrl = sanitizeUrl(isCloud ? settings.ollamaCloudBaseUrl : settings.ollamaBaseUrl);
     
     let effectiveBaseUrl = rawBaseUrl;
-    let extraHeaders: Record<string, string> = {};
+    const extraHeaders: Record<string, string> = {};
 
     if (typeof window !== 'undefined') {
         const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -592,7 +592,7 @@ export const abstractImageOllama = async (base64ImageData: string, promptLength:
     try {
         const config = getOllamaConfig(settings);
         /* @ts-ignore */
-let _tokenLimit = promptLength === 'Long' ? 2048 : 1024;
+const _tokenLimit = promptLength === 'Long' ? 2048 : 1024;
         const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,

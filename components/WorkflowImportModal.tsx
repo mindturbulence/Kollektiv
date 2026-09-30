@@ -56,7 +56,7 @@ function buildNodeList(rawJson: Record<string, any>): RawNodeInfo[] {
   const nodes: RawNodeInfo[] = [];
   for (const [nodeId, node] of Object.entries(rawJson)) {
     if (!node || typeof node !== 'object') continue;
-    const n = node as any;
+    const n = node;
     nodes.push({
       nodeId,
       classType: n.class_type || 'unknown',
@@ -176,7 +176,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
           }
         }
 
-        setRawJson(promptJson!);
+        setRawJson(promptJson);
         initMapping(promptJson!);
         setStep('map');
       } catch {
@@ -202,7 +202,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
 
   const handleResetAuto = useCallback(() => {
     if (!rawJson) return;
-    initMapping(rawJson!);
+    initMapping(rawJson);
   }, [rawJson, initMapping]);
 
   // ── Mapping helpers ──────────────────────────────────────────────────
@@ -256,7 +256,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
 
     const schema: ComfyWorkflowSchema = {
       workflowName: workflowLabel || `Custom ${new Date().toLocaleDateString()}`,
-      rawPromptJson: rawJson!,
+      rawPromptJson: rawJson,
       targetInputs,
     };
 

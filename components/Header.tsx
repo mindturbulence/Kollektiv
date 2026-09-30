@@ -438,7 +438,7 @@ const Header: React.FC<HeaderProps> = ({
               onClick={(e) => {
                 e.stopPropagation();
                 audioService.playClick();
-                onNavigate('settings' as ActiveTab);
+                onNavigate('settings');
               }}
               title="Settings"
             >
