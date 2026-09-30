@@ -320,13 +320,12 @@ test('tree context menu: New Folder prompts for a name, Delete Folder removes it
     test.setTimeout(120_000);
     await openPhotos(page);
 
-    page.on('dialog', d => {
-        void d.accept(d.type() === 'prompt' ? 'holiday' : undefined);
-    });
-
-    // New Folder… under photos/ — the name comes from a prompt.
+    // New Folder… under photos/ — the name comes from an in-app prompt (no native dialog).
     await page.locator('[title="photos"]').click({ button: 'right' });
     await page.getByRole('menu').getByRole('menuitem', { name: 'New Folder…' }).click();
+    const prompt = page.getByRole('dialog', { name: 'New folder name' });
+    await prompt.getByRole('textbox').fill('holiday');
+    await prompt.getByRole('button', { name: 'OK' }).click();
     await expect(page.getByText('Created folder "holiday".')).toBeVisible({ timeout: 10_000 });
     // photos gains its first child → the expand affordance appears; expand to see it.
     await page.locator('[title="photos"]').getByRole('button', { name: 'Expand folder' }).click({ timeout: 15_000 });
@@ -393,9 +392,11 @@ test('Move to Trash files the file away; the Trash node restores it and Empty Tr
     test.setTimeout(120_000);
     await openPhotos(page);
 
-    page.on('dialog', d => { void d.accept(); }); // confirms: move to trash / empty trash
+    // Confirmations are in-app dialogs now (shared Modal), never native confirm().
+    const confirm = (label: string) => page.getByRole('dialog', { name: 'Confirm' }).getByRole('button', { name: label }).click();
     await card(page, 'a.png').click({ button: 'right' });
     await page.getByRole('menu').getByRole('menuitem', { name: 'Move to Trash' }).click();
+    await confirm('Move to trash');
 
     await expect(page.getByText('Moved 1 file to trash.')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText('2 IMAGES')).toBeVisible({ timeout: 15_000 });
@@ -428,9 +429,11 @@ test('Move to Trash files the file away; the Trash node restores it and Empty Tr
     // Trash it again, then Empty Trash from the node's own menu.
     await card(page, 'a.png').click({ button: 'right' });
     await page.getByRole('menu').getByRole('menuitem', { name: 'Move to Trash' }).click();
+    await confirm('Move to trash');
     await expect(page.getByText('Moved 1 file to trash.')).toBeVisible({ timeout: 10_000 });
     await page.locator('[title="Trash"]').click({ button: 'right' });
     await page.getByRole('menu').getByRole('menuitem', { name: 'Empty Trash' }).click();
+    await confirm('Empty trash');
     await expect(page.getByText('Emptied the trash (1 item).')).toBeVisible({ timeout: 10_000 });
     await expect(page.locator('[title="photos/a.png"]')).toHaveCount(0);
     await expect(card(page, 'a.png')).toHaveCount(0);

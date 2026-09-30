@@ -40,7 +40,7 @@ Boundary: Assets Manager = external multi-root browser; Vault gallery = ingested
 - [x] **T12 Collections + stacks** (manifest-persisted, survive rescan/restart; collection view spans roots). (2026-09-29)
 - [x] **T13 Batch rename** (tokens, validated preview, two-phase apply, index follows, undoable). (2026-09-29)
 - [x] **T14** — conflict policy (skip / keep both) and cross-root copy/move. (2026-09-29)
-- [ ] **T15 Delete + safety** — soft-delete to `.kollektiv-trash/` per root, restore/empty. **M** — waits on the owner: soft-delete as the default?
+- [x] **T15 Delete + safety** — built on `main` (2026-09-30, `services/assets/trash.ts`, `folderOps.ts`, context menus): Move to Trash is the default delete, per-root `.kollektiv-trash/`, restore, delete forever, empty trash, folder create/rename/delete, tree folder move. All confirmations and name prompts now use in-app Modal dialogs (`components/assets/AskDialog.tsx`), not `window.confirm/prompt`.
 - [x] **T16 Undo journal** — IndexedDB, survives restart (e2e), per-item honest failures. (2026-09-29)
 - [x] **T17** — save-to-vault export target (via T24). (2026-09-29)
 - [ ] **T18 AI captions** (batch queue, resumable, no key → manual workflow unaffected). **M** — needs a live AI key to build/verify.
@@ -53,7 +53,7 @@ Boundary: Assets Manager = external multi-root browser; Vault gallery = ingested
 - [ ] **T25 View modes + keyboard** — grid size, list view, slideshow, shortcuts overlay. **M** — waits on the owner: slideshow wanted? (Rating/label/select-all keys are in.)
 - [x] **RAW files** — listed with embedded-JPEG thumbnails and a RAW badge; the editor handoff routes them to the RAW importer. (2026-09-29)
 - [x] **T26 States + docs + e2e** — no-vault/read-only/missing-collection notices, `e2e/assets-manager.spec.ts` (3 flows), handbook Feature Modules entry. (2026-09-29)
-- Open questions: soft-delete as the default? phash-first find-similar? slideshow in T25? index manifest in the vault?
+- Open questions: phash-first find-similar? slideshow in T25? (Soft-delete is settled: trash is the default. The index manifest lives in the vault.)
 
 ## 3. App-wide (from the 2026-09-24 whole-app review)
 

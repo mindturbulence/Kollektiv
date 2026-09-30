@@ -28,6 +28,7 @@ import { FolderClosedIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon, Cl
 import LoadingSpinner from './LoadingSpinner';
 import FilterBar, { LABEL_COLORS } from './assets/FilterBar';
 import AssetInspector from './assets/AssetInspector';
+import { useAsk } from './assets/AskDialog';
 import { BatchRenameModal, CopyMoveModal, DuplicatesModal, VaultSaveModal } from './assets/AssetDialogs';
 import ContextMenu, { type MenuItem } from './ContextMenu';
 import { clipboardCopy, clipboardCut, clipboardContent, clipboardClear, clipboardHasContent } from '../services/assets/clipboard';
@@ -107,6 +108,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   const library = useSyncExternalStore(subscribeLibrary, getLibrary);
   const libStatus = useSyncExternalStore(subscribeLibrary, getLibraryStatus);
 
+  const { ask, dialog: askDialog } = useAsk();
   const { track, revoke } = useObjectUrls();
   // Generation counter guards against stale async resolutions (listing,
   // indexing, URL creation) landing after the user switched folders/roots.
@@ -739,9 +741,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
     if (!root || !(await needWrite([root.id]))) return;
     const files = folderFiles.filter(f => fileIds.has(f.id));
     if (!files.length) return;
-    const ok = files.length > 1
-      ? window.confirm(`Move ${files.length} files to trash?`)
-      : window.confirm(`Move "${files[0]?.name}" to trash?`);
+    const ok = await ask.confirm(files.length > 1 ? `Move ${files.length} files to trash?` : `Move "${files[0]?.name}" to trash?`, 'Move to trash');
     if (!ok) return;
     setIsBusy(true);
     try {
@@ -752,14 +752,14 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       finishOp(`Moved ${files.length} file${files.length === 1 ? '' : 's'} to trash.`);
     } catch (e) { showGlobalFeedback?.(`Could not move to trash: ${errText(e)}`); }
     finally { setIsBusy(false); }
-  }, [selectedRoot, folderFiles, needWrite, clearSelection, showGlobalFeedback, finishOp]);
+  }, [ask, selectedRoot, folderFiles, needWrite, clearSelection, showGlobalFeedback, finishOp]);
 
 
 
   const handleFolderCreate = useCallback(async (parentNode: DirectoryNode) => {
     const root = roots.find(r => r.id === parentNode.rootId);
     if (!root || !(await needWrite([root.id]))) return;
-    const name = window.prompt('New folder name:')?.trim();
+    const name = (await ask.prompt('New folder name', ''))?.trim();
     if (!name) return;
     try {
       await createFolder(root.handle, parentNode.path, name);
@@ -767,7 +767,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       setTreeTick(t => t + 1);
       finishOp(`Created folder "${name}".`);
     } catch (e) { showGlobalFeedback?.(`Could not create folder: ${errText(e)}`); }
-  }, [roots, needWrite, showGlobalFeedback, finishOp]);
+  }, [ask, roots, needWrite, showGlobalFeedback, finishOp]);
 
   const handleFolderRename = useCallback(async (node: DirectoryNode) => {
     const root = roots.find(r => r.id === node.rootId);
@@ -775,7 +775,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
     const parts = node.path.split('/').filter(Boolean);
     const oldName = parts[parts.length - 1] ?? node.name;
     const parentPath = parts.slice(0, -1).join('/');
-    const newName = window.prompt('Rename folder to:', oldName)?.trim();
+    const newName = (await ask.prompt('Rename folder to', oldName))?.trim();
     if (!newName || newName === oldName) return;
     try {
       await renameFolder(root.handle, parentPath, oldName, newName);
@@ -783,7 +783,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       setTreeTick(t => t + 1);
       finishOp(`Renamed folder to "${newName}".`);
     } catch (e) { showGlobalFeedback?.(`Could not rename folder: ${errText(e)}`); }
-  }, [roots, needWrite, showGlobalFeedback, finishOp]);
+  }, [ask, roots, needWrite, showGlobalFeedback, finishOp]);
 
   const handleFolderDelete = useCallback(async (node: DirectoryNode) => {
     const root = roots.find(r => r.id === node.rootId);
@@ -795,7 +795,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       finishOp(`Deleted folder "${node.name}".`);
     } catch (e) {
       if (e instanceof FolderNotEmptyError) {
-        const ok = window.confirm(`"${node.name}" is not empty. Delete it and all its contents?`);
+        const ok = await ask.confirm(`"${node.name}" is not empty. Delete it and all its contents?`, 'Delete all');
         if (!ok) return;
         try {
           await deleteFolder(root.handle, node.path, true);
@@ -807,7 +807,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
         showGlobalFeedback?.(`Could not delete folder: ${errText(e)}`);
       }
     }
-  }, [roots, needWrite, showGlobalFeedback, finishOp]);
+  }, [ask, roots, needWrite, showGlobalFeedback, finishOp]);
 
   const handleRestoreFromTrash = useCallback(async (entries: TrashedEntry[]) => {
     if (!selectedRoot || entries.length === 0 || !(await needWrite([selectedRoot.id]))) return;
@@ -823,7 +823,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
   const handleTrashDeleteForever = useCallback(async (entries: TrashedEntry[]) => {
     if (!selectedRoot || entries.length === 0 || !(await needWrite([selectedRoot.id]))) return;
     const label = entries.length === 1 ? `"${entries[0].name}"` : `${entries.length} files`;
-    const ok = window.confirm(`Permanently delete ${label}? This cannot be undone.`);
+    const ok = await ask.confirm(`Permanently delete ${label}? This cannot be undone.`, 'Delete forever');
     if (!ok) return;
     setIsBusy(true);
     try {
@@ -832,12 +832,12 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       finishOp(`Permanently deleted ${removed} item${removed === 1 ? '' : 's'}.`);
     } catch (e) { showGlobalFeedback?.(`Could not delete: ${errText(e)}`); }
     finally { setIsBusy(false); }
-  }, [selectedRoot, needWrite, finishOp, showGlobalFeedback]);
+  }, [ask, selectedRoot, needWrite, finishOp, showGlobalFeedback]);
 
   const handleEmptyTrash = useCallback(async () => {
     const count = trashEntries.length;
     if (!selectedRoot || count === 0 || !(await needWrite([selectedRoot.id]))) return;
-    const ok = window.confirm(`Empty the trash? ${count} item${count === 1 ? '' : 's'} will be permanently deleted.`);
+    const ok = await ask.confirm(`Empty the trash? ${count} item${count === 1 ? '' : 's'} will be permanently deleted.`, 'Empty trash');
     if (!ok) return;
     setIsBusy(true);
     try {
@@ -846,7 +846,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
       finishOp(`Emptied the trash (${count} item${count === 1 ? '' : 's'}).`);
     } catch (e) { showGlobalFeedback?.(`Could not empty the trash: ${errText(e)}`); }
     finally { setIsBusy(false); }
-  }, [selectedRoot, trashEntries, needWrite, finishOp, showGlobalFeedback]);
+  }, [ask, selectedRoot, trashEntries, needWrite, finishOp, showGlobalFeedback]);
 
 
 
@@ -1735,6 +1735,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
         )}
       </AnimatePresence>
 
+      {askDialog}
       <BatchRenameModal isOpen={dialog === 'rename'} entries={renameEntries} otherNames={renameOthers} busy={isBusy}
         onClose={() => setDialog(null)} onApply={plan => void handleRename(plan)} />
       <CopyMoveModal isOpen={dialog === 'copymove'} count={selectedIds.size} roots={roots} initialRootId={selectedRootId} busy={isBusy}
