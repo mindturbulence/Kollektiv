@@ -243,6 +243,7 @@ class BrowserControlService {
             // Use the native value setter so React's controlled-input detection fires.
             // Setting `input.value` directly bypasses React's property descriptor
             // patch — React polls the native setter to detect changes in 18+.
+            // eslint-disable-next-line @typescript-eslint/unbound-method -- a property setter, always invoked with .call(el)
             const nativeSetter = Object.getOwnPropertyDescriptor(
                 window.HTMLInputElement.prototype, 'value'
             )?.set;
@@ -253,7 +254,7 @@ class BrowserControlService {
             }
             input.setSelectionRange(caret, caret);
         } else if (isContentEditable) {
-            const editable = el as HTMLElement;
+            const editable = el;
             const sel = window.getSelection();
             if (sel && sel.rangeCount) {
                 const range = sel.getRangeAt(0);
@@ -315,7 +316,7 @@ class BrowserControlService {
                     document.execCommand('copy');
                 }
                 return `Pressed "${key}" and copied text to clipboard.`;
-            } catch (e) {
+            } catch {
                 // Ignore errors and fall through to dispatching the event
             }
         }
@@ -327,7 +328,7 @@ class BrowserControlService {
                     this.type(text);
                     return `Pressed "${key}" and pasted text from clipboard.`;
                 }
-            } catch (e) {
+            } catch {
                 // Ignore errors and fall through to dispatching the event
             }
         }
@@ -372,7 +373,7 @@ class BrowserControlService {
      *  value must be set directly through React's native setter. */
     selectOption(id: string, optionText: string): string {
         this.assertPermission();
-        const el = document.querySelector(`[data-ai-id="${CSS.escape(id)}"]`) as HTMLSelectElement | null;
+        const el = document.querySelector<HTMLSelectElement>(`[data-ai-id="${CSS.escape(id)}"]`);
         if (!el) return `Error: no element with id "${id}". Call browser_read_structure to see current ids.`;
         if (el.tagName.toLowerCase() !== 'select') return `Error: element "${id}" is not a <select>.`;
 
@@ -384,6 +385,7 @@ class BrowserControlService {
             return `Error: no option "${optionText}" in "${id}". Available: ${available}`;
         }
 
+        // eslint-disable-next-line @typescript-eslint/unbound-method -- a property setter, always invoked with .call(el)
         const nativeSetter = Object.getOwnPropertyDescriptor(
             window.HTMLSelectElement.prototype, 'value'
         )?.set;
@@ -416,7 +418,7 @@ class BrowserControlService {
         el.dispatchEvent(new MouseEvent('mouseup', mouseOpts));
         el.dispatchEvent(new MouseEvent('click', mouseOpts));
 
-        return `Clicked <${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${el.className ? `.${el.className.split(' ').filter(Boolean).slice(0, 1)}` : ''}> matching "${cssSelector}".`;
+        return `Clicked <${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${el.className ? `.${el.className.split(' ').filter(Boolean).slice(0, 1).join('')}` : ''}> matching "${cssSelector}".`;
     }
 
     /** Find the actual scrollable container under the given viewport point.

@@ -72,7 +72,7 @@ export const WebResultCard: React.FC<{
                                 <Markdown
                                     remarkPlugins={[remarkGfm]}
                                     components={{
-                                        a: ({node, ...props}) => <a target="_blank" rel="noopener noreferrer" {...props} />
+                                        a: ({node: _node, ...props}) => <a target="_blank" rel="noopener noreferrer" {...props} />
                                     }}
                                 >{result.markdown}</Markdown>
                             </div>

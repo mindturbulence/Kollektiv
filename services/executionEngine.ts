@@ -457,6 +457,7 @@ export function interpolateStepValue(
     const resolved = getNestedProperty(outputs, path);
     return typeof resolved === 'object'
       ? JSON.stringify(resolved)
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string -- objects were handled above
       : String(resolved ?? '');
   });
 }

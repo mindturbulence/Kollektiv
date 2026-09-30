@@ -107,7 +107,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                         objectUrls.current.add(newUrl);
                         finalUrl = newUrl;
                     }
-                } catch (e) {
+                } catch {
                     if (isMounted) setHasError(true);
                 }
             }

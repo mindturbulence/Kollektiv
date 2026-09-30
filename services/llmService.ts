@@ -544,7 +544,7 @@ Output JSON ONLY.`;
                 modifiers: result.modifiers || {},
                 constantModifier: result.constantModifier || ''
             };
-        } catch (e) {
+        } catch {
             return { prompt: cleanLLMResponse(raw), modifiers: {}, constantModifier: '' };
         }
     } else {

@@ -221,7 +221,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
       } else {
         handleGoogleDriveSignIn();
       }
-    } catch (e) {
+    } catch {
       handleGoogleDriveSignIn();
     }
   };

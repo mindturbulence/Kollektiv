@@ -245,6 +245,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                 const tab = defs[key].tab;
                 if (mediaMode === 'audio' && ['styling', 'photography', 'motion', 'platform'].includes(tab)) return;
                 if (mediaMode !== 'audio' && tab === 'audio') return;
+                // eslint-disable-next-line @typescript-eslint/no-base-to-string -- modifier values are strings/numbers/booleans
                 list.push({ label: defs[key].label, value: String(val), tab: defs[key].tab, key });
             }
         });
@@ -261,7 +262,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                 ]);
                 setArtStyles(styles);
                 setCustomOptions(custom);
-            } catch (e) {
+            } catch {
                 setErrorRefine({ message: "Reference data offline." });
             }
         };
@@ -429,7 +430,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
         try {
             const text = await navigator.clipboard.readText();
             if (text) setRefineText(prev => prev ? `${prev} ${text}` : text);
-        } catch (err) {
+        } catch {
             showGlobalFeedback('Clipboard access denied.', true);
         }
     };

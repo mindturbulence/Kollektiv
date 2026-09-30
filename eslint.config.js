@@ -30,7 +30,7 @@ export default tseslint.config(
       '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }],
     },
   },
-  { ignores: ['dist/', '.playwright-mcp/', '.pi/', '*.cjs', 'node_modules/'] },
+  { ignores: ['dist/', '.playwright-mcp/', '.pi/', '*.cjs', 'node_modules/', 'utils/piexif.js' /* vendored */] },
 
   // Relax rules where the codebase intentionally uses dynamic patterns
   {
@@ -38,6 +38,15 @@ export default tseslint.config(
     rules: {
       // Noisy in test code with mock async functions
       '@typescript-eslint/require-await': 'off',
+      // `expect(obj.method).toHaveBeenCalled()` is the normal way to assert on a
+      // mock; typescript-eslint itself says to turn this off for tests.
+      '@typescript-eslint/unbound-method': 'off',
+      // Tests load modules lazily with require() after vi.resetModules().
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/only-throw-error': 'off',
+      // Removing these casts breaks `tsc` on DOM-typed test queries (the editor
+      // and tsc disagree there); `pnpm lint` (tsc) is authoritative.
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
     },
   },
   // Relax rules where the codebase intentionally uses dynamic patterns
@@ -56,6 +65,12 @@ export default tseslint.config(
       '@typescript-eslint/no-empty-object-type': 'warn',
       // Allow intentional browser globals
       '@typescript-eslint/no-unnecessary-condition': 'off',
+      // `async` without `await` is deliberate here: methods that implement a
+      // Promise-returning contract (demo/real file-system managers, the browser
+      // operator, tool execute handlers) and async React handlers. The rule's fix
+      // would turn rejected promises into synchronous throws. The rules that catch
+      // real async bugs (no-floating-promises, no-misused-promises) stay on.
+      '@typescript-eslint/require-await': 'off',
     },
   },
 );

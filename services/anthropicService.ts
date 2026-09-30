@@ -74,7 +74,7 @@ export async function* streamChatAnthropic(
                                     yield delta.content;
                                 }
                             }
-                        } catch (e) {
+                        } catch {
                             // If it's a raw line or custom format that isn't strict JSON, ignore parsing error
                         }
                     }

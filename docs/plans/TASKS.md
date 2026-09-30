@@ -58,7 +58,7 @@ Boundary: Assets Manager = external multi-root browser; Vault gallery = ingested
 ## 3. App-wide (from the 2026-09-24 whole-app review)
 
 - [ ] **D2** — migrate the remaining ~37 hand-rolled `fixed inset-0` overlays to `components/Modal.tsx`. **L**
-- [ ] **T2** — ESLint to zero (300 errors, 72 warnings: `no-unnecessary-type-assertion`, `unbound-method`, `no-unused-vars`), then make the CI step blocking. **M**
+- [x] **T2** — ESLint: 321 errors → 0 and the CI step is blocking (2026-09-30). Autofixes that typecheck; test-file overrides for `unbound-method`/`no-require-imports`; `require-await` off (Jev 0.80: interface-conforming async methods); `literal | string` → `(string & {})`; unused `catch (e)` → `catch`; explained suppressions for deliberate coercions and the LoRA calculator's `new Function`. Left: 9 `react-hooks/exhaustive-deps` warnings (fixing changes behaviour — review each). **M**
 - [x] Page content visible at t=0: `TerminalText` start delays capped at 150 ms in the component (all 22 call sites); the decrypt effect stays. (2026-09-29)
 - [ ] Motion leftovers: ChromaticText still rAF; InitialLoader 3.2 s delay / 1 s timeout; AboutModal `scale: 0`; ScanLine animates `top`; `.animate-fade-in` on `--duration-slow`; CustomCursor has no `quickTo`; boot blinds `backdrop-blur-md`. **M**
 - [ ] Light theme (`sanrita`) polish: ~200 hard-coded `white`/`black`; dark dashboard artwork reads as grey haze. **M**

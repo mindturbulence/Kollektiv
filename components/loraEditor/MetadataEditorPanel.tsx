@@ -26,7 +26,7 @@ const MetadataEditorPanel: React.FC<MetadataEditorPanelProps> = ({ state, settin
                 if (parsed[key] !== undefined) JSON.parse(parsed[key]);
             }
             return parsed;
-        } catch (e) {
+        } catch {
             onFeedback(`Error parsing edited metadata. Ensure it is valid JSON (and that ss_dataset_dirs/ss_bucket_info/ss_tag_frequency are valid JSON strings).`, true);
             return null;
         }

@@ -10,6 +10,7 @@ import type { CustomFieldDef, CustomFieldContext } from '../types';
  */
 export function escapeHtml(value: unknown): string {
     if (value === null || value === undefined) return '';
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string -- metadata values are coerced to text before escaping
     return String(value)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -31,6 +32,7 @@ export function evaluateCustomFields(defs: CustomFieldDef[], context: CustomFiel
     for (const def of defs) {
         if (!def || typeof def.label !== 'string' || typeof def.calc !== 'string') continue;
         try {
+            // eslint-disable-next-line @typescript-eslint/no-implied-eval -- user-defined calculated fields are the feature; runs locally on the user's own expression
             const evaluator = new Function(
                 'fileMetadata', 'civitaiMetadata', 'arcencielMetadata', 'basemodelMetadata', 'vaeMetadata', 'customMetadata', 'safetensorsFile', 'escapeHtml',
                 `return (${def.calc});`

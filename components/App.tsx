@@ -731,8 +731,7 @@ const AppContent: React.FC = () => {
                         title="Hidden Audio Engine"
                         frameBorder="0"
                         allow="autoplay; encrypted-media"
-                        /* @ts-ignore */
-                        credentialless="true"
+                        {...{ credentialless: 'true' }}
                         referrerPolicy="no-referrer-when-downgrade"
                     />
                 )}

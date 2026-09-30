@@ -16,7 +16,6 @@ import type {
   TextLayer,
   LookLayer,
   Layer,
-  LayerMask,
   LayerTransform,
 } from '../types';
 import { getSnapshot, subscribe } from '../store';
@@ -214,7 +213,7 @@ async function deserializeLayer(meta: SerializedLayer, blobs: Record<string, Arr
             enabled: meta.mask.enabled,
             invert: meta.mask.invert,
             feather: meta.mask.feather,
-          } as ImageLayer['mask'] as LayerMask;
+          };
         }
         // A missing mask blob for a masked layer is corrupt — drop the mask
         // rather than restoring a fully-opaque (visually mask-removed) layer.

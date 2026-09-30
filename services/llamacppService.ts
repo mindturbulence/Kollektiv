@@ -151,7 +151,7 @@ export async function* enhancePromptLlamaCppStream(
                         yield content;
                         trackTokenUsage('llamacpp', Math.ceil(content.length / 4));
                     }
-                } catch (e) {}
+                } catch {}
             }
         }
     } catch (err: any) {
@@ -229,7 +229,7 @@ export async function* streamChatLlamaCpp(
                         yield content;
                         trackTokenUsage('llamacpp', Math.ceil(content.length / 4));
                     }
-                } catch (e) {}
+                } catch {}
             }
         }
     } catch (err: any) {

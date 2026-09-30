@@ -140,7 +140,7 @@ export interface McAgent {
   role: string;
   session_key?: string | null;
   soul_content?: string | null;
-  status: 'offline' | 'idle' | 'busy' | 'error' | string;
+  status: 'offline' | 'idle' | 'busy' | 'error' | (string & {});
   last_seen?: number | null;
   last_activity?: string | null;
   created_at: number;
@@ -163,8 +163,8 @@ export interface McTask {
   id: number;
   title: string;
   description?: string | null;
-  status: 'inbox' | 'assigned' | 'in_progress' | 'review' | 'quality_review' | 'done' | string;
-  priority: 'low' | 'medium' | 'high' | 'urgent' | string;
+  status: 'inbox' | 'assigned' | 'in_progress' | 'review' | 'quality_review' | 'done' | (string & {});
+  priority: 'low' | 'medium' | 'high' | 'urgent' | (string & {});
   assigned_to?: string | null;
   created_by?: string;
   created_at: number;
@@ -196,7 +196,7 @@ export interface McActivityEvent {
 export interface McLogLike {
   id: string;
   timestamp: number;
-  level: 'info' | 'warn' | 'error' | 'debug' | string;
+  level: 'info' | 'warn' | 'error' | 'debug' | (string & {});
   source: string;
   message: string;
   [k: string]: unknown;
@@ -306,7 +306,7 @@ export interface McCronJob {
   enabled: boolean;
   lastRun?: number;
   nextRun?: number;
-  lastStatus?: 'success' | 'error' | 'running' | string;
+  lastStatus?: 'success' | 'error' | 'running' | (string & {});
   lastError?: string;
   agentId?: string;
   [k: string]: unknown;

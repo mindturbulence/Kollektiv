@@ -48,7 +48,7 @@ export function renderName(pattern: string, e: AssetEntry, index: number, indexW
 export function planRename(entries: AssetEntry[], pattern: string, start: number, otherNames: Iterable<string>): RenamePlanItem[] {
   const width = Math.max(2, String(start + entries.length - 1).length);
   const others = new Set([...otherNames].map(n => n.toLowerCase()));
-  const plan = entries.map((entry, i) => ({ entry, newName: renderName(pattern, entry, start + i, width) } as RenamePlanItem));
+  const plan: RenamePlanItem[] = entries.map((entry, i) => ({ entry, newName: renderName(pattern, entry, start + i, width) }));
   const seen = new Map<string, number>();
   for (const p of plan) seen.set(p.newName.toLowerCase(), (seen.get(p.newName.toLowerCase()) ?? 0) + 1);
   for (const p of plan) {

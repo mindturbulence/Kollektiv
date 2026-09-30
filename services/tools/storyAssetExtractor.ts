@@ -229,7 +229,7 @@ export const extractStoryAssetsTool: AssistantTool = {
         if (!note) return `Error: Could not read file at ${vaultPath}`;
         scriptText = note.content;
       } catch (e) {
-        return `Error reading vault file: ${e}`;
+        return `Error reading vault file: ${e instanceof Error ? e.message : String(e)}`;
       }
     }
 

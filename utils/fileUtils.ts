@@ -159,9 +159,9 @@ class LocalFileSystemManager implements IFileSystemManager {
                 if (parsed?.error?.message) {
                     return `${parsed.error.message} (Status: ${res.status})`;
                 }
-            } catch (e) {}
+            } catch {}
             return `Status ${res.status}: ${txt || res.statusText}`;
-        } catch (e) {
+        } catch {
             return `Status ${res.status} (${res.statusText})`;
         }
     }
@@ -598,7 +598,7 @@ class LocalFileSystemManager implements IFileSystemManager {
                     try {
                         const cache = await caches.open('kollektiv-drive-cache');
                         await cache.delete(`/google-api/drive/v3/files/${fileId}?alt=media`);
-                    } catch(e) {}
+                    } catch {}
                 }
 
                 return filePath;
@@ -639,7 +639,7 @@ class LocalFileSystemManager implements IFileSystemManager {
                 new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Read timeout')), timeoutMs))
             ]);
             return result;
-        } catch (e) {
+        } catch {
             return null;
         }
     }
@@ -688,7 +688,7 @@ class LocalFileSystemManager implements IFileSystemManager {
                         if (cachedRes) {
                             return await cachedRes.blob();
                         }
-                    } catch(e) {}
+                    } catch {}
                 }
 
                 const res = await fetch(downloadUrl, {
@@ -701,7 +701,7 @@ class LocalFileSystemManager implements IFileSystemManager {
                     try {
                         const cache = await caches.open('kollektiv-drive-cache');
                         await cache.put(downloadUrl, res.clone());
-                    } catch(e) {}
+                    } catch {}
                 }
 
                 return await res.blob();
@@ -724,7 +724,7 @@ class LocalFileSystemManager implements IFileSystemManager {
             }
             const fileHandle = await currentHandle.getFileHandle(fileName);
             return await fileHandle.getFile();
-        } catch (error) {
+        } catch {
             return null;
         }
     }
@@ -749,7 +749,7 @@ class LocalFileSystemManager implements IFileSystemManager {
                         try {
                             const cache = await caches.open('kollektiv-drive-cache');
                             await cache.delete(`/google-api/drive/v3/files/${fileId}?alt=media`);
-                        } catch(e) {}
+                        } catch {}
                     }
                 }
             } catch (e) {
@@ -770,7 +770,7 @@ class LocalFileSystemManager implements IFileSystemManager {
                 currentHandle = await currentHandle.getDirectoryHandle(segment);
             }
             await currentHandle.removeEntry(fileName);
-        } catch (error) {}
+        } catch {}
     }
 
     public async reset(): Promise<void> {
@@ -856,7 +856,7 @@ class LocalFileSystemManager implements IFileSystemManager {
             for await (const handle of (currentHandle as any).values()) {
                 yield handle;
             }
-        } catch (error) {
+        } catch {
             return;
         }
     }
@@ -1248,7 +1248,7 @@ class LocalFileSystemManager implements IFileSystemManager {
         let driveManifest: any = null;
         try {
             driveManifest = JSON.parse(driveManifestContent);
-        } catch (e) {
+        } catch {
             throw new Error("Failed to parse gallery manifest from Google Drive.");
         }
 
@@ -1443,7 +1443,7 @@ export const fileToBase64 = (file: File | Blob, getRawData: boolean = false): Pr
         const result = reader.result as string;
         resolve(getRawData ? result.split(',')[1] : result);
     };
-    reader.onerror = error => reject(error);
+    reader.onerror = () => reject(reader.error ?? new Error('Could not read the file'));
   });
 };
 
@@ -1494,7 +1494,7 @@ function parseComfyGraph(graph: any): { prompt: string; negativePrompt: string }
                 if (!positive || text.length > positive.length) positive = text;
             }
         });
-    } catch (e) {}
+    } catch {}
 
     return { prompt: positive, negativePrompt: negative };
 }
@@ -1557,7 +1557,7 @@ export async function extractFullMetadata(imageBlob: Blob): Promise<ParsedMetada
                 if (end !== -1) {
                     try {
                         return { data: JSON.parse(text.substring(start, end + 1)), key };
-                    } catch (e) {}
+                    } catch {}
                 }
             }
             return null;
@@ -1612,11 +1612,11 @@ export async function extractFullMetadata(imageBlob: Blob): Promise<ParsedMetada
                         workflow: json.workflow ? JSON.stringify(json.workflow, null, 2) : undefined
                     };
                 }
-            } catch (e) {}
+            } catch {}
         }
 
         return null;
-    } catch (e) {
+    } catch {
         return null;
     }
 }

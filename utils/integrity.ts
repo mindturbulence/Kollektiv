@@ -83,7 +83,7 @@ export const forceParseJson = (str: string): any => {
     let sanitized = sanitizeJsonString(str);
     try {
         return JSON.parse(sanitized);
-    } catch (e) {
+    } catch {
         // Attempt manual structural repair for unclosed braces/brackets/quotes
         let openBraces = 0;
         let openBrackets = 0;
@@ -383,7 +383,7 @@ export const rebuildPromptDatabase = async (onProgress: (msg: string) => void): 
                     try {
                         const txt = await fileSystemManager.readFile(`prompts/${sanitized.id}.txt`);
                         if (txt) sanitized.text = txt;
-                    } catch (e) {
+                    } catch {
                         // ignore
                     }
                 }
@@ -427,7 +427,7 @@ export const optimizeManifests = async (onProgress: (msg: string) => void): Prom
                         await fileSystemManager.saveFile(file, new Blob([JSON.stringify(parsed)], { type: 'application/json' }));
                     }
                 }
-            } catch (e) {
+            } catch {
                 // Skip files that can't be read
             }
         }

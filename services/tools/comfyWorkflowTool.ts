@@ -75,7 +75,7 @@ export const comfyWorkflowTool: AssistantTool = {
           : `\n\n**Validation: FAILED** — ${errorCount} node errors:\n` +
             Object.entries(errors).map(([id, err]) => `- Node ${id}: ${JSON.stringify(err)}`).join('\n');
       } catch (e) {
-        validationResult = `\n\n**Validation error:** ${e}`;
+        validationResult = `\n\n**Validation error:** ${e instanceof Error ? e.message : String(e)}`;
       }
     }
 

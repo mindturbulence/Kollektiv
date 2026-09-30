@@ -315,7 +315,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         if (!tokenClientRef.current) { showGlobalFeedback("System Error: Google Auth library failed to load.", true); return; }
         setIsWorking(false);
         try { tokenClientRef.current.requestAccessToken({ prompt: 'consent' }); }
-        catch (e) { if (authTimeoutRef.current) window.clearTimeout(authTimeoutRef.current); showGlobalFeedback("Popup blocked or init error.", true); }
+        catch { if (authTimeoutRef.current) window.clearTimeout(authTimeoutRef.current); showGlobalFeedback("Popup blocked or init error.", true); }
     };
 
     const handleGoogleDisconnect = () => {
@@ -461,7 +461,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             const result = await testOllamaConnection(url);
             setOllamaTestResult(result);
             if (result.success) void refreshOllamaModels();
-        } catch (e) { setOllamaTestResult({ success: false, message: "CRITICAL PING FAILURE" }); }
+        } catch { setOllamaTestResult({ success: false, message: "CRITICAL PING FAILURE" }); }
         setIsTestingOllama(false);
     };
 

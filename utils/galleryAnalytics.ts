@@ -8,7 +8,7 @@ export interface TagFrequency {
 }
 
 export interface CategoryDistribution {
-  categoryId: string | 'uncategorized';
+  categoryId: string; // 'uncategorized' when the item has none
   categoryName: string;
   count: number;
 }

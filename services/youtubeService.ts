@@ -46,7 +46,7 @@ export const publishToYouTube = async (
         try {
             const error = await initResponse.json();
             errorMsg = error.error?.message || errorMsg;
-        } catch (e) {}
+        } catch {}
         throw new Error(errorMsg);
     }
 
@@ -77,7 +77,7 @@ export const publishToYouTube = async (
                         id: result.id,
                         url: `https://www.youtube.com/watch?v=${result.id}`
                     });
-                } catch (e) {
+                } catch {
                     reject(new Error("Failed to parse registry response."));
                 }
             } else {

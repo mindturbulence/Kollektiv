@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   COLOR_LABELS, addToCollection, createCollection, createStack, removeFromCollection, unstack, updateMeta,
-  type AssetMeta, type ColorLabel, type LibraryData,
+  type AssetMeta, type LibraryData,
 } from '../../services/assets/assetLibrary';
 import type { AssetEntry } from '../../services/assets/assetFilter';
 import { canWriteMetadata } from '../../services/assets/metadataWriter';
@@ -48,8 +48,8 @@ const AssetInspector: React.FC<{
   // Shared values across a multi-selection (shown when all agree).
   const all = entries.map(e => library.assets[e.file.id] ?? {});
   const common = <K extends keyof AssetMeta>(k: K) => (all.every(m => m[k] === all[0]?.[k]) ? all[0]?.[k] : undefined);
-  const rating = (common('rating') as number | undefined) ?? 0;
-  const label = common('label') as ColorLabel | undefined;
+  const rating = common('rating') ?? 0;
+  const label = common('label');
   const tagCounts = new Map<string, number>();
   all.forEach(m => m.tags?.forEach(t => tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1)));
   const tags = [...tagCounts.entries()].map(([t, n]) => ({ t, partial: n < all.length }));

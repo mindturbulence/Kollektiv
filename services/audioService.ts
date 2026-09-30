@@ -170,7 +170,7 @@ class AudioService {
   }
 
   toggle(): boolean {
-    this.isEnabled ? this.disable() : this.enable();
+    if (this.isEnabled) this.disable(); else this.enable();
     return this.isEnabled;
   }
 
@@ -491,7 +491,7 @@ class AudioService {
     const now = this.ctx.currentTime;
     this.ambientGain.gain.setTargetAtTime(0, now, 0.5);
     setTimeout(() => {
-      this.ambientOscillators.forEach(osc => { try { osc.stop(); } catch(e) {} });
+      this.ambientOscillators.forEach(osc => { try { osc.stop(); } catch {} });
       this.ambientOscillators = [];
       this.isAmbientPlaying = false;
     }, 1000);

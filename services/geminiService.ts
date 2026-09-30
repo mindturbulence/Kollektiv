@@ -119,7 +119,7 @@ export const analyzePaletteMood = async (hexColors: string[], settings: LLMSetti
       }
     });
     return (response.text || '').trim();
-  } catch (err) { return "Archive Error"; }
+  } catch { return "Archive Error"; }
 };
 
 export const generateColorNameGemini = async (hexColor: string, mood: string, settings: LLMSettings): Promise<string> => {
@@ -135,7 +135,7 @@ export const generateColorNameGemini = async (hexColor: string, mood: string, se
             }
         });
         return (response.text || '').trim().replace(/"/g, '');
-    } catch (err) { return "Archived Color"; }
+    } catch { return "Archived Color"; }
 };
 
 const convertPromptToNaturalLanguage = async (promptText: string, settings: LLMSettings): Promise<string> => {
@@ -221,7 +221,7 @@ Output JSON ONLY. Format: { "prompt": string, "modifiers": { [key: string]: stri
                 constantModifier: result.constantModifier || '',
                 categorizedParameters: (result.categorizedParameters || []).slice(0, 10)
             };
-        } catch (e) { 
+        } catch { 
             return { naturalLanguage: naturalLang, prompt: promptText, modifiers: {}, constantModifier: '', categorizedParameters: [] }; 
         }
     } catch (err) { throw handleGeminiError(err, 'extraction'); }
@@ -240,7 +240,7 @@ export const generateFocusedVariationsGemini = async (promptText: string, compon
                 thinkingConfig: { thinkingBudget: 0 }
             }
         });
-        try { return JSON.parse(response.text || '{}'); } catch (e) { return {}; }
+        try { return JSON.parse(response.text || '{}'); } catch { return {}; }
     } catch (err) { throw handleGeminiError(err, 'processing'); }
 };
 
@@ -574,7 +574,7 @@ Only include relevant modifiers. Output JSON ONLY.`,
                 modifiers: result.modifiers || {},
                 constantModifier: result.constantModifier || ''
             };
-        } catch (e) { 
+        } catch { 
             return { prompt: '', modifiers: {}, constantModifier: '' }; 
         }
     } catch (err) { throw handleGeminiError(err, 'processing'); }

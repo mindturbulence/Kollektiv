@@ -206,7 +206,7 @@ export async function* enhancePromptOllamaStream(
         if (!apiResponse.ok) {
             const errorBody = await apiResponse.text();
             let msg = `Stream failed (${apiResponse.status})`;
-            try { msg = JSON.parse(errorBody).error || msg; } catch(e) {}
+            try { msg = JSON.parse(errorBody).error || msg; } catch {}
             throw new Error(msg);
         }
         
@@ -262,7 +262,7 @@ export async function* streamChatOllama(
         if (!apiResponse.ok) {
             const errorBody = await apiResponse.text();
             let msg = `Ollama Chat Stream failed (${apiResponse.status})`;
-            try { msg = JSON.parse(errorBody).error || msg; } catch(e) {}
+            try { msg = JSON.parse(errorBody).error || msg; } catch {}
             throw new Error(msg);
         }
 
@@ -324,7 +324,7 @@ export async function* refineSinglePromptOllamaStream(promptText: string, settin
         if (!apiResponse.ok) {
              const errorBody = await apiResponse.text();
              let msg = `Stream failed (${apiResponse.status})`;
-             try { msg = JSON.parse(errorBody).error || msg; } catch(e) {}
+             try { msg = JSON.parse(errorBody).error || msg; } catch {}
              throw new Error(msg);
         }
 
@@ -353,7 +353,7 @@ export const analyzePaletteMoodOllama = async (hexColors: string[], settings: LL
         });
         const data = await apiResponse.json();
         return (data.message?.content || '').trim();
-    } catch (err) { return "Archive Error"; }
+    } catch { return "Archive Error"; }
 };
 
 export const generateColorNameOllama = async (hexColor: string, mood: string, settings: LLMSettings): Promise<string> => {
@@ -375,7 +375,7 @@ export const generateColorNameOllama = async (hexColor: string, mood: string, se
         });
         const data = await apiResponse.json();
         return (data.message?.content || '').trim().replace(/"/g, '');
-    } catch (err) { return "Archived Color"; }
+    } catch { return "Archived Color"; }
 };
 
 const convertPromptToNaturalLanguage = async (promptText: string, settings: LLMSettings): Promise<string> => {
@@ -588,11 +588,9 @@ export const reconstructFromIntentOllama = async (intents: string[], settings: L
     } catch (err) { throw handleGeminiError(err, 'reconstruction'); }
 };
 
-export const abstractImageOllama = async (base64ImageData: string, promptLength: string, _targetAIModel: string, settings: LLMSettings): Promise<EnhancementResult> => {
+export const abstractImageOllama = async (base64ImageData: string, _promptLength: string, _targetAIModel: string, settings: LLMSettings): Promise<EnhancementResult> => {
     try {
         const config = getOllamaConfig(settings);
-        /* @ts-ignore */
-const _tokenLimit = promptLength === 'Long' ? 2048 : 1024;
         const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,

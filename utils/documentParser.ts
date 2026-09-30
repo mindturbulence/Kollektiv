@@ -1,6 +1,5 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
-// @ts-ignore
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;

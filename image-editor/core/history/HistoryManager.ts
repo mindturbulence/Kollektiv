@@ -30,7 +30,7 @@ export function pushMergeable(command: HistoryCommand): void {
     const merged: HistoryCommand = {
       ...command,
       do: () => { top.do(); command.do(); },
-      undo: top.undo,
+      undo: () => top.undo(),
     };
     dispatch({ type: 'REPLACE_TOP_HISTORY', command: merged });
     command.do();

@@ -200,7 +200,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
             } else {
                 setError("No metadata detected in this file.");
             }
-        } catch (err: any) {
+        } catch {
             setError("Metadata extraction failed.");
         } finally {
             setIsLoading(false);

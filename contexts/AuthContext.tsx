@@ -3,7 +3,7 @@ import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 
 // This is a stub context. It can be expanded with authentication logic in the future.
 // For now, it simply provides a context to prevent import errors in other files.
-export interface AuthContextType {}
+export type AuthContextType = Record<string, never>;
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
