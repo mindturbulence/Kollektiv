@@ -42,7 +42,7 @@ export function useAmbientMusic(settings: LLMSettings, updateSettings: (s: LLMSe
         }
     }, [videoId, isUplinkActive, playerState, audioEnabled, settings.musicEnabled]);
 
-    /** Boot-loader CONTINUE / CONTINUE WITHOUT MUSIC handler body. */
+    /** Boot-loader sound prompt (Yes / No) handler body. */
     const startupContinue = useCallback((withMusic: boolean) => {
         audioService.enable();
         setAudioEnabled(true);

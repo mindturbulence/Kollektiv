@@ -227,7 +227,7 @@ const Footer: React.FC<FooterProps> = ({
 
 
     return (
-        <footer className="flex-shrink-0 px-8 py-4 bg-base-200/20 backdrop-blur-md z-overlay flex flex-row items-center justify-between select-none whitespace-nowrap relative pointer-events-auto border-t border-base-content/10 mt-auto">
+        <footer className="flex-shrink-0 h-[40px] px-6 xl:px-[40px] z-overlay flex flex-row items-center justify-between select-none whitespace-nowrap relative pointer-events-auto border-t border-base-content/10 mt-auto">
             {/* Background Technical Noise */}
             <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
 
