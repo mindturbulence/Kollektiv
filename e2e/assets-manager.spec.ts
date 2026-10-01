@@ -52,7 +52,7 @@ async function bootToAppShell(page: Page, initialTab: string) {
 
     await expect(page.getByRole('heading', { name: /PROVISION/ })).toBeVisible({ timeout: 30_000 });
     await page.getByRole('button', { name: 'CONTINUE', exact: true }).click();
-    await page.getByRole('button', { name: 'CONTINUE', exact: true }).click({ timeout: 60_000 });
+    await page.getByRole('button', { name: 'Yes', exact: true }).click({ timeout: 60_000 });
     await expect(page.locator('.app-header')).toBeVisible({ timeout: 30_000 });
 }
 
@@ -221,7 +221,7 @@ test('batch rename + undo, move to another folder, metadata written into the fil
     await page.reload();
     // Whatever boot screens a returning session shows (vault gate and/or CONTINUE), click through.
     const header = page.locator('.app-header');
-    const next = page.getByRole('button', { name: /^(SELECT_VAULT_FOLDER|RECONNECT_VAULT|CONTINUE)$/ });
+    const next = page.getByRole('button', { name: /^(SELECT_VAULT_FOLDER|RECONNECT_VAULT|CONTINUE|Yes)$/ });
     for (let i = 0; i < 6 && !(await header.isVisible()); i++) {
         await next.first().click({ timeout: 30_000 }).catch(() => {});
         await page.waitForTimeout(500);
@@ -376,7 +376,7 @@ test('grid reorder: dropping a card switches to manual order and it survives a r
     // Restart: sort resets to Name — re-selecting Manual restores the dropped order.
     await page.reload();
     const header = page.locator('.app-header');
-    const next = page.getByRole('button', { name: /^(SELECT_VAULT_FOLDER|RECONNECT_VAULT|CONTINUE)$/ });
+    const next = page.getByRole('button', { name: /^(SELECT_VAULT_FOLDER|RECONNECT_VAULT|CONTINUE|Yes)$/ });
     for (let i = 0; i < 6 && !(await header.isVisible()); i++) {
         await next.first().click({ timeout: 30_000 }).catch(() => {});
         await page.waitForTimeout(500);

@@ -269,8 +269,8 @@ const Header: React.FC<HeaderProps> = ({
   }, [activeMenu, onNavigate]);
 
   return (
-    <header className="flex-shrink-0 h-12 bg-base-200/20 backdrop-blur-md border-b border-base-content/10 z-50 relative">
-      <div ref={navRef} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center h-full relative z-50 px-6 gap-4">
+    <header className="flex-shrink-0 h-[72px] z-50 relative">
+      <div ref={navRef} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center h-full relative z-50 px-6 xl:px-[40px] gap-4 xl:gap-[40px]">
 
         {/* Left Side Logo */}
         <div className="flex items-center shrink-0 h-full">

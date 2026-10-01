@@ -49,7 +49,7 @@ async function bootToAppShell(page: Page) {
     // Gate 3: the finish splash auto-advances after ~800ms into the boot
     // loader, which reaches 100% and crossfades its own CONTINUE buttons in.
     // Headless throttles rAF, so be generous.
-    const continueBtn = page.getByRole('button', { name: 'CONTINUE', exact: true });
+    const continueBtn = page.getByRole('button', { name: 'Yes', exact: true });
     await continueBtn.click({ timeout: 60_000 });
 
     // App shell (header) becomes visible after the blinds reveal.

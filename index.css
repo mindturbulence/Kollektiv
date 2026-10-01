@@ -580,9 +580,9 @@ button:disabled,
   filter: none;
 }
 
-[data-theme="pipboy"] *:not(.cursor-inner),
-[data-theme="explorer"] *:not(.cursor-inner),
-[data-theme="prompt"] *:not(.cursor-inner) {
+[data-theme="pipboy"] *,
+[data-theme="explorer"] *,
+[data-theme="prompt"] * {
   border-radius: 0 !important;
 }
 
@@ -1107,7 +1107,8 @@ button:disabled,
 [data-theme="Hiigara"] header .parent-nav-item,
 [data-theme="Hiigara"] header button.px-3,
 [data-theme="Hiigara"] footer .font-rajdhani,
-[data-theme="Hiigara"] footer .font-sf-mono {
+[data-theme="Hiigara"] footer .font-sf-mono,
+[data-theme="Hiigara"] .theme-label {
   font-size: 10px !important;
   font-family: "Microgramma D Medium Extended", sans-serif !important;
   font-weight: normal !important;
@@ -1246,7 +1247,8 @@ button:disabled,
 [data-theme="Stellar"] footer .font-sf-mono,
 [data-theme="Stellar"] footer span,
 [data-theme="Stellar"] footer a,
-[data-theme="Stellar"] .font-monoton {
+[data-theme="Stellar"] .font-monoton,
+[data-theme="Stellar"] .theme-label {
   font-family: "Chakra Petch", sans-serif !important;
 }
 
@@ -1256,7 +1258,8 @@ button:disabled,
 [data-theme="starfield"] footer .font-sf-mono,
 [data-theme="starfield"] footer span,
 [data-theme="starfield"] footer a,
-[data-theme="starfield"] .font-monoton {
+[data-theme="starfield"] .font-monoton,
+[data-theme="starfield"] .theme-label {
   font-family: "Raleway", sans-serif !important;
 }
 
@@ -1266,7 +1269,8 @@ button:disabled,
 [data-theme="Arc"] footer .font-rajdhani,
 [data-theme="Arc"] footer .font-sf-mono,
 [data-theme="Arc"] footer span,
-[data-theme="Arc"] footer a {
+[data-theme="Arc"] footer a,
+[data-theme="Arc"] .theme-label {
   font-family: "Urbanist", sans-serif !important;
 }
 
@@ -1282,7 +1286,8 @@ button:disabled,
 [data-theme="MindTurbulence"] footer .font-rajdhani,
 [data-theme="MindTurbulence"] footer .font-sf-mono,
 [data-theme="MindTurbulence"] footer span,
-[data-theme="MindTurbulence"] footer a {
+[data-theme="MindTurbulence"] footer a,
+[data-theme="MindTurbulence"] .theme-label {
   font-size: 10px !important;
   font-family: "Microgramma D Medium Extended", sans-serif !important;
   font-weight: normal !important;
@@ -1307,7 +1312,8 @@ button:disabled,
 [data-theme="synthwave"] footer .font-rajdhani,
 [data-theme="synthwave"] footer .font-sf-mono,
 [data-theme="synthwave"] footer span,
-[data-theme="synthwave"] footer a {
+[data-theme="synthwave"] footer a,
+[data-theme="synthwave"] .theme-label {
   font-family: "ITC Serif Gothic Std", sans-serif !important;
 }
 
@@ -2470,7 +2476,7 @@ footer.footer {
   font-family: "Rajdhani", sans-serif !important;
 }
 
-[data-theme="arwes"] *:not(.cursor-inner) {
+[data-theme="arwes"] * {
   cursor: crosshair !important;
 }
 

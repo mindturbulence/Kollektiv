@@ -178,7 +178,7 @@ export const useBootSequence = ({
         sessionStorage.removeItem('_init_reload_count');
       } catch { /* ignore */ }
 
-      // InitialLoader shows its CONTINUE / CONTINUE WITHOUT MUSIC buttons
+      // InitialLoader shows its sound prompt (Yes / No) buttons
       // once progress hits 100%, and calls handleInitContinue (which sets
       // isInitialized/isLoading) when the user picks one — don't do that
       // here, or the loader unmounts itself before the buttons are clickable.

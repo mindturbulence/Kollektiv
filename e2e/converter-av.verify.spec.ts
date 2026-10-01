@@ -63,7 +63,7 @@ async function bootToConverter(page: Page) {
 
     await expect(page.getByRole('heading', { name: /PROVISION/ })).toBeVisible({ timeout: 30_000 });
     await page.getByRole('button', { name: 'CONTINUE', exact: true }).click();
-    await page.getByRole('button', { name: 'CONTINUE', exact: true }).click({ timeout: 60_000 });
+    await page.getByRole('button', { name: 'Yes', exact: true }).click({ timeout: 60_000 });
     await expect(page.locator('.app-header')).toBeVisible({ timeout: 30_000 });
 
     // Header nav → Utilities → Converter (letter-doubled RollingText).

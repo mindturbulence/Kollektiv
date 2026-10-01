@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useLayoutEffect, lazy, Suspense } from 'react';
 import { gsap } from 'gsap';
 import ChromaticText from './ChromaticText';
+import RollingText from './RollingText';
 import { prefersReducedMotion } from './transitions/routeFx';
 
 // Lazy: own chunk — keeps the storm off the critical boot path AND avoids
@@ -104,6 +105,21 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
         }
     }, []);
 
+    // Sound prompt: question, Yes, No slide up in sequence — same tween as "Kreator".
+    useLayoutEffect(() => {
+        if (!isComplete || !actionButtonsRef.current) return;
+        const items = actionButtonsRef.current.querySelectorAll('.sound-prompt-item');
+        if (prefersReducedMotion()) {
+            gsap.set(items, { y: 0, autoAlpha: 1 });
+            return;
+        }
+        const tween = gsap.fromTo(items,
+            { y: 24, autoAlpha: 0 },
+            { y: 0, autoAlpha: 1, duration: 0.8, ease: "power2.out", stagger: 0.15 }
+        );
+        return () => { tween.kill(); };
+    }, [isComplete]);
+
     useEffect(() => {
         if (targetPercentage >= 100 && smoothPercentage >= 99) {
             const t = setTimeout(() => { setIsComplete(true); }, 250);
@@ -193,18 +209,20 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                     </div>
 
                     <div ref={actionButtonsRef} className={`absolute inset-0 flex flex-col items-center justify-center gap-4 transition-opacity duration-500 ${isComplete ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-                        <button
-                            className="form-btn form-btn-primary w-48 h-10 text-2xs"
-                            onClick={() => handleContinue(true)}
-                        >
-                            CONTINUE
-                        </button>
-                        <button
-                            className="text-xs font-rajdhani uppercase tracking-widest font-normal text-base-content/60 hover:text-base-content px-4 py-2 transition-colors bg-transparent hover:bg-transparent"
-                            onClick={() => handleContinue(false)}
-                        >
-                            CONTINUE WITHOUT MUSIC
-                        </button>
+                        <p className="sound-prompt-item text-xs font-rajdhani uppercase tracking-widest font-normal text-base-content whitespace-nowrap text-center">
+                            Would you like to have a sound experience?
+                        </p>
+                        <div className="flex items-center gap-6">
+                            {([['Yes', true], ['No', false]] as const).map(([label, withMusic]) => (
+                                <button
+                                    key={label}
+                                    className="sound-prompt-item text-xs font-rajdhani uppercase tracking-widest font-normal text-base-content/60 hover:text-primary px-4 py-2 transition-colors duration-500 bg-transparent hover:bg-transparent"
+                                    onClick={() => handleContinue(withMusic)}
+                                >
+                                    <RollingText text={label} hoverClassName="text-primary" />
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>

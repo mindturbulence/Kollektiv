@@ -61,6 +61,7 @@ import AssistantAvatarBridge from './AssistantAvatarBridge';
 
 import InitialLoader from './InitialLoader';
 import PageFrame from './PageFrame';
+import ParticleField from './ParticleField';
 import { useIdleSystem } from '../utils/useIdleSystem';
 import { useAmbientMusic } from '../utils/useAmbientMusic';
 
@@ -323,7 +324,6 @@ const AppContent: React.FC = () => {
 
             const frame = frameWrapperRef.current?.querySelector('.main-app-frame');
             const corners = frameWrapperRef.current?.querySelectorAll('.corner-accent');
-            const markers = frameWrapperRef.current?.querySelectorAll('.side-marker');
             const blindItems = Array.from(blindsRef.current!.children) as HTMLElement[];
 
             gsap.set(apertureRef.current, { visibility: 'visible', alpha: 1 });
@@ -345,13 +345,6 @@ const AppContent: React.FC = () => {
                         { opacity: 0, x: (i) => (i % 2 === 0 ? -40 : 40), y: (i) => (i < 2 ? -40 : 40) },
                         { opacity: 1, x: 0, y: 0, duration: 1.5, stagger: 0.05, ease: "expo.out" },
                         0.2
-                    );
-                }
-                if (markers && markers.length > 0) {
-                    tl.fromTo(markers,
-                        { opacity: 0, scaleY: 0 },
-                        { opacity: 1, scaleY: 1, duration: 1.2, ease: "expo.out" },
-                        0.8
                     );
                 }
             }
@@ -510,13 +503,17 @@ const AppContent: React.FC = () => {
                             onError={() => setVideoError(true)}
                         />
                     ) : settings.dashboardBackgroundType === 'image' && settings.dashboardImageUrl ? (
-                        <div 
-                            className="w-full h-full bg-cover bg-center grayscale brightness-[0.6] contrast-125 opacity-30 transition-opacity duration-1000"
-                            style={{ 
-                                backgroundImage: `url(${settings.dashboardImageUrl})`,
-                                filter: 'grayscale(1) brightness(0.6) contrast(1.1)' 
-                            }}
-                        />
+                        <>
+                            <div
+                                className="w-full h-full bg-cover bg-center grayscale brightness-[0.6] contrast-125 opacity-30 transition-opacity duration-1000"
+                                style={{
+                                    backgroundImage: `url(${settings.dashboardImageUrl})`,
+                                    filter: 'grayscale(1) brightness(0.6) contrast(1.1)'
+                                }}
+                            />
+                            {/* Sibling, not child: the image's grayscale filter would drain the particles' colour. */}
+                            <ParticleField />
+                        </>
                     ) : (
                         <div className="w-full h-full bg-transparent"></div>
                     )}
@@ -578,7 +575,7 @@ const AppContent: React.FC = () => {
                 <>
                     <div
                         ref={apertureRef}
-                        className="fixed inset-4 md:inset-6 z-overlay pointer-events-none"
+                        className="fixed inset-[10px] z-overlay pointer-events-none"
                         style={{ visibility: 'hidden' }}
                     >
                         <div ref={blindsRef} className="absolute inset-0 flex flex-row">
@@ -593,7 +590,7 @@ const AppContent: React.FC = () => {
 
                     <div
                         ref={appWrapperRef}
-                        className="w-full h-full flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none p-4 md:p-6"
+                        className="w-full h-full flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none p-[10px]"
                     >
                         {/* relative z-20: Header's absolute submenu row must paint above <main> (z-10) */}
                         <div className="app-header flex-shrink-0 relative z-20">

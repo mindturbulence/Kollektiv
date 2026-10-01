@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kollektiv Redesign Sample</title>
+<!--
+  Kollektiv redesign sample, v2 ("Quiet"). A design reference only, not app code.
+  Open from disk; switch screens from the header nav or #hash (#dashboard, #crafter, #gallery,
+  #assets_manager, #image_editor, #settings, #tokens).
+  IA is the real app's: NAV_GROUPS (constants/navigation.ts), the header control cluster,
+  the footer HUD (components/Footer.tsx) and the inset page frame (components/PageFrame.tsx).
+  Colours use daisyUI role names so porting is one theme block in tailwind.config.js.
+  Visual language inspired by (not copied from) trionn.com: oversized tight grotesk type,
+  monochrome with one ember accent, mono caps labels, hairlines, lots of empty space.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&family=Martian+Mono:wght@300;400;500&display=swap">
+<style>
+:root {
+  /* daisyUI roles */
+  --p: #FF5A1F;        /* primary: ember, the only colour on screen */
+  --pc: #0A0402;
+  --b1: #050608;       /* base-100 */
+  --b2: #0B0C0F;       /* base-200 */
+  --b3: #14161A;       /* base-300 */
+  --bc: #D8D8D8;       /* base-content */
+  --inv: #CFCFCF;      /* light section surface */
+  --inv-c: #0B0B0C;    /* light section ink */
+  --su: #7ED9A0;
+  --wa: #F2C14E;
+  --er: #FF5A5F;
+
+  --muted: color-mix(in srgb, var(--bc) 52%, transparent);
+  --faint: color-mix(in srgb, var(--bc) 28%, transparent);
+  --line: color-mix(in srgb, var(--bc) 10%, transparent);
+  --line-2: color-mix(in srgb, var(--bc) 20%, transparent);
+
+  /* space scale: 8 · 16 · 24 · 40 · 64 · 120 */
+  --s1: 8px; --s2: 16px; --s3: 24px; --s4: 40px; --s5: 64px; --s6: 120px;
+  --gutter: 56px;
+
+  --font: "Inter Tight", "Helvetica Neue", Arial, sans-serif;
+  --mono: "Martian Mono", ui-monospace, monospace;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+}
+:root[data-primary="lime"] { --p: #C0F04C; }
+:root[data-primary="mint"] { --p: #3FE6B4; }
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--b1); color: var(--bc); font: 400 16px/1.5 var(--font); -webkit-font-smoothing: antialiased; overflow: hidden; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+a { color: inherit; text-decoration: none; }
+input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 1px solid var(--p); outline-offset: 4px; }
+::selection { background: var(--p); color: var(--pc); }
+svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+/* ---------- type ---------- */
+.display { font-weight: 400; font-size: clamp(56px, 8.2vw, 132px); line-height: .9; letter-spacing: -.06em; margin: 0; }
+.h1 { font-weight: 400; font-size: clamp(44px, 5.6vw, 90px); line-height: .9; letter-spacing: -.06em; margin: 0; }
+.h2 { font-weight: 400; font-size: clamp(28px, 2.6vw, 40px); line-height: 1; letter-spacing: -.04em; margin: 0; }
+.h3 { font-weight: 400; font-size: 24px; line-height: 1.1; letter-spacing: -.03em; margin: 0; }
+.lead { font-size: 18px; line-height: 1.35; letter-spacing: -.01em; color: var(--bc); max-width: 30ch; }
+.body { color: var(--muted); max-width: 52ch; }
+.cap { font: 400 11px/1.4 var(--mono); letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+.cap.ink { color: var(--bc); }
+.sup { font: 400 12px/1 var(--mono); vertical-align: top; margin-left: 10px; color: var(--muted); letter-spacing: 0; position: relative; top: .5em; }
+.num { font-weight: 300; font-size: clamp(48px, 5vw, 80px); line-height: .9; letter-spacing: -.06em; }
+.accent { color: var(--p); }
+
+/* ---------- shell ---------- */
+.frame { position: fixed; inset: 0; padding: 10px; }
+.app { position: relative; height: 100%; display: grid; grid-template-rows: 72px minmax(0, 1fr) 40px; grid-template-columns: minmax(0, 1fr); border: 1px solid var(--line); background: var(--b1); }
+.plus { position: absolute; width: 11px; height: 11px; z-index: 20; pointer-events: none; }
+.plus::before, .plus::after { content: ""; position: absolute; background: var(--muted); }
+.plus::before { left: 5px; top: 0; width: 1px; height: 11px; }
+.plus::after { top: 5px; left: 0; height: 1px; width: 11px; }
+.plus.tl { top: -6px; left: -6px; } .plus.tr { top: -6px; right: -6px; } .plus.bl { bottom: -6px; left: -6px; } .plus.br { bottom: -6px; right: -6px; }
+
+header.top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--s4); padding: 0 var(--s4); position: relative; z-index: 10; }
+.logo { font: 500 19px/1 var(--font); letter-spacing: -.05em; display: flex; align-items: baseline; gap: 1px; }
+.logo b { color: var(--p); font-weight: 500; }
+.logo sup { font: 400 8px var(--mono); margin-left: 3px; color: var(--muted); }
+nav.groups { display: flex; align-items: center; gap: var(--s3); min-width: 0; overflow-x: auto; scrollbar-width: none; }
+nav.groups > * { flex-shrink: 0; }
+.g-btn, .n-item { font: 400 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .02em; color: var(--muted); padding: 6px 0; position: relative; transition: color .3s; white-space: nowrap; }
+.g-btn:hover, .n-item:hover, .g-btn.current, .n-item.active { color: var(--bc); }
+.g-btn.current::before { content: "("; } .g-btn.current::after { content: ")"; }
+.sub { display: flex; gap: var(--s3); max-width: 0; opacity: 0; overflow: hidden; transition: max-width .7s var(--ease), opacity .4s; }
+.sub.open { max-width: 900px; opacity: 1; }
+.sub:not(.open) { margin-left: calc(-1 * var(--s3)); } /* collapsed group takes no gap */
+.n-item { color: var(--faint); }
+.n-item.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--p); }
+.ctl { display: flex; align-items: center; gap: var(--s1); position: relative; }
+.ic { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); position: relative; transition: color .3s, background .3s; }
+.ic:hover { color: var(--bc); background: var(--b3); }
+.ic .badge { position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--p); }
+.btn { display: inline-flex; align-items: center; gap: 10px; height: 34px; padding: 0 16px; border-radius: 999px; font: 500 13px/1 var(--font); letter-spacing: -.01em; text-transform: uppercase; border: 1px solid var(--line-2); white-space: nowrap; transition: background .3s, color .3s, border-color .3s; }
+.btn:hover { border-color: var(--bc); }
+.btn.solid { background: var(--bc); color: var(--b1); border-color: var(--bc); }
+.btn.solid:hover { background: #fff; }
+.btn.ember { background: var(--p); color: var(--pc); border-color: var(--p); }
+.btn.lg { height: 48px; padding: 0 24px; font-size: 14px; }
+.burger { display: inline-flex; flex-direction: column; gap: 3px; }
+.burger i { width: 12px; height: 1px; background: currentColor; }
+.pop { position: absolute; top: calc(100% + 12px); right: 0; width: 280px; padding: var(--s3); background: var(--b2); border: 1px solid var(--line); display: none; z-index: 30; }
+.pop.open { display: block; animation: rise .4s var(--ease); }
+.pop .cap { margin-bottom: var(--s2); }
+.pop-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s1); margin-bottom: var(--s3); }
+@keyframes rise { from { opacity: 0; transform: translateY(-6px); } }
+
+main { position: relative; overflow: hidden; }
+.screen { position: absolute; inset: 0; overflow-y: auto; display: none; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+.screen.on { display: block; animation: enter .8s var(--ease); }
+@keyframes enter { from { opacity: 0; transform: translateY(14px); } }
+.wrap { padding: var(--s5) var(--gutter) var(--s6); }
+.narrow { max-width: 1080px; margin: 0 auto; }
+
+footer.hud { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: 0 var(--s4); border-top: 1px solid var(--line); font: 400 10px/1 var(--mono); text-transform: uppercase; color: var(--faint); white-space: nowrap; }
+.hud-l, .hud-r { display: flex; gap: var(--s3); align-items: center; }
+.hud b { font-weight: 400; color: var(--muted); }
+.int.on b { color: var(--bc); }
+.int.on::before { content: "● "; color: var(--su); font-size: 7px; vertical-align: 1px; }
+.hud-c { color: var(--muted); }
+.hud-c::before { content: "✦ "; color: var(--p); }
+
+/* ---------- shared bits ---------- */
+.head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s4); flex-wrap: wrap; padding-bottom: var(--s4); margin-bottom: var(--s5); border-bottom: 1px solid var(--line); }
+.crumbs { margin-bottom: var(--s3); }
+.tlink { display: inline-flex; align-items: center; gap: var(--s4); padding-bottom: 8px; border-bottom: 1px solid currentColor; font: 400 12px/1 var(--mono); text-transform: uppercase; color: var(--bc); transition: gap .4s var(--ease), color .3s; white-space: nowrap; cursor: pointer; }
+.tlink:hover { gap: calc(var(--s4) + 12px); color: var(--p); }
+.tabs { display: flex; gap: var(--s3); }
+.tab { font: 400 11px/1 var(--mono); text-transform: uppercase; color: var(--faint); padding-bottom: 6px; border-bottom: 1px solid transparent; transition: color .3s; }
+.tab:hover { color: var(--bc); }
+.tab.on { color: var(--bc); border-color: var(--bc); }
+.section { padding: var(--s6) var(--gutter); position: relative; }
+.sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s3); margin-bottom: var(--s5); }
+.art { position: relative; overflow: hidden; background: var(--b3); }
+.art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 60%, rgba(0,0,0,.35)); }
+.rows > * { border-top: 1px solid var(--line); }
+.rows > *:last-child { border-bottom: 1px solid var(--line); }
+.toggle { width: 40px; height: 22px; border-radius: 11px; border: 1px solid var(--line-2); position: relative; flex-shrink: 0; cursor: pointer; transition: border-color .3s; }
+.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--faint); transition: transform .4s var(--ease), background .3s; }
+.toggle.on { border-color: var(--p); }
+.toggle.on::after { transform: translateX(18px); background: var(--p); }
+.uline { background: transparent; border: 0; border-bottom: 1px solid var(--line-2); padding: 10px 0; outline: none; min-width: 0; transition: border-color .3s; }
+.uline:focus { border-color: var(--bc); }
+.uline::placeholder { color: var(--faint); }
+.hair { height: 1px; background: var(--line-2); position: relative; }
+.hair b { position: absolute; left: 0; top: 0; height: 1px; background: var(--bc); }
+.hair b::after { content: ""; position: absolute; right: -5px; top: -5px; width: 11px; height: 11px; border-radius: 50%; background: var(--p); }
+
+/* ---------- Home ---------- */
+.hero { position: relative; min-height: 100%; padding: var(--s5) var(--gutter) var(--s4); display: flex; flex-direction: column; justify-content: space-between; gap: var(--s5); overflow: hidden; }
+.hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.hero > *:not(canvas) { position: relative; }
+.hero-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--s4); flex-wrap: wrap; }
+.facts { display: grid; grid-template-columns: repeat(2, auto); border: 1px solid var(--line-2); margin-bottom: var(--s3); width: max-content; }
+.facts > div { padding: var(--s2) var(--s3); display: flex; flex-direction: column; gap: 6px; }
+.facts > div + div { border-left: 1px solid var(--line-2); }
+.facts .v { font-size: 22px; letter-spacing: -.04em; line-height: 1; }
+.status { display: flex; flex-direction: column; gap: 10px; }
+.warn { color: var(--p); }
+.marquee { overflow: hidden; border-block: 1px solid var(--line); padding: var(--s4) 0; }
+.marquee-track { display: flex; width: max-content; animation: slide 38s linear infinite; }
+.marquee span { font-weight: 400; font-size: clamp(64px, 9vw, 150px); line-height: 1; letter-spacing: -.06em; text-transform: uppercase; padding: 0 var(--s4); color: color-mix(in srgb, var(--bc) 85%, transparent); display: flex; align-items: center; gap: var(--s5); white-space: nowrap; }
+.marquee span::after { content: "+"; font-weight: 200; font-size: .35em; color: var(--muted); }
+@keyframes slide { to { transform: translateX(-50%); } }
+.cols3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cols3 { column-gap: 80px; }
+.proj { display: flex; flex-direction: column; gap: var(--s3); position: relative; }
+.proj + .proj::before { content: ""; position: absolute; left: -40px; top: 0; bottom: 0; width: 1px; background: var(--line); }
+.proj .art { aspect-ratio: 4 / 3; transition: transform 1s var(--ease); }
+.proj:hover .art { transform: scale(.985); }
+.proj-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--s3); }
+.light { background: var(--inv); color: var(--inv-c); --bc: var(--inv-c); --muted: color-mix(in srgb, var(--inv-c) 55%, transparent); --faint: color-mix(in srgb, var(--inv-c) 35%, transparent); --line: color-mix(in srgb, var(--inv-c) 12%, transparent); --line-2: color-mix(in srgb, var(--inv-c) 22%, transparent); }
+.stackwords { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.stackwords a { font-weight: 500; font-size: clamp(56px, 8vw, 128px); line-height: .88; letter-spacing: -.06em; text-transform: uppercase; display: inline-flex; align-items: center; gap: var(--s3); transition: color .4s, transform .6s var(--ease); }
+.stackwords a small { font: 400 12px/1 var(--mono); letter-spacing: 0; opacity: 0; transition: opacity .4s; color: var(--muted); }
+.stackwords a:hover { transform: translateX(12px); }
+.stackwords a:hover small { opacity: 1; }
+.stackwords:hover a:not(:hover) { color: color-mix(in srgb, var(--inv-c) 30%, transparent); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.stat { padding: var(--s4) var(--s4) 0; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: var(--s4); min-height: 240px; justify-content: space-between; }
+.stat:first-child { border-left: 0; padding-left: 0; }
+.plist a { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto 24px; gap: var(--s3); align-items: baseline; padding: var(--s3) 0; transition: color .3s; }
+.plist a:hover { color: var(--p); }
+.plist a:hover .h2 { transform: translateX(8px); }
+.plist .h2 { transition: transform .6s var(--ease); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Crafter ---------- */
+.composer { width: 100%; min-height: 220px; resize: none; border: 0; outline: none; background: transparent; font-weight: 400; font-size: clamp(30px, 3.2vw, 48px); line-height: 1.08; letter-spacing: -.045em; color: var(--bc); caret-color: var(--p); }
+.mods { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s4); padding: var(--s4) 0; border-block: 1px solid var(--line); margin: var(--s4) 0; }
+.mods > div { display: flex; flex-direction: column; gap: var(--s1); }
+.act { display: flex; justify-content: space-between; align-items: center; gap: var(--s3); flex-wrap: wrap; }
+.variants a { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: var(--s3); padding: var(--s4) 0; align-items: baseline; color: var(--muted); transition: color .3s; cursor: pointer; }
+.variants a:hover, .variants a.on { color: var(--bc); }
+.variants a.on .cap:first-child { color: var(--p); }
+
+/* ---------- Gallery ---------- */
+.grid3 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--s4); row-gap: var(--s5); }
+.item { display: flex; flex-direction: column; gap: var(--s2); cursor: pointer; text-align: left; }
+.item:nth-child(even) { margin-top: var(--s5); }
+.item .art { aspect-ratio: 4 / 5; transition: transform 1s var(--ease); }
+.item:hover .art { transform: scale(.98); }
+.item .row { display: flex; justify-content: space-between; gap: var(--s2); align-items: baseline; }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: min(520px, 100%); background: var(--b2); border-left: 1px solid var(--line); transform: translateX(100%); visibility: hidden; transition: transform .8s var(--ease), visibility 0s .8s; z-index: 8; overflow-y: auto; padding: var(--s4); display: flex; flex-direction: column; gap: var(--s4); }
+.drawer > * { flex-shrink: 0; }
+.drawer.open { transform: none; visibility: visible; transition: transform .8s var(--ease); }
+.scrim { position: absolute; inset: 0; background: rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .6s; z-index: 7; }
+.scrim.open { opacity: 1; pointer-events: auto; }
+.kv { display: grid; grid-template-columns: auto 1fr; }
+.kv > * { padding: 14px 0; border-top: 1px solid var(--line); }
+.kv dd { margin: 0; text-align: right; }
+
+/* ---------- Assets ---------- */
+.alist a { display: grid; grid-template-columns: 56px 64px minmax(0, 1fr) 160px 160px 100px 24px; gap: var(--s3); align-items: center; padding: var(--s3) 0; transition: color .3s, padding .6s var(--ease); cursor: pointer; }
+.alist a:hover { color: var(--p); padding-left: var(--s2); }
+.alist .art { width: 64px; height: 48px; }
+.drop { margin-top: var(--s5); border: 1px dashed var(--line-2); padding: var(--s6) var(--s4); text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--s2); }
+
+/* ---------- Editor ---------- */
+.editor { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr) 360px; }
+.stage { position: relative; display: grid; place-items: center; overflow: hidden; border-right: 1px solid var(--line); }
+.canvas-art { width: min(62%, 760px); aspect-ratio: 4 / 3; position: relative; box-shadow: 0 40px 120px -30px rgba(0,0,0,.9); }
+.selbox { position: absolute; inset: 20% 32% 24% 22%; border: 1px solid var(--p); z-index: 1; }
+.selbox i { position: absolute; width: 7px; height: 7px; background: var(--b1); border: 1px solid var(--p); }
+.float { position: absolute; display: flex; align-items: center; gap: var(--s2); }
+.tools { position: absolute; left: var(--s4); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 4px; padding: 6px; border: 1px solid var(--line-2); border-radius: 999px; }
+.tools .ic.on { background: var(--bc); color: var(--b1); }
+.fill { left: 50%; bottom: var(--s4); transform: translateX(-50%); width: min(560px, 80%); border: 1px solid var(--line-2); border-radius: 999px; padding: 6px 6px 6px 22px; background: color-mix(in srgb, var(--b1) 70%, transparent); backdrop-filter: blur(10px); }
+.fill input { flex: 1; min-width: 0; background: none; border: 0; outline: none; font-size: 15px; letter-spacing: -.01em; }
+.fill input::placeholder { color: var(--faint); }
+.panel { overflow-y: auto; padding: var(--s4); display: flex; flex-direction: column; gap: var(--s5); }
+.layer { display: flex; align-items: center; gap: var(--s2); padding: 14px 0; color: var(--muted); transition: color .3s; cursor: pointer; }
+.layer.on, .layer:hover { color: var(--bc); }
+.layer .art { width: 40px; height: 30px; }
+.layer.on span::before { content: "● "; color: var(--p); font-size: 9px; vertical-align: 2px; }
+.adj { display: flex; flex-direction: column; gap: var(--s4); }
+.adj .top { display: flex; justify-content: space-between; margin-bottom: var(--s2); }
+
+/* ---------- Settings ---------- */
+.settings { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: var(--s6); }
+.snav { position: sticky; top: 0; align-self: start; display: flex; flex-direction: column; gap: 6px; }
+.snav button { text-align: left; display: flex; align-items: baseline; gap: var(--s2); color: var(--faint); transition: color .3s; }
+.snav button .cap { color: inherit; }
+.snav button .h2 { transition: transform .6s var(--ease); }
+.snav button:hover { color: var(--muted); }
+.snav button.on { color: var(--bc); }
+.snav button.on .h2 { transform: translateX(8px); }
+.setrow { display: flex; justify-content: space-between; align-items: center; gap: var(--s4); padding: var(--s4) 0; }
+.setrow > div:first-child { display: flex; flex-direction: column; gap: 8px; }
+.group + .group { margin-top: var(--s6); }
+
+/* ---------- Tokens ---------- */
+.sw-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); column-gap: var(--s5); row-gap: var(--s4); }
+.sw { display: flex; flex-direction: column; gap: var(--s2); position: relative; }
+.sw + .sw::before { content: ""; position: absolute; left: calc(var(--s5) / -2); top: 0; bottom: 0; width: 1px; background: var(--line); }
+.sw i { display: block; aspect-ratio: 1; border: 1px solid var(--line); }
+.spec > div { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: var(--s3); align-items: baseline; padding: var(--s4) 0; }
+.spacing { display: flex; align-items: flex-end; gap: var(--s4); flex-wrap: wrap; }
+.spacing div { display: flex; flex-direction: column; gap: var(--s2); }
+.spacing i { display: block; background: var(--p); height: 8px; }
+
+/* ---------- empty ---------- */
+.empty { min-height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: var(--s5) var(--gutter); gap: var(--s4); }
+
+@media (max-width: 1100px) {
+  :root { --gutter: 32px; }
+  .ctl .xl { display: none; }
+  .cols3, .grid3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .proj:nth-child(3) { display: none; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--s5); }
+  .stat:nth-child(3) { border-left: 0; padding-left: 0; }
+  .alist a { grid-template-columns: 40px 64px minmax(0, 1fr) 100px 24px; }
+  .alist a .hide-md { display: none; }
+  .mods { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings { grid-template-columns: 1fr; gap: var(--s5); }
+  .snav { position: static; flex-direction: row; flex-wrap: wrap; gap: var(--s3); }
+  .editor { grid-template-columns: 1fr; grid-template-rows: minmax(480px, 1fr) auto; position: static; }
+}
+@media (max-width: 700px) {
+  :root { --gutter: 16px; --s6: 72px; --s5: 40px; }
+  body { overflow: auto; }
+  .frame { position: static; padding: 0; }
+  .app { min-height: 100vh; grid-template-rows: auto minmax(0, 1fr) auto; border: 0; }
+  .plus { display: none; }
+  header.top { grid-template-columns: 1fr auto; padding: var(--s2); gap: var(--s2); }
+  nav.groups { grid-column: 1 / -1; grid-row: 2; }
+  .ctl .btn.solid { display: none; }
+  main { overflow: visible; overflow-x: clip; }
+  .screen { position: static; }
+  .cols3, .grid3, .stats { grid-template-columns: 1fr; }
+  .proj { margin-bottom: var(--s5); }
+  .proj + .proj::before { display: none; }
+  .proj:nth-child(3) { display: flex; }
+  .item:nth-child(n) { margin-top: 0; }
+  .stat { border-left: 0; padding-left: 0; min-height: 0; border-top: 1px solid var(--line); padding-top: var(--s3); }
+  .alist a { grid-template-columns: 64px minmax(0, 1fr) 24px; }
+  .alist a > .cap { display: none; }
+  .plist a { grid-template-columns: 32px minmax(0, 1fr) 16px; }
+  .plist a .hide-sm { display: none; }
+  .mods, .sw-grid { grid-template-columns: 1fr 1fr; }
+  .spec > div { grid-template-columns: 1fr; }
+  .tools { left: var(--s2); }
+  .hud-l .int, .hud-r .opt, .hud-c { display: none; }
+  footer.hud { padding: var(--s2); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16M14 6l6 6-6 6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v16M6 14l6 6 6-6"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-max" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="i-screen" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8M12 16v4"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="1"/><path d="m16 10 5-3v10l-5-3"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+  <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M7 4v16M17 4v16"/></symbol>
+  <symbol id="i-term" viewBox="0 0 24 24"><path d="m5 8 4 4-4 4M12 16h7"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></symbol>
+  <symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v9M6.3 6.3a8 8 0 1 0 11.4 0"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/></symbol>
+  <symbol id="i-brush" viewBox="0 0 24 24"><path d="M18 3 9 12l3 3 9-9zM9 12c-3 0-5 2-5 5 0 2-1 3-1 3s4 1 6-1c2-1.5 3-3 3-4"/></symbol>
+  <symbol id="i-crop" viewBox="0 0 24 24"><path d="M6 2v16h16M2 6h16v16"/></symbol>
+  <symbol id="i-text" viewBox="0 0 24 24"><path d="M5 5h14M12 5v14"/></symbol>
+  <symbol id="i-lasso" viewBox="0 0 24 24"><ellipse cx="12" cy="10" rx="8" ry="5"/><path d="M8 14c-1 2 0 4 2 5"/></symbol>
+  <symbol id="i-wand" viewBox="0 0 24 24"><path d="m4 20 12-12M14 4v2M18 8h2M17 3l1 2"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+</svg>
+
+<div class="frame">
+<div class="app">
+  <span class="plus tl"></span><span class="plus tr"></span><span class="plus bl"></span><span class="plus br"></span>
+
+  <header class="top">
+    <a class="logo" href="#dashboard" aria-label="Kollektiv home">Kollektiv<b>.</b><sup>®</sup></a>
+    <nav class="groups" id="nav" aria-label="Main"></nav>
+    <div class="ctl">
+      <button class="ic" title="Command palette (Ctrl+K)"><svg class="i"><use href="#i-search"/></svg></button>
+      <button class="ic" title="Live assistant mic"><svg class="i"><use href="#i-mic"/></svg></button>
+      <button class="ic xl" title="Chat"><svg class="i"><use href="#i-chat"/></svg></button>
+      <button class="ic xl" title="Clipboard (4)"><svg class="i"><use href="#i-book"/></svg><span class="badge"></span></button>
+      <a class="btn solid" href="#assistant">Assistant</a>
+      <button class="btn" id="ctlBtn" aria-expanded="false" aria-controls="ctlPop">Controls <span class="burger" aria-hidden="true"><i></i><i></i></span></button>
+      <div class="pop" id="ctlPop">
+        <div class="cap">Live</div>
+        <div class="pop-grid">
+          <button class="ic" title="Screen share"><svg class="i"><use href="#i-screen"/></svg></button>
+          <button class="ic" title="Camera"><svg class="i"><use href="#i-cam"/></svg></button>
+          <button class="ic" title="Media player"><svg class="i"><use href="#i-film"/></svg></button>
+          <button class="ic" title="Activity &amp; transcript"><svg class="i"><use href="#i-term"/></svg></button>
+        </div>
+        <div class="cap">Window</div>
+        <div class="pop-grid">
+          <button class="ic" title="About"><svg class="i"><use href="#i-info"/></svg></button>
+          <button class="ic" title="Fullscreen"><svg class="i"><use href="#i-max"/></svg></button>
+          <a class="ic" title="Settings" href="#settings"><svg class="i"><use href="#i-cog"/></svg></a>
+          <button class="ic" title="Standby"><svg class="i"><use href="#i-power"/></svg></button>
+        </div>
+        <div class="cap">Accent</div>
+        <div class="tabs" data-accent>
+          <button class="tab on" data-p="">Ember</button><button class="tab" data-p="lime">Lime</button><button class="tab" data-p="mint">Mint</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- ================= HOME ================= -->
+    <section class="screen" data-screen="dashboard">
+      <div class="hero">
+        <canvas id="shards" aria-hidden="true"></canvas>
+        <div class="cap">Mindturbulence's<br>creative studio.</div>
+        <h1 class="display">Make images<br>worth keeping.</h1>
+        <div class="hero-foot">
+          <div class="status">
+            <span class="cap ink">● Vault connected</span>
+            <span class="cap">Engine: Gemini 2.5 Flash</span>
+            <a class="cap warn" href="#gallery">14 files missing on disk →</a>
+          </div>
+          <div class="cap" style="display:flex;align-items:center;gap:10px"><svg class="i"><use href="#i-down"/></svg>Scroll</div>
+          <div>
+            <div class="facts">
+              <div><span class="v">1,284</span><span class="cap">Media</span></div>
+              <div><span class="v">38.2 GB</span><span class="cap">In vault</span></div>
+            </div>
+            <p class="lead" style="margin:0">Prompts, media and models in one local studio. Nothing leaves the vault unless you send it.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="marquee" aria-hidden="true"><div class="marquee-track" id="marquee"></div></div>
+
+      <div class="section">
+        <div class="sec-head"><span class="cap">(01) Recent media</span><a class="tlink" href="#gallery">Open gallery <svg class="i"><use href="#i-arrow"/></svg></a></div>
+        <div class="cols3" id="recentProj"></div>
+      </div>
+
+      <div class="section light">
+        <div class="sec-head"><span class="cap">(02) Pick up where you left off</span><span class="cap">Six tools this week</span></div>
+        <div class="stackwords">
+          <a href="#crafter">Crafter <small>Workbench</small></a>
+          <a href="#image_editor">Image Editor <small>Studio</small></a>
+          <a href="#gallery">Media <small>Vault</small></a>
+          <a href="#assets_manager">Assets <small>Utilities</small></a>
+          <a href="#batch_runner">Batch <small>Utilities</small></a>
+          <a href="#comfy_studio">ComfyUI <small>Studio</small></a>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sec-head"><span class="cap">(03) The vault</span><span class="cap">Last 30 days</span></div>
+        <div class="stats">
+          <div class="stat"><span class="cap">Media</span><div><div class="num">1,284</div><div class="cap" style="margin-top:12px">+92 this month</div></div></div>
+          <div class="stat"><span class="cap">Prompts</span><div><div class="num">412</div><div class="cap" style="margin-top:12px">+38 saved</div></div></div>
+          <div class="stat"><span class="cap">LoRAs</span><div><div class="num">36</div><div class="cap" style="margin-top:12px">4 drafts</div></div></div>
+          <div class="stat"><span class="cap">Need attention</span><div><div class="num accent">17</div><div class="cap" style="margin-top:12px">Failed or missing</div></div></div>
+        </div>
+      </div>
+
+      <div class="section" style="padding-top:0">
+        <div class="sec-head"><span class="cap">(04) Recent prompts</span><a class="tlink" href="#prompt">Library <svg class="i"><use href="#i-arrow"/></svg></a></div>
+        <div class="plist rows">
+          <a href="#crafter"><span class="cap">01</span><span class="h2">Neon koi in a flooded arcade</span><span class="cap hide-sm">29 Sep</span><svg class="i"><use href="#i-arrow"/></svg></a>
+          <a href="#crafter"><span class="cap">02</span><span class="h2">Brutalist library at dusk</span><span class="cap hide-sm">27 Sep</span><svg class="i"><use href="#i-arrow"/></svg></a>
+          <a href="#crafter"><span class="cap">03</span><span class="h2">Portrait study, chrome skin</span><span class="cap hide-sm">24 Sep</span><svg class="i"><use href="#i-arrow"/></svg></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CRAFTER ================= -->
+    <section class="screen" data-screen="crafter">
+      <div class="wrap narrow">
+        <div class="cap crumbs">(Workbench) / Crafter</div>
+        <div class="head">
+          <h1 class="h1">Crafter</h1>
+          <div class="tabs seg"><button class="tab on">Compose</button><button class="tab">Refine</button><button class="tab">Analyze</button></div>
+        </div>
+        <textarea class="composer" aria-label="Prompt">A lone koi drifts through a flooded 1980s arcade, cabinets glowing under ankle-deep water, reflections in teal and ember.</textarea>
+        <div class="mods">
+          <div><span class="cap">Camera</span><span class="h3">35mm · f/1.8</span></div>
+          <div><span class="cap">Lighting</span><span class="h3">Rim + neon</span></div>
+          <div><span class="cap">Mood</span><span class="h3">Melancholic</span></div>
+          <div><span class="cap">Target</span><span class="h3">SDXL · ComfyUI</span></div>
+        </div>
+        <div class="act">
+          <span class="cap">Negative: blurry, text, watermark · 142 / 225 tokens</span>
+          <div style="display:flex;gap:12px"><button class="btn lg">Enhance</button><button class="btn lg solid">Generate 4 <svg class="i"><use href="#i-arrow"/></svg></button></div>
+        </div>
+
+        <div class="sec-head" style="margin-top:var(--s6)"><span class="cap">Variants</span><span class="cap">Score <span class="accent">78</span> / 100</span></div>
+        <div class="variants rows" id="variants">
+          <a class="on"><span class="cap">01</span><span class="h3">A lone koi glides between drowned arcade cabinets, neon bleeding into still water.</span><span class="cap">Use</span></a>
+          <a><span class="cap">02</span><span class="h3">Overhead view, koi silhouette on a flooded arcade floor lit by CRT glow.</span><span class="cap">Use</span></a>
+          <a><span class="cap">03</span><span class="h3">Macro on koi scales, arcade lights in soft bokeh, teal and ember split tone.</span><span class="cap">Use</span></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VAULT MEDIA ================= -->
+    <section class="screen" data-screen="gallery">
+      <div class="wrap">
+        <div class="cap crumbs">(Vault) / Media</div>
+        <div class="head">
+          <h1 class="h1">Media<span class="sup">(1,284)</span></h1>
+          <div style="display:flex;gap:var(--s4);align-items:center;flex-wrap:wrap">
+            <div class="tabs seg"><button class="tab on">All</button><button class="tab">Images</button><button class="tab">Videos</button><button class="tab">Pinned</button></div>
+            <input class="uline" placeholder="Search tags" aria-label="Search tags" style="width:200px">
+            <button class="btn solid">Import</button>
+          </div>
+        </div>
+        <div class="grid3" id="grid"></div>
+      </div>
+    </section>
+
+    <!-- ================= ASSETS ================= -->
+    <section class="screen" data-screen="assets_manager">
+      <div class="wrap">
+        <div class="cap crumbs">(Utilities) / Assets</div>
+        <div class="head">
+          <h1 class="h1">Assets<span class="sup">(312)</span></h1>
+          <div style="display:flex;gap:var(--s4);align-items:center;flex-wrap:wrap">
+            <div class="tabs seg"><button class="tab on">All</button><button class="tab">Textures</button><button class="tab">Fonts</button><button class="tab">Overlays</button><button class="tab">Brushes</button></div>
+            <button class="btn solid">Add assets</button>
+          </div>
+        </div>
+        <div class="alist rows" id="alist"></div>
+        <div class="drop"><span class="h2">Drop files anywhere</span><span class="cap">PNG · JPG · WEBP · TTF · OTF · ABR — 2.4 of 8 GB used</span></div>
+      </div>
+    </section>
+
+    <!-- ================= IMAGE EDITOR ================= -->
+    <section class="screen" data-screen="image_editor">
+      <div class="editor">
+        <div class="stage">
+          <div class="float" style="left:var(--s4);top:var(--s4)"><span class="cap ink">neon-koi-04.png</span><span class="cap">100% · RGB/8</span></div>
+          <div class="float" style="right:var(--s4);top:var(--s4)"><button class="btn">Undo</button><button class="btn solid">Export</button></div>
+          <div class="tools">
+            <button class="ic on" title="Move"><svg class="i"><use href="#i-move"/></svg></button>
+            <button class="ic" title="Lasso"><svg class="i"><use href="#i-lasso"/></svg></button>
+            <button class="ic" title="Crop"><svg class="i"><use href="#i-crop"/></svg></button>
+            <button class="ic" title="Brush"><svg class="i"><use href="#i-brush"/></svg></button>
+            <button class="ic" title="Text"><svg class="i"><use href="#i-text"/></svg></button>
+            <button class="ic" title="AI fill"><svg class="i"><use href="#i-wand"/></svg></button>
+          </div>
+          <div class="canvas-art art" id="canvasArt"><div class="selbox"><i style="left:-4px;top:-4px"></i><i style="right:-4px;top:-4px"></i><i style="left:-4px;bottom:-4px"></i><i style="right:-4px;bottom:-4px"></i></div></div>
+          <div class="float fill"><svg class="i" style="color:var(--p)"><use href="#i-wand"/></svg><input placeholder="Fill the selection with…" aria-label="AI fill prompt"><button class="btn solid">Fill</button></div>
+        </div>
+        <div class="panel">
+          <div>
+            <div class="sec-head" style="margin-bottom:var(--s2)"><span class="cap">Layers</span><button class="cap ink">+ Add</button></div>
+            <div class="rows" id="layers"></div>
+          </div>
+          <div>
+            <div class="cap" style="margin-bottom:var(--s4)">Adjust</div>
+            <div class="adj">
+              <div><div class="top"><span>Opacity</span><span class="cap ink">86%</span></div><div class="hair"><b style="width:86%"></b></div></div>
+              <div><div class="top"><span>Exposure</span><span class="cap ink">+0.3</span></div><div class="hair"><b style="width:58%"></b></div></div>
+              <div><div class="top"><span>Hue shift</span><span class="cap ink">−12°</span></div><div class="hair"><b style="width:40%"></b></div></div>
+            </div>
+          </div>
+          <div>
+            <div class="cap" style="margin-bottom:var(--s2)">Blend</div>
+            <div class="tabs seg" style="flex-wrap:wrap"><button class="tab on">Normal</button><button class="tab">Screen</button><button class="tab">Multiply</button><button class="tab">Overlay</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SETTINGS ================= -->
+    <section class="screen" data-screen="settings">
+      <div class="wrap">
+        <div class="cap crumbs">Settings</div>
+        <div class="settings">
+          <div class="snav" id="snav">
+            <button><span class="cap">01</span><span class="h2">App</span></button>
+            <button><span class="cap">02</span><span class="h2">Appearance</span></button>
+            <button class="on"><span class="cap">03</span><span class="h2">Integrations</span></button>
+            <button><span class="cap">04</span><span class="h2">Prompt</span></button>
+            <button><span class="cap">05</span><span class="h2">Gallery</span></button>
+          </div>
+          <div>
+            <div class="group">
+              <div class="sec-head" style="margin-bottom:var(--s2)"><span class="cap">AI providers</span><span class="cap">3 connected</span></div>
+              <div class="rows">
+                <div class="setrow"><div><span class="h3">Gemini</span><span class="cap">Key ••••4f2a · 412 calls in 30 days</span></div><span class="toggle on" role="switch" aria-checked="true" aria-label="Gemini" tabindex="0"></span></div>
+                <div class="setrow"><div><span class="h3">Ollama</span><span class="cap">localhost:11434 · 1.8 s average</span></div><span class="toggle on" role="switch" aria-checked="true" aria-label="Ollama" tabindex="0"></span></div>
+                <div class="setrow"><div><span class="h3">OpenRouter</span><span class="cap">Not configured</span></div><a class="tlink">Add key <svg class="i"><use href="#i-arrow"/></svg></a></div>
+              </div>
+            </div>
+            <div class="group">
+              <div class="sec-head" style="margin-bottom:var(--s2)"><span class="cap">Connections</span></div>
+              <div class="rows">
+                <div class="setrow"><div><span class="h3">Vault folder</span><span class="cap">D:\Kollektiv\vault · 1,284 files</span></div><a class="tlink">Change <svg class="i"><use href="#i-arrow"/></svg></a></div>
+                <div class="setrow"><div><span class="h3">ComfyUI endpoint</span><span class="cap">Used by Studio and Batch</span></div><input class="uline" value="http://127.0.0.1:8188" aria-label="ComfyUI endpoint" style="width:220px;text-align:right"></div>
+                <div class="setrow"><div><span class="h3">MCP servers</span><span class="cap">3 enabled · filesystem, playwright, vault</span></div><a class="tlink">Manage <svg class="i"><use href="#i-arrow"/></svg></a></div>
+                <div class="setrow"><div><span class="h3">Spotify</span><span class="cap">Background audio for the media player</span></div><span class="toggle" role="switch" aria-checked="false" aria-label="Spotify" tabindex="0"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TOKENS ================= -->
+    <section class="screen" data-screen="tokens">
+      <div class="wrap">
+        <div class="cap crumbs">Design reference</div>
+        <div class="head">
+          <h1 class="h1">Tokens</h1>
+          <div class="tabs" data-accent><button class="tab on" data-p="">Ember</button><button class="tab" data-p="lime">Lime</button><button class="tab" data-p="mint">Mint</button></div>
+        </div>
+
+        <div class="sec-head"><span class="cap">(01) Colour roles</span><span class="cap">One accent. Everything else is ink on black.</span></div>
+        <div class="sw-grid" id="swatches"></div>
+
+        <div class="sec-head" style="margin-top:var(--s6)"><span class="cap">(02) Type</span><span class="cap">Inter Tight + Martian Mono</span></div>
+        <div class="spec rows">
+          <div><span class="display">Display</span><span class="cap">400 · clamp(56–132) · .9 · −.06em<br>Hero only, once per screen</span></div>
+          <div><span class="h1">Heading 1</span><span class="cap">400 · clamp(44–90) · .9 · −.06em<br>Page title</span></div>
+          <div><span class="h2">Heading 2</span><span class="cap">400 · clamp(28–40) · 1 · −.04em<br>List rows, section items</span></div>
+          <div><span class="h3">Heading 3 for values and variants</span><span class="cap">400 · 24 · 1.1 · −.03em</span></div>
+          <div><span class="body">Body copy stays short and muted. It explains; the big type does the talking.</span><span class="cap">400 · 16 · 1.5 · 52% ink</span></div>
+          <div><span class="cap ink">(01) Mono caption / label</span><span class="cap">Martian Mono 400 · 11 · caps<br>Labels, nav, meta, HUD</span></div>
+        </div>
+
+        <div class="sec-head" style="margin-top:var(--s6)"><span class="cap">(03) Controls</span><span class="cap">Pills for actions, underlines for navigation</span></div>
+        <div style="display:flex;gap:var(--s4);align-items:center;flex-wrap:wrap">
+          <button class="btn solid">Primary</button><button class="btn">Secondary</button><button class="btn lg solid">Large <svg class="i"><use href="#i-arrow"/></svg></button><button class="btn ember">Accent (rare)</button>
+          <a class="tlink">Text link <svg class="i"><use href="#i-arrow"/></svg></a>
+          <div class="tabs"><button class="tab on">Tab on</button><button class="tab">Tab</button></div>
+          <span class="toggle on"></span><span class="toggle"></span>
+          <input class="uline" placeholder="Underline input" aria-label="Sample input">
+        </div>
+        <div class="hair" style="margin-top:var(--s5);max-width:420px"><b style="width:60%"></b></div>
+
+        <div class="sec-head" style="margin-top:var(--s6)"><span class="cap">(04) Space</span><span class="cap">Section 120 · block 64 · group 40 · gutter 56</span></div>
+        <div class="spacing">
+          <div><i style="width:8px"></i><span class="cap">8</span></div><div><i style="width:16px"></i><span class="cap">16</span></div><div><i style="width:24px"></i><span class="cap">24</span></div><div><i style="width:40px"></i><span class="cap">40</span></div><div><i style="width:64px"></i><span class="cap">64</span></div><div><i style="width:120px"></i><span class="cap">120</span></div>
+        </div>
+
+        <div class="sec-head" style="margin-top:var(--s6)"><span class="cap">(05) Rules</span></div>
+        <div class="rows">
+          <div class="setrow"><span class="h3">One idea per screen at display size; everything else steps down.</span></div>
+          <div class="setrow"><span class="h3">No card boxes. Group with space and hairlines.</span></div>
+          <div class="setrow"><span class="h3">The accent marks state (selected, warning, knob), never decoration.</span></div>
+          <div class="setrow"><span class="h3">Motion is slow and eased (.6–1s, expo-out). Respect reduced motion.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= NOT IN SAMPLE ================= -->
+    <section class="screen" data-screen="empty">
+      <div class="empty">
+        <span class="cap" id="emptyGroup">(Screen)</span>
+        <h1 class="display" id="emptyTitle">Not in sample.</h1>
+        <p class="body">This screen isn't mocked. Build it from the Tokens page: a mono crumb, one H1, hairline rows, and one pill action.</p>
+        <a class="tlink" href="#tokens">Open tokens <svg class="i"><use href="#i-arrow"/></svg></a>
+      </div>
+    </section>
+
+    <div class="scrim" id="scrim"></div>
+    <aside class="drawer" id="drawer" aria-label="Media details">
+      <div class="sec-head" style="margin:0"><span class="cap">(Vault) / Media</span><button class="ic" id="dClose" title="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
+      <div class="art" id="dArt" style="aspect-ratio:4/5"></div>
+      <h2 class="h2" id="dTitle">Neon koi 04</h2>
+      <p class="body" style="margin:0">From the prompt "Neon koi in a flooded arcade". Generated 29 Sep in ComfyUI.</p>
+      <dl class="kv cap" style="margin:0">
+        <dt>Size</dt><dd class="ink">1344 × 1728</dd>
+        <dt>Seed</dt><dd class="ink">2118440931</dd>
+        <dt>Sampler</dt><dd class="ink">DPM++ 2M Karras</dd>
+        <dt>LoRA</dt><dd class="ink">arcade-glow v2 · 0.7</dd>
+      </dl>
+      <div style="display:flex;gap:12px;flex-wrap:wrap"><a class="btn solid" href="#image_editor">Edit</a><button class="btn">Compare</button><button class="btn">Remix prompt</button></div>
+    </aside>
+  </main>
+
+  <footer class="hud">
+    <div class="hud-l">
+      <span>Eng <b>Gemini-2.5-flash</b></span>
+      <span class="int on"><b>VLT</b></span><span class="int on"><b>OLM</b></span><span class="int"><b>ORT</b></span><span class="int on"><b>LCP</b></span><span class="int on"><b>GLG</b></span><span class="int"><b>SPO</b></span><span class="int"><b>TRT</b></span><span class="int on"><b>MCP 3</b></span>
+    </div>
+    <div class="hud-c">All systems nominal</div>
+    <div class="hud-r"><span class="opt">FPS <b>60</b></span><span class="opt">Mem <b>412 MB</b></span><span>Pwr <b>88%</b></span><b id="clock">00:00:00</b></div>
+  </footer>
+</div>
+</div>
+
+<script>
+(() => {
+  // mirrors constants/navigation.ts NAV_GROUPS
+  const NAV = [
+    { id: 'home', label: 'Home', single: 'dashboard', items: [] },
+    { id: 'workspaces', label: 'Workbench', items: [['discovery','Discovery'],['crafter','Crafter'],['refiner','Refiner'],['prompt_analyzer','Analyzer'],['media_analyzer','Abstractor']] },
+    { id: 'vault', label: 'Vault', items: [['prompt','Prompt'],['gallery','Media']] },
+    { id: 'utilities', label: 'Utilities', items: [['assets_manager','Assets'],['color_palette_extractor','Palette'],['resizer','Resizer'],['converter','Converter'],['video_to_frames','Video'],['batch_runner','Batch'],['lora_editor','LoRA Editor']] },
+    { id: 'studio', label: 'Studio', items: [['image_editor','Image Editor'],['video_editor','Video Editor'],['composer','Composer'],['image_compare','Compare'],['comfy_studio','ComfyUI'],['a1111_studio','A1111']] },
+    { id: 'design', label: 'Tokens', single: 'tokens', items: [] }, // sample-only
+  ];
+  const MOCKED = new Set(['dashboard','crafter','gallery','assets_manager','image_editor','settings','tokens']);
+  const LABEL = Object.fromEntries(NAV.flatMap(g => g.items.map(([id, l]) => [id, [g.label, l]])));
+  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  // ---- nav: built once, classes toggle so the slide can animate ----
+  const nav = $('#nav');
+  let openGroup = null;
+  nav.innerHTML = NAV.map(g => `<button class="g-btn" data-g="${g.id}" ${g.items.length ? 'aria-expanded="false"' : ''}>${g.label}</button>${
+    g.items.length ? `<div class="sub" data-sub="${g.id}" inert>${g.items.map(([id, l]) => `<a class="n-item" data-id="${id}" href="#${id}">${l}</a>`).join('')}</div>` : ''}`).join('');
+  const tabNow = () => (location.hash.slice(1) || 'dashboard');
+  const render = () => {
+    const tab = tabNow();
+    NAV.forEach(g => {
+      const btn = nav.querySelector(`[data-g="${g.id}"]`), sub = nav.querySelector(`[data-sub="${g.id}"]`);
+      btn.classList.toggle('current', g.single === tab || g.items.some(([id]) => id === tab));
+      if (!sub) return;
+      const open = openGroup === g.id;
+      btn.setAttribute('aria-expanded', open);
+      sub.classList.toggle('open', open);
+      sub.inert = !open;
+    });
+    $$('.n-item').forEach(a => a.classList.toggle('active', a.dataset.id === tab));
+    const s = nav.querySelector('.sub.open');
+    // like Header.tsx: slide the row so a long group isn't clipped
+    setTimeout(() => s ? s.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' }) : nav.scrollTo({ left: 0, behavior: 'smooth' }), 700);
+  };
+  nav.addEventListener('click', e => {
+    const b = e.target.closest('.g-btn');
+    if (!b) return;
+    const g = NAV.find(x => x.id === b.dataset.g);
+    if (g.single) { openGroup = null; location.hash = g.single; return; }
+    openGroup = openGroup === g.id ? null : g.id;
+    render();
+  });
+
+  // ---- controls popover: holds the rest of the real header's icon cluster ----
+  const ctlBtn = $('#ctlBtn'), pop = $('#ctlPop');
+  const setPop = open => { pop.classList.toggle('open', open); ctlBtn.setAttribute('aria-expanded', open); };
+  ctlBtn.addEventListener('click', e => { e.stopPropagation(); setPop(!pop.classList.contains('open')); });
+  document.addEventListener('pointerdown', e => { if (!pop.contains(e.target) && !ctlBtn.contains(e.target)) setPop(false); });
+
+  // ---- deterministic pseudo-random + placeholder "media" (no external files) ----
+  let seed = 11;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const art = () => {
+    const warm = rnd() > .5, h1 = warm ? 14 + rnd() * 18 : 190 + rnd() * 40, h2 = warm ? 200 + rnd() * 30 : 10 + rnd() * 25;
+    return `radial-gradient(ellipse at ${25 + rnd() * 50}% ${30 + rnd() * 40}%, hsl(${h1} 70% 52% / .85), transparent 60%), radial-gradient(circle at ${rnd() * 100}% ${rnd() * 100}%, hsl(${h2} 25% 40% / .6), transparent 55%), linear-gradient(${rnd() * 360}deg, hsl(${h1} 12% 10%), hsl(${h2} 10% 5%))`;
+  };
+
+  // ---- Home ----
+  const words = ['Craft', 'Refine', 'Generate', 'Edit', 'Compose', 'Batch'];
+  $('#marquee').innerHTML = [...words, ...words].map(w => `<span>${w}</span>`).join('');
+  $('#recentProj').innerHTML = [['Neon koi 04', 'Flooded arcade study, SDXL in ComfyUI.'], ['Brutal dusk 02', 'Concrete library, volumetric fog pass.'], ['Chrome saint 07', 'Portrait series, needs a refine.']]
+    .map(([t, d]) => `<a class="proj" href="#gallery"><div class="art" style="background:${art()}"></div><h3 class="h2">${t}</h3><div class="proj-foot"><p class="body" style="margin:0">${d}</p><span class="tlink">Open <svg class="i"><use href="#i-arrow"/></svg></span></div></a>`).join('');
+
+  // hero shards: sparse drifting line fragments, a few in the accent colour
+  const shards = (() => {
+    const cv = $('#shards'), ctx = cv.getContext('2d'), host = cv.parentElement;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const S = Array.from({ length: 70 }, () => ({ x: rnd(), y: rnd(), l: 10 + rnd() * 70, a: -1.05 + rnd() * .3, v: .02 + rnd() * .05, z: .3 + rnd() * .7, hot: rnd() < .08 }));
+    let W = 0, H = 0, raf = 0, last = 0, mx = 0, my = 0;
+    const size = () => { const r = host.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2); W = r.width; H = r.height; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0); };
+    const draw = dt => {
+      ctx.clearRect(0, 0, W, H);
+      const acc = css('--p'), ink = css('--bc');
+      for (const s of S) {
+        s.y -= s.v * dt * s.z * .02; s.x += s.v * dt * s.z * .012;
+        if (s.y < -.1) { s.y = 1.1; s.x = rnd(); }
+        if (s.x > 1.1) s.x = -.1;
+        const x = s.x * W + mx * 30 * s.z, y = s.y * H + my * 30 * s.z, dx = Math.cos(s.a) * s.l * s.z, dy = Math.sin(s.a) * s.l * s.z;
+        const g = ctx.createLinearGradient(x, y, x + dx, y + dy);
+        g.addColorStop(0, 'transparent'); g.addColorStop(1, s.hot ? acc : ink);
+        ctx.strokeStyle = g; ctx.globalAlpha = s.hot ? .9 : .12 + s.z * .25; ctx.lineWidth = s.hot ? 1.5 : 1;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx, y + dy); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    };
+    const loop = t => { draw(Math.min(50, t - (last || t))); last = t; raf = requestAnimationFrame(loop); };
+    host.addEventListener('pointermove', e => { const r = host.getBoundingClientRect(); mx = (e.clientX - r.left) / r.width - .5; my = (e.clientY - r.top) / r.height - .5; });
+    new ResizeObserver(() => { size(); if (!raf) draw(0); }).observe(host);
+    const api = {
+      start() { size(); if (reduce) { draw(0); return; } if (!raf) { last = 0; raf = requestAnimationFrame(loop); } },
+      stop() { cancelAnimationFrame(raf); raf = 0; },
+    };
+    document.addEventListener('visibilitychange', () => document.hidden ? api.stop() : (tabNow() === 'dashboard' && api.start()));
+    return api;
+  })();
+
+  // ---- Gallery + drawer ----
+  const names = ['Neon koi', 'Drowned arcade', 'Chrome saint', 'Brutal dusk', 'Moss relay', 'Signal bloom', 'Orbit cafe', 'Ash choir', 'Salt engine'];
+  $('#grid').innerHTML = names.map((n, i) => `<button class="item" data-n="${n} ${String(i + 1).padStart(2, '0')}"><div class="art" style="background:${art()}"></div><div class="row"><span class="h3">${n} ${String(i + 1).padStart(2, '0')}</span><span class="cap">${i % 4 === 0 ? 'Video' : 'SDXL'}</span></div><span class="cap">1344 × 1728 · ${29 - i} Sep</span></button>`).join('');
+  const drawer = $('#drawer'), scrim = $('#scrim');
+  const openDrawer = it => { $('#dArt').style.background = it.querySelector('.art').style.background; $('#dTitle').textContent = it.dataset.n; drawer.classList.add('open'); scrim.classList.add('open'); };
+  const closeDrawer = () => { drawer.classList.remove('open'); scrim.classList.remove('open'); };
+  $('#grid').addEventListener('click', e => { const it = e.target.closest('.item'); if (it) openDrawer(it); });
+  $('#dClose').addEventListener('click', closeDrawer);
+  scrim.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { setPop(false); closeDrawer(); } });
+
+  // ---- Assets ----
+  const assets = [['Grain 35mm', 'Texture', 'Image Editor', '4.2 MB'], ['Space Grotesk', 'Font', 'Composer', '380 KB'], ['Light leak 07', 'Overlay', 'Video Editor', '12.8 MB'], ['Ink splatter', 'Brush', 'Image Editor', '1.1 MB'], ['Paper fold', 'Texture', 'Composer', '6.0 MB'], ['CRT scanlines', 'Overlay', 'Video Editor', '2.3 MB']];
+  $('#alist').innerHTML = assets.map(([n, k, u, s], i) => `<a><span class="cap">${String(i + 1).padStart(2, '0')}</span><div class="art" style="background:${art()}"></div><span class="h2" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n}</span><span class="cap">${k}</span><span class="cap hide-md">${u}</span><span class="cap">${s}</span><svg class="i"><use href="#i-arrow"/></svg></a>`).join('');
+
+  // ---- Editor ----
+  $('#canvasArt').style.background = art();
+  $('#layers').innerHTML = [['AI fill · koi', 1], ['Glow pass'], ['Grain 35mm'], ['Background']].map(([n, on]) => `<div class="layer${on ? ' on' : ''}"><div class="art" style="background:${art()}"></div><span style="flex:1">${n}</span><svg class="i"><use href="#i-eye"/></svg></div>`).join('');
+  $('#layers').addEventListener('click', e => { const l = e.target.closest('.layer'); if (l) $$('.layer').forEach(x => x.classList.toggle('on', x === l)); });
+
+  // ---- Tokens / accent ----
+  const drawSwatches = () => {
+    $('#swatches').innerHTML = [['primary', '--p'], ['base-100', '--b1'], ['base-300', '--b3'], ['base-content', '--bc'], ['light surface', '--inv']]
+      .map(([n, v]) => `<div class="sw"><i style="background:var(${v})"></i><span class="h3">${n}</span><span class="cap">${css(v)}</span></div>`).join('');
+  };
+  drawSwatches();
+  const setAccent = p => {
+    if (p) document.documentElement.dataset.primary = p; else delete document.documentElement.dataset.primary;
+    $$('[data-accent] .tab').forEach(t => t.classList.toggle('on', t.dataset.p === p));
+    drawSwatches();
+  };
+  $$('[data-accent]').forEach(g => g.addEventListener('click', e => { const t = e.target.closest('[data-p]'); if (t) setAccent(t.dataset.p); }));
+
+  // ---- small interactions ----
+  $$('.seg').forEach(s => s.addEventListener('click', e => { const t = e.target.closest('.tab'); if (t) s.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t)); }));
+  $('#variants').addEventListener('click', e => { const a = e.target.closest('a'); if (a) $$('#variants a').forEach(x => x.classList.toggle('on', x === a)); });
+  $('#snav').addEventListener('click', e => { const b = e.target.closest('button'); if (b) $$('#snav button').forEach(x => x.classList.toggle('on', x === b)); });
+  $$('.toggle').forEach(t => {
+    const flip = () => { t.classList.toggle('on'); t.setAttribute('aria-checked', t.classList.contains('on')); };
+    t.addEventListener('click', flip);
+    t.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flip(); } });
+  });
+
+  const show = () => {
+    const tab = tabNow();
+    const target = MOCKED.has(tab) ? tab : 'empty';
+    $$('.screen').forEach(s => { const on = s.dataset.screen === target; s.classList.toggle('on', on); if (on) s.scrollTop = 0; });
+    if (target === 'empty') {
+      const [g, l] = LABEL[tab] || ['Kollektiv', tab.replace(/_/g, ' ')];
+      $('#emptyGroup').textContent = `(${g}) / ${l}`;
+      $('#emptyTitle').innerHTML = `${l}<br><span style="color:var(--faint)">isn't in the sample.</span>`;
+    }
+    const grp = NAV.find(g => g.items.some(([id]) => id === tab));
+    openGroup = grp ? grp.id : null;
+    closeDrawer();
+    render();
+    if (tab === 'dashboard') shards.start(); else shards.stop();
+  };
+
+  const tick = () => { $('#clock').textContent = new Date().toLocaleTimeString([], { hour12: false }); };
+  tick(); setInterval(tick, 1000);
+  addEventListener('hashchange', show);
+  show();
+})();
+</script>
+</body>
+</html>

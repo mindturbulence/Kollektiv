@@ -23,7 +23,7 @@ const KNOWN_SHELL_HOSTS = [
     'accounts.google.com',
     'apis.google.com',
     // App.tsx "Hidden Audio Engine": ambient music (useAmbientMusic), started
-    // because the boot helper clicks CONTINUE (not CONTINUE WITHOUT MUSIC).
+    // because the boot helper clicks Yes (sound on), not No.
     // Deliberate app behaviour, unrelated to the video editor.
     'www.youtube-nocookie.com',
     // Home montage / stock fill (per project memory: intentional, keep it) —
@@ -75,7 +75,7 @@ async function passBootGates(page: Page) {
     const header = page.locator('.app-header');
     await expect(async () => {
         if (await header.isVisible()) return;
-        for (const name of ['SELECT_VAULT_FOLDER', 'RECONNECT_VAULT', 'CONTINUE']) {
+        for (const name of ['SELECT_VAULT_FOLDER', 'RECONNECT_VAULT', 'CONTINUE', 'Yes']) {
             const btn = page.getByRole('button', { name, exact: true });
             // Short timeout: gate screens swap mid-click; a stuck click must not block the retry loop.
             if (await btn.isVisible()) { await btn.click({ timeout: 5_000 }).catch(() => undefined); break; }
