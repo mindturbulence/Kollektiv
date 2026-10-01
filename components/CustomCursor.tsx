@@ -3,10 +3,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { useBusy } from '../contexts/BusyContext';
 
+// Reticle corner brackets — same look as .corner-frame's corners in index.css.
+const CORNERS = [
+    'top-0 left-0 border-t border-l',
+    'top-0 right-0 border-t border-r',
+    'bottom-0 left-0 border-b border-l',
+    'bottom-0 right-0 border-b border-r',
+];
+
 const CustomCursor: React.FC = () => {
     const cursorRef = useRef<HTMLDivElement>(null);
-    const innerRef = useRef<HTMLDivElement>(null);
-    const arrowRef = useRef<SVGSVGElement>(null);
     const spinnerRef = useRef<HTMLDivElement>(null);
     const [isHovering, setIsHovering] = useState(false);
     const [coords, setCoords] = useState({ x: 0, y: 0 });
@@ -14,16 +20,11 @@ const CustomCursor: React.FC = () => {
 
     useEffect(() => {
         const cursor = cursorRef.current;
-        const inner = innerRef.current;
-        if (!cursor || !inner) return;
+        if (!cursor) return;
 
-        // Set initial state - positioned at bottom right of system cursor
-        gsap.set(cursor, { xPercent: 10, yPercent: 10 });
-        gsap.set(inner, { scale: 1 });
-
-        // quickTo reuses one tween per axis; gsap.to() built a new one on every mousemove.
-        const moveX = gsap.quickTo(cursor, 'x', { duration: 0.4, ease: 'power3.out' });
-        const moveY = gsap.quickTo(cursor, 'y', { duration: 0.4, ease: 'power3.out' });
+        // Short follow so the square stays pinned to the arrow's hotspot.
+        const moveX = gsap.quickTo(cursor, 'x', { duration: 0.08, ease: 'power3.out' });
+        const moveY = gsap.quickTo(cursor, 'y', { duration: 0.08, ease: 'power3.out' });
         const moveCursor = (e: MouseEvent) => {
             if (!Number.isFinite(e.clientX) || !Number.isFinite(e.clientY)) return;
             setCoords({ x: e.clientX, y: e.clientY });
@@ -70,23 +71,6 @@ const CustomCursor: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (!arrowRef.current) return;
-        
-        // Constant rotation for the half-circle
-        gsap.to(arrowRef.current, {
-            rotation: 360,
-            repeat: -1,
-            duration: 2,
-            ease: "none"
-        });
-        
-        const arrow = arrowRef.current;
-        return () => {
-            if (arrow) gsap.killTweensOf(arrow);
-        };
-    }, []);
-
-    useEffect(() => {
         if (isBusy && spinnerRef.current) {
             gsap.to(spinnerRef.current, {
                 rotation: 360,
@@ -100,47 +84,36 @@ const CustomCursor: React.FC = () => {
     }, [isBusy]);
 
     return (
+        // Zero-size anchor at the hotspot; children position off it.
         <div
             ref={cursorRef}
-            className="fixed top-1 left-1 pointer-events-none z-system opacity-0 flex items-center text-primary"
-            style={{ width: 'auto', height: '40px' }}
+            className="fixed top-0 left-0 w-0 h-0 pointer-events-none z-system opacity-0 text-primary"
         >
-            <div className={`relative flex items-center justify-center transition-opacity duration-300 ${isBusy ? 'opacity-0' : 'opacity-100'}`}>
-                <div 
-                    ref={innerRef}
-                    className={`w-5 h-5 border rounded-full flex items-center justify-center overflow-hidden cursor-inner transition-[transform,background-color,border-color] duration-300 ease-out border-primary text-primary ${isHovering ? 'scale-[1.8] bg-primary/20 border-opacity-100' : 'scale-100 bg-transparent border-opacity-60'}`}
-                    style={{ borderRadius: '50%', borderStyle: 'solid' }}
-                >
-                    {/* Rotating Half-Circle */}
-                    <svg 
-                        ref={arrowRef}
-                        className="w-3 h-3 opacity-40 scale-100"
-                        style={{ color: 'inherit' }}
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        strokeWidth="3" 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round"
-                    >
-                        <path d="M 12 4 A 8 8 0 0 1 12 20" />
-                    </svg>
-                </div>
-
-                {/* X and Y Coordinates at the side */}
-                <div className="ml-4 flex flex-col gap-0.5 pointer-events-none text-primary">
-                    <span className="text-[8px] font-mono font-bold opacity-40 leading-none uppercase tracking-tighter">
-                        X:{coords.x.toString().padStart(4, '0')}
-                    </span>
-                    <span className="text-[8px] font-mono font-bold opacity-40 leading-none uppercase tracking-tighter">
-                        Y:{coords.y.toString().padStart(4, '0')}
-                    </span>
-                </div>
+            {/* Tiny square on the hotspot; grows into a corner-bracket reticle over interactive elements */}
+            <div
+                className={`absolute -translate-x-1/2 -translate-y-1/2 transition-[width,height,background-color] duration-200 ease-out ${isHovering ? 'w-7 h-7 bg-transparent' : 'w-1 h-1 bg-primary/70'}`}
+            >
+                {CORNERS.map(pos => (
+                    <span
+                        key={pos}
+                        className={`absolute ${pos} w-2 h-2 border-current transition-opacity duration-200 ${isHovering ? 'opacity-100' : 'opacity-0'}`}
+                    />
+                ))}
             </div>
-            
+
+            {/* X/Y readout at the bottom right of the system arrow */}
+            <div className={`absolute left-4 top-5 flex flex-col gap-0.5 transition-opacity duration-300 ${isBusy ? 'opacity-0' : 'opacity-100'}`}>
+                <span className="text-[8px] font-mono font-bold opacity-40 leading-none uppercase tracking-tighter">
+                    X:{coords.x.toString().padStart(4, '0')}
+                </span>
+                <span className="text-[8px] font-mono font-bold opacity-40 leading-none uppercase tracking-tighter">
+                    Y:{coords.y.toString().padStart(4, '0')}
+                </span>
+            </div>
+
             {isBusy && (
-                <div className="absolute flex items-center gap-2 animate-fade-in whitespace-nowrap left-0 text-primary">
-                    <div 
+                <div className="absolute left-4 top-5 flex items-center gap-2 animate-fade-in whitespace-nowrap">
+                    <div
                         ref={spinnerRef}
                         className="w-3 h-3 border border-current border-t-current rounded-full"
                     />
