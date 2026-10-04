@@ -793,6 +793,14 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     fileSystemManager.isMigrationPaused = false;
                     if (duplicateResolverRef.current) duplicateResolverRef.current('replace');
                     setIsMigrationPaused(false); setDuplicateFile(null); setIsMigrationModalOpen(false);
+                    // ponytail: reset all migration state immediately so re-opening the modal
+                    // always shows the clean confirm screen — not a frozen "0% preparing" from a
+                    // previous run that hung (e.g. expired Drive token). The async finally-block
+                    // may reset the same fields again; that double-reset is harmless.
+                    setIsWorking(false); setMaintenanceProgress(0); setMaintenanceMsg("");
+                    setMigrationPhase('idle'); setConvertingProgress(0); setConvertingMsg("");
+                    setUploadingProgress(0); setUploadingMsg("");
+                    appEventBus.emit('syncProgress', { progress: 0, active: false });
                 }}
                 onConfirm={migrationDirection === 'push' ? handleConfirmMigration : handleConfirmPullMigration}
                 isWorking={isWorking}
