@@ -4,7 +4,7 @@ import type { GalleryItem, GalleryCategory } from '../types';
 import { loadGalleryItems, loadCategories } from '../utils/galleryStorage';
 import { fileSystemManager } from '../utils/fileUtils';
 import { CloseIcon, PhotoIcon, FilmIcon, CheckIcon, SearchIcon } from './icons';
-import LoadingSpinner from './LoadingSpinner';
+import { ThinkingOrb } from 'thinking-orbs';
 import TreeView, { TreeViewItem } from './TreeView';
 import useLocalStorage from '../utils/useLocalStorage';
 import Modal from './Modal';
@@ -326,7 +326,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                             <div className="flex-grow overflow-y-auto p-6 bg-transparent">
                                 {isLoading ? (
                                     <div className="h-full w-full flex items-center justify-center">
-                                        <LoadingSpinner />
+                                        <ThinkingOrb state="working" size={64} />
                                     </div>
                                 ) : displayUnits.length > 0 ? (
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">

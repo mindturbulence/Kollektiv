@@ -201,7 +201,7 @@ test: {
     testTimeout: 20000, // vitest option name; `timeout` is silently ignored
     exclude: ['e2e/**', 'node_modules/**', '.claude/**', 'test-results/**'],
     environment: 'jsdom',
-    setupFiles: [],
+    setupFiles: ['./test-setup.ts'],
 },
     };
 });

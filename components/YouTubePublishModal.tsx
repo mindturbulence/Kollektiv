@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CloseIcon, YouTubeIcon } from './icons';
-import LoadingSpinner from './LoadingSpinner';
+import { ThinkingOrb } from 'thinking-orbs';
 import { publishToYouTube, type YouTubeMetadata } from '../services/youtubeService';
 import { useSettings } from '../contexts/SettingsContext';
 import Modal from './Modal';
@@ -87,7 +87,7 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
         <div className="p-8 space-y-8 flex-grow overflow-y-auto">
           {isUploading ? (
             <div className="py-12 flex flex-col items-center justify-center space-y-8 animate-fade-in">
-              <LoadingSpinner size={64} />
+              <ThinkingOrb state="connecting" size={64} />
               <div className="w-full max-w-sm space-y-3">
                  <div className="flex justify-between items-end"><span className="text-2xs font-black uppercase tracking-widest text-primary">Transmitting Payload</span><span className="text-sm font-mono font-bold">{Math.round(progress)}%</span></div>
                  <progress className="progress progress-primary w-full h-1" value={progress} max="100"></progress>

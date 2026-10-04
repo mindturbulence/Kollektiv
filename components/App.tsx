@@ -23,7 +23,7 @@ import VaultMapPanel from './VaultMapPanel';
 import LlmStatusPanel from './LlmStatusPanel';
 import FeedbackToast from './FeedbackToast';
 import Footer from './Footer';
-import LoadingSpinner from './LoadingSpinner';
+import { ThinkingOrb } from 'thinking-orbs';
 import IdleOverlay from './IdleOverlay';
 import { TabTitleManager } from './TabTitleManager';
 
@@ -466,12 +466,12 @@ const AppContent: React.FC = () => {
             case 'comfy_studio': return <LocalGenerationStudioPage key="comfy_studio" backendId="comfy" showGlobalFeedback={showGlobalFeedback} />;
             case 'a1111_studio': return <LocalGenerationStudioPage key="a1111_studio" backendId="a1111" showGlobalFeedback={showGlobalFeedback} />;
             case 'image_editor': return (
-                <React.Suspense key="image_editor" fallback={<div className="flex items-center justify-center w-full h-full"><LoadingSpinner text="LOADING" /></div>}>
+                <React.Suspense key="image_editor" fallback={<div className="flex items-center justify-center w-full h-full"><ThinkingOrb state="working" size={64} /></div>}>
                     <ImageEditorPage openPayload={editorOpenPayload} showGlobalFeedback={showGlobalFeedback} isExiting={false} />
                 </React.Suspense>
             );
             case 'video_editor': return (
-                <React.Suspense key="video_editor" fallback={<div className="flex items-center justify-center w-full h-full"><LoadingSpinner text="LOADING" /></div>}>
+                <React.Suspense key="video_editor" fallback={<div className="flex items-center justify-center w-full h-full"><ThinkingOrb state="working" size={64} /></div>}>
                     <VideoEditorPage openPayload={videoEditorOpenPayload} showGlobalFeedback={showGlobalFeedback} isExiting={false} />
                 </React.Suspense>
             );

@@ -5,7 +5,7 @@ import { motion } from 'motion/react';
 import type { GalleryItem } from '../types';
 import { CloseIcon, CenterIcon, ImageBrokenIcon, ChevronLeftIcon, ChevronRightIcon, DownloadIcon, PlayIcon, PauseIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
-import LoadingSpinner from './LoadingSpinner';
+import { ThinkingOrb } from 'thinking-orbs';
 
 interface FullscreenViewerProps {
     items: GalleryItem[];
@@ -328,7 +328,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                     {/* Current Layer */}
                     <div ref={currentLayerRef} className="absolute inset-0 z-10 flex items-center justify-center">
                         {isLoading && !mediaBlobUrl ? (
-                            <LoadingSpinner size={64} />
+                            <ThinkingOrb state="working" size={64} />
                         ) : hasError || !mediaBlobUrl ? (
                             <ImageBrokenIcon className="w-24 h-24 text-warning" />
                         ) : itemGroup.type === 'video' ? (

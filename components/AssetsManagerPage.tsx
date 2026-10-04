@@ -27,6 +27,7 @@ import { setPendingFiles, type HandoffTarget } from '../utils/pendingHandoff';
 import { openInVideoEditor } from '../video-editor/bridge/openInVideoEditor';
 import { FolderClosedIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon, CloseIcon, ChevronLeftIcon, CenterIcon, DownloadIcon, CheckIcon, DeleteIcon, RefreshIcon, EditIcon, FilmIcon, AspectRatioIcon, SparklesIcon, ArchiveIcon, MenuIcon, UndoIcon, CopyIcon, KeyboardIcon, GridViewIcon, ListViewIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
+import { ThinkingOrb } from 'thinking-orbs';
 import FilterBar, { LABEL_COLORS } from './assets/FilterBar';
 import AssetInspector from './assets/AssetInspector';
 import { useAsk } from './assets/AskDialog';
@@ -1479,7 +1480,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
               )}
               {isScanningTree && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
-                  <LoadingSpinner size={40} />
+                  <ThinkingOrb state="searching" size={64} />
                   <p className="text-2xs font-mono uppercase tracking-widest text-base-content/60">Scanning folders…</p>
                 </div>
               )}
@@ -1776,7 +1777,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                   exit={{ opacity: 0 }}
                   className="absolute inset-0 z-raised flex flex-col items-center justify-center gap-3 pointer-events-none"
                 >
-                  <LoadingSpinner size={56} />
+                  <ThinkingOrb state="searching" size={64} />
                   {isListingFolder ? (
                     <p className="text-xs font-mono uppercase tracking-widest text-base-content/70">
                       Scanning folder… {listProgress ? `${listProgress.scannedFiles} files found` : ''}
@@ -2345,7 +2346,7 @@ const Lightbox: React.FC<{
                 draggable={false}
               />
             ) : (
-              <LoadingSpinner size={32} />
+              <ThinkingOrb state="working" size={32} />
             )}
           </motion.div>
         </AnimatePresence>
