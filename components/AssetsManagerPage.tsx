@@ -1400,7 +1400,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
 
   return (
     <div className="h-full w-full flex flex-col relative overflow-hidden">
-      <div className="flex-grow flex min-h-0 px-6 py-4 gap-4">
+      <div className="flex-grow flex min-h-0 gap-4">
         {/* SIDEBAR: roots + folder tree + collections */}
         <motion.aside
           variants={panelVariants}
