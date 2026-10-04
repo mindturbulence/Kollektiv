@@ -199,7 +199,10 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     { access_token: accessToken, expires_in: typeof expiresIn === 'number' ? expiresIn : 3600 },
                     { email: user.email, name: user.name, picture: user.picture },
                 );
-                const updatedSettings = { ...currentSettings, googleIdentity: updatedGoogle };
+                // ponytail: read fresh settings here — this callback fires after silent refresh
+                // when SetupPage may be unmounted; settingsRef.current would be stale and could
+                // overwrite settings changed while the user was on a different page.
+                const updatedSettings = { ...loadLLMSettings(), googleIdentity: updatedGoogle };
                 setSettings(updatedSettings); updateSettings(updatedSettings);
                 showGlobalFeedback(`Uplink confirmed. Scanning Google Drive for 'Kollektiv' folder...`);
                 fileSystemManager.accessToken = accessToken;

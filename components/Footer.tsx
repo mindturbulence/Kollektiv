@@ -3,15 +3,12 @@ import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import LlmStatusSwitcher from './LlmStatusSwitcher';
 import { useSettings } from '../contexts/SettingsContext';
-import { fileSystemManager } from '../utils/fileUtils';
 import { audioService } from '../services/audioService';
-import { loadGalleryItems } from '../utils/galleryStorage';
 import { useAssistantSignals } from '../utils/useAssistantSignals';
 import DemoModeIndicator from './DemoModeIndicator';
 import { useLiveAssistantContext } from '../contexts/LiveAssistantContext';
 import { appEventBus } from '../utils/eventBus';
 import type { AssistantMode } from '../utils/assistantMode';
-import { isGoogleAuthValid } from '../utils/googleAuth';
 
 const MetadataItem: React.FC<{ label: string; value: string; title?: string }> = ({ label, value, title }) => {
     const { settings } = useSettings();
@@ -26,61 +23,6 @@ const MetadataItem: React.FC<{ label: string; value: string; title?: string }> =
     );
 };
 
-const BatteryStatus: React.FC = () => {
-    const [battery, setBattery] = useState<{ level: number, charging: boolean } | null>(null);
-    const { settings } = useSettings();
-    const isPipboyTheme = settings.darkTheme === 'pipboy';
-    const fontClass = isPipboyTheme ? 'font-fixedsys text-2xs' : 'font-rajdhani text-xs font-normal';
-
-    useEffect(() => {
-        // Battery API is not available in all browsers
-        if ('getBattery' in navigator) {
-            (navigator as any).getBattery().then((batt: any) => {
-                const updateBattery = () => {
-                    setBattery({
-                        level: Math.round(batt.level * 100),
-                        charging: batt.charging
-                    });
-                };
-                updateBattery();
-                batt.addEventListener('levelchange', updateBattery);
-                batt.addEventListener('chargingchange', updateBattery);
-
-                return () => {
-                    batt.removeEventListener('levelchange', updateBattery);
-                    batt.removeEventListener('chargingchange', updateBattery);
-                };
-            });
-        }
-    }, []);
-
-    if (!battery) return null;
-
-    return (
-        <div className="flex items-center gap-2" title={`Battery ${battery.level}%${battery.charging ? ', charging' : ''}`}>
-            <span className={`arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block ${fontClass}`}>PWR</span>
-            <span className={`uppercase tracking-widest text-base-content/60 leading-none inline-block ${fontClass}`}>
-                {battery.level}%
-            </span>
-        </div>
-    );
-};
-
-const IntegrationItem: React.FC<{
-    label: string,
-    active: boolean,
-    title: string
-}> = ({ label, active, title }) => {
-    const { settings } = useSettings();
-    const isPipboyTheme = settings.darkTheme === 'pipboy';
-    const fontClass = isPipboyTheme ? 'font-fixedsys text-2xs' : 'font-rajdhani text-xs font-normal';
-
-    return (
-        <span title={`${title}: ${active ? 'connected' : 'not connected'}`} className={`uppercase tracking-widest transition-colors duration-500 leading-none inline-block ${fontClass} ${active ? 'text-base-content/60' : 'text-base-content/60'}`}>
-            {label}
-        </span>
-    );
-};
 
 const DigitalOscillator = ({ state = 'idle', theme = 'light' }: { state: string, theme?: 'light' | 'dark' }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -204,26 +146,12 @@ const Footer: React.FC<FooterProps> = ({
     isLlmPanelOpen
 }) => {
     const { settings } = useSettings();
-    const [vaultCount, setVaultCount] = useState<number>(0);
-    const [time, setTime] = useState(new Date().toLocaleTimeString());
     const [syncData, setSyncData] = useState<{ progress: number; active: boolean }>({ progress: 0, active: false });
     const { mode: liveMode, status: liveStatus } = useAssistantSignals();
     const { controlEnabled } = useLiveAssistantContext();
     const liveLabel = liveStatus === 'error' ? 'Error' : ASSISTANT_LABEL[liveMode];
     const isPipboyTheme = settings.darkTheme === 'pipboy';
     const mainFontClass = isPipboyTheme ? 'font-fixedsys text-2xs' : 'font-rajdhani text-xs font-normal';
-
-    useEffect(() => {
-        const fetch = async () => {
-            try {
-                const items = await loadGalleryItems();
-                setVaultCount(items.filter(i => !i.isNsfw).length);
-            } catch (e) { console.error(e); }
-        };
-        void fetch();
-        const timer = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000);
-        return () => clearInterval(timer);
-    }, []);
 
     useEffect(() => appEventBus.on('syncProgress', setSyncData), []);
 
@@ -242,23 +170,10 @@ const Footer: React.FC<FooterProps> = ({
                     </div>
                 </div>
 
-                <div className={`flex gap-4 ${mainFontClass} items-center pl-4 ps-6 border-l border-base-content/10`}>
-                    <span className="arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block" title="Integrations">INT</span>
-                    <IntegrationItem label="VLT" title="Vault folder" active={fileSystemManager.isDirectorySelected()} />
-                    <IntegrationItem label="OLM" title="AI provider (Gemini key or Ollama)" active={!!(settings.geminiApiKey || process.env.GEMINI_API_KEY) || settings.activeLLM?.includes('ollama')} />
-                    {/* OpenRouter provider indicator */}
-                    <IntegrationItem label="ORT" title="OpenRouter" active={!!settings.openrouterModel} />
-                    {/* Llama.cpp provider indicator */}
-                    <IntegrationItem label="LCP" title="Llama.cpp" active={!!settings.llamacppModel} />
-                    <IntegrationItem label="GLG" title="Google account" active={isGoogleAuthValid(settings.googleIdentity)} />
-                    <IntegrationItem label="SPO" title="Spotify" active={!!settings.spotify?.isConnected} />
-                    <IntegrationItem label="TRT" title="Tensor.Art" active={!!settings.tensorartApiKey} />
-                    <IntegrationItem label={`MCP: ${(settings.mcpServers || []).filter(s => s.enabled).length}`} title="Enabled MCP servers" active={(settings.mcpServers || []).filter(s => s.enabled).length > 0} />
-                    <DemoModeIndicator />
-                </div>
+                <DemoModeIndicator />
             </div>
 
-            <div className="flex-1 flex items-center justify-center h-full relative z-base pointer-events-none">
+            <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 flex items-center z-base pointer-events-none">
                 <AnimatePresence mode="wait">
                     {liveStatus !== 'idle' && (
                         <motion.button
@@ -282,21 +197,12 @@ const Footer: React.FC<FooterProps> = ({
 
             <div className="flex flex-row items-center h-full gap-6 relative z-raised pointer-events-auto">
                 <div className="flex items-center gap-6">
-                    <div className="hidden md:flex items-center gap-6">
-                        {liveStatus === 'live' && (
-                            <>
-                                <MetadataItem label="AUT" value={controlEnabled ? 'ON' : 'OFF'} title={`Assistant screen control: ${controlEnabled ? 'on' : 'off'}`} />
-                                <div className="w-[1px] h-3 bg-base-content/10" />
-                            </>
-                        )}
-                        <MetadataItem label="VLT" value={`${vaultCount} UNITS`} title={`${vaultCount} items in your vault`} />
-                        <div className="w-[1px] h-3 bg-base-content/10" />
-                        <MetadataItem label="SEQ" value={time} title="Local time" />
-                    </div>
-
-                    <div className="w-[1px] h-3 bg-base-content/10 invisible md:visible" />
-
-                    <BatteryStatus />
+                    {liveStatus === 'live' && (
+                        <div className="hidden md:flex items-center gap-6">
+                            <MetadataItem label="AUT" value={controlEnabled ? 'ON' : 'OFF'} title={`Assistant screen control: ${controlEnabled ? 'on' : 'off'}`} />
+                            <div className="w-[1px] h-3 bg-base-content/10" />
+                        </div>
+                    )}
 
                     <AnimatePresence>
                         {syncData.active && (
@@ -308,14 +214,12 @@ const Footer: React.FC<FooterProps> = ({
                                 transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
                                 className="flex items-center gap-2 overflow-hidden"
                             >
+                                <span className={`arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block ${mainFontClass}`}>SYN</span>
+                                <span className={`uppercase tracking-widest text-base-content/60 leading-none inline-block ${mainFontClass}`}>{syncData.progress}%</span>
                                 <div className="w-[1px] h-3 bg-base-content/10" />
-                                <span className={`arwes-label uppercase tracking-widest text-secondary/80 leading-none inline-block ${mainFontClass}`}>SYN</span>
-                                <span className={`uppercase tracking-widest text-secondary animate-pulse leading-none inline-block ${mainFontClass}`}>{syncData.progress}%</span>
                             </motion.div>
                         )}
                     </AnimatePresence>
-
-                    <div className="w-[1px] h-3 bg-base-content/10" />
 
                     <button
                         onClick={onAudioToggle}

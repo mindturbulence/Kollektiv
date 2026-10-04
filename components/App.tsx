@@ -177,6 +177,24 @@ const AppContent: React.FC = () => {
         if (prev === 'converter') setConverterOpenFiles(undefined);
     }, [activeTab]);
 
+    // Proactive Google token refresh — fire a silent GSI refresh 5 min before the token
+    // expires so tool calls never race against the on-demand 5-second window.
+    // Runs from App (always mounted), so it works even when SetupPage is not on screen.
+    useEffect(() => {
+        const identity = settings.googleIdentity;
+        if (!identity?.isConnected || !identity.accessToken || !identity.expiresAt) return;
+        const msLeft = identity.expiresAt - Date.now();
+        if (msLeft <= 0) return; // already expired — on-demand path handles it
+        const delay = Math.max(0, msLeft - 5 * 60 * 1000);
+        const timer = window.setTimeout(() => {
+            try {
+                const gsiClient = (window as any).__GOOGLE_TOKEN_CLIENT;
+                if (gsiClient?.requestAccessToken) gsiClient.requestAccessToken({ prompt: '' });
+            } catch { /* best-effort silent refresh */ }
+        }, delay);
+        return () => window.clearTimeout(timer);
+    }, [settings.googleIdentity?.expiresAt]);
+
     const currentTitle = useMemo(() => {
         const base = "KOLLEKTIV";
         switch (activeTab) {
@@ -610,7 +628,7 @@ const AppContent: React.FC = () => {
                         </div>
 
                         <div className={`flex-1 flex flex-col overflow-hidden relative ${activeTab === 'prompts' ? 'pt-0' : 'pt-0'} p-0 bg-transparent min-h-0 gap-0`}>
-                            <main className="flex-grow min-w-0 relative overflow-hidden rounded-none bg-transparent border-none shadow-none backdrop-blur-none z-10 py-6 px-7"
+                            <main className="flex-grow min-w-0 relative overflow-hidden rounded-none bg-transparent border-none shadow-none backdrop-blur-none z-10 pb-6 px-7"
                                 // The closed side panels park off-screen inside <main>, so it has horizontal
                                 // overflow that focus/scroll-into-view can scroll to, shoving the page left.
                                 // Nothing should ever scroll it sideways (overflow: clip broke pointer holds).

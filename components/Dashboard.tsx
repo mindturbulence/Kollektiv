@@ -59,12 +59,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onOpenSettings, isExiting = false
             exit="exit"
             className="relative h-full w-full overflow-y-auto select-none bg-transparent"
         >
-            <div className="min-h-full flex flex-col justify-between gap-16 px-0 md:px-7 pt-10 md:pt-14 pb-4">
+            <div className="min-h-full flex flex-col justify-between gap-16 px-0 md:px-14 pb-8">
                 <motion.p variants={riseVariants} className={`${CAP} text-base-content/50`}>
                     Mindturbulence's<br />creative studio.
                 </motion.p>
 
-                <motion.h1 variants={riseVariants} className={`font-normal text-[clamp(44px,7vw,116px)] leading-[0.95] tracking-[-0.02em] text-base-content ${isPipboyTheme ? 'font-monofonto' : 'font-monoton'}`}>
+                <motion.h1 variants={riseVariants} className={`font-normal text-[clamp(44px,7vw,116px)] leading-[0.95] tracking-[-0.02em] text-base-content ${isPipboyTheme ? 'font-monofonto' : 'font-rajdhani'}`}>
                     Make images<br />worth keeping<span className="text-primary">.</span>
                 </motion.h1>
 

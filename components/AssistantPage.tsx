@@ -5,7 +5,7 @@ import { useAssistantSignals } from '../utils/useAssistantSignals';
 import { getPreviousTab } from '../utils/tabHistory';
 import { useSettings } from '../contexts/SettingsContext';
 import { resolveLangKey } from '../utils/languageKey';
-import AssistantBackdrop from './AssistantBackdrop';
+import VoiceOrbCanvas from './VoiceOrbCanvas';
 import { isPipSupported, openAssistantPip } from '../utils/assistantPip';
 import { audioService } from '../services/audioService';
 
@@ -472,12 +472,17 @@ const AssistantPage: React.FC = () => {
     }, [status]);
 
     return (
-        <div className="absolute inset-0 bg-base-100 overflow-hidden select-none flex items-center justify-center">
-            <AssistantBackdrop mode={displayMode} />
+        <div className="absolute inset-0 overflow-hidden select-none flex items-center justify-center">
+            {/* Voice orb — centered, fills most of the viewport */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div style={{ width: 'min(76vmin, 520px)', flexShrink: 0 }}>
+                    <VoiceOrbCanvas mode={displayMode} />
+                </div>
+            </div>
 
             {/* Status readouts, centered top and bottom */}
             <div className="absolute top-4 inset-x-0 flex justify-center font-mono text-2xs tracking-[0.2em] text-base-content/60 pointer-events-none">
-                {{ live: 'Connected', connecting: 'Connecting...', error: 'Error', idle: 'Idle' }[status]}
+                {{ live: 'CONNECTED', connecting: 'CONNECTING...', error: 'ERROR', idle: 'IDLE' }[status]}
             </div>
             <div className="absolute bottom-4 inset-x-0 flex flex-col items-center gap-1 pointer-events-none">
                 {isPipSupported() && (
