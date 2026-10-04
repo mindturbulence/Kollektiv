@@ -206,6 +206,7 @@ const Footer: React.FC<FooterProps> = ({
     const { settings } = useSettings();
     const [vaultCount, setVaultCount] = useState<number>(0);
     const [time, setTime] = useState(new Date().toLocaleTimeString());
+    const [syncData, setSyncData] = useState<{ progress: number; active: boolean }>({ progress: 0, active: false });
     const { mode: liveMode, status: liveStatus } = useAssistantSignals();
     const { controlEnabled } = useLiveAssistantContext();
     const liveLabel = liveStatus === 'error' ? 'Error' : ASSISTANT_LABEL[liveMode];
@@ -223,6 +224,8 @@ const Footer: React.FC<FooterProps> = ({
         const timer = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000);
         return () => clearInterval(timer);
     }, []);
+
+    useEffect(() => appEventBus.on('syncProgress', setSyncData), []);
 
 
 
@@ -294,6 +297,23 @@ const Footer: React.FC<FooterProps> = ({
                     <div className="w-[1px] h-3 bg-base-content/10 invisible md:visible" />
 
                     <BatteryStatus />
+
+                    <AnimatePresence>
+                        {syncData.active && (
+                            <motion.div
+                                key="syn"
+                                initial={{ opacity: 0, width: 0 }}
+                                animate={{ opacity: 1, width: 'auto' }}
+                                exit={{ opacity: 0, width: 0 }}
+                                transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+                                className="flex items-center gap-2 overflow-hidden"
+                            >
+                                <div className="w-[1px] h-3 bg-base-content/10" />
+                                <span className={`arwes-label uppercase tracking-widest text-secondary/80 leading-none inline-block ${mainFontClass}`}>SYN</span>
+                                <span className={`uppercase tracking-widest text-secondary animate-pulse leading-none inline-block ${mainFontClass}`}>{syncData.progress}%</span>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     <div className="w-[1px] h-3 bg-base-content/10" />
 

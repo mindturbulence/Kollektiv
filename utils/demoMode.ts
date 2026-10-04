@@ -253,6 +253,10 @@ export class DemoFileSystemManager implements IFileSystemManager {
     throw new Error('Google Drive is not available in demo mode.');
   }
 
+  async pushConfigsToDrive(): Promise<{ succeeded: number; failed: number }> {
+    return { succeeded: 0, failed: 0 };
+  }
+
   // ── Private helpers ───────────────────────────────────────────────────────
 
   private normalizePath(filePath: string): string {

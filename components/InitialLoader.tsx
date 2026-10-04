@@ -182,7 +182,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                         ref={systemTextRef}
                         className="block -mt-0 md:-mt-0 font-rainmaker text-primary text-xl md:text-5xl whitespace-nowrap leading-[0] pulse-glow pointer-events-none normal-case"
                     >
-                      Kreator
+                      _Studio_
                     </span>
                 </div>
 

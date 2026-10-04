@@ -41,6 +41,7 @@ export interface IFileSystemManager {
     calculateTotalSize(): Promise<number>;
     scanForKollektivFolder(): Promise<{ id: string; name: string } | null>;
     createKollektivFolder(): Promise<string>;
+    pushConfigsToDrive(): Promise<{ succeeded: number; failed: number }>;
 }
 
 // --- Helper Classes for GDrive Integration ---
@@ -415,6 +416,72 @@ class LocalFileSystemManager implements IFileSystemManager {
         }
 
         return newFolder.id;
+    }
+
+    // Config-only manifest paths — same list as integrity.ts fileManifest (no media files)
+    private static readonly CONFIG_PATHS = [
+        'kollektiv_gallery_manifest.json',
+        'prompts_manifest.json',
+        'crafter_manifest.json',
+        'refiner_presets_manifest.json',
+        'composer_presets_manifest.json',
+        'artstyles_cheatsheet.json',
+        'artists_cheatsheet.json',
+        'cheatsheet.json',
+        'generations.json',
+    ];
+
+    /**
+     * Reads each known config/manifest JSON from the local vault and writes it to
+     * Google Drive. Safe to call while storageProvider === 'drive' because it reads
+     * directly from appDirHandle without touching storageProvider.
+     */
+    public async pushConfigsToDrive(): Promise<{ succeeded: number; failed: number }> {
+        if (!this.appDirHandle || !this.accessToken || !this.rootFolderId) {
+            return { succeeded: 0, failed: 0 };
+        }
+
+        let succeeded = 0;
+        let failed = 0;
+
+        for (const filePath of LocalFileSystemManager.CONFIG_PATHS) {
+            try {
+                // Read from local appDirHandle directly (bypasses storageProvider)
+                const segments = filePath.replace(/\\/g, '/').split('/');
+                const fileName = segments.pop()!;
+                let dirHandle: FileSystemDirectoryHandle = this.appDirHandle;
+                let reachable = true;
+                for (const seg of segments) {
+                    if (!seg) continue;
+                    try { dirHandle = await dirHandle.getDirectoryHandle(seg); }
+                    catch { reachable = false; break; }
+                }
+                if (!reachable) continue; // dir doesn't exist locally — skip silently
+
+                let blob: Blob;
+                try {
+                    const fh = await dirHandle.getFileHandle(fileName);
+                    blob = await fh.getFile();
+                } catch {
+                    continue; // file not in local vault — skip silently
+                }
+
+                // Write to Drive (saveFile already handles drive path when provider is drive)
+                const prev = this.storageProvider;
+                this.storageProvider = 'drive';
+                try {
+                    await this.saveFile(filePath, blob);
+                    succeeded++;
+                } finally {
+                    this.storageProvider = prev;
+                }
+            } catch (e) {
+                console.warn(`[Mirror] Failed to push ${filePath} to Drive:`, e);
+                failed++;
+            }
+        }
+
+        return { succeeded, failed };
     }
 
     async initialize(settings: LLMSettings, _auth: AuthContextType): Promise<boolean> {
@@ -962,6 +1029,7 @@ class LocalFileSystemManager implements IFileSystemManager {
                 const itemIndexInManifest = driveManifest.galleryItems.findIndex((it: any) => it.id === item.id);
                 const urlsToUploadInGDrive: string[] = [];
                 const convertedBlobsToUpload: { path: string; blob: Blob }[] = [];
+                const originalsToDeleteFromDrive: string[] = [];
 
                 if (Array.isArray(item.urls)) {
                     for (let urlIndex = 0; urlIndex < item.urls.length; urlIndex++) {
@@ -986,6 +1054,8 @@ class LocalFileSystemManager implements IFileSystemManager {
 
                                             uploadedFilePaths.add(originalUrl);
                                             uploadedFilePaths.add(newUrl);
+                                            // Track the old-format path so we can delete it from Drive
+                                            originalsToDeleteFromDrive.push(originalUrl);
                                         }
                                     } else {
                                         // Video or non-image
@@ -1051,6 +1121,10 @@ class LocalFileSystemManager implements IFileSystemManager {
                     for (const fileToUpload of convertedBlobsToUpload) {
                         await this.saveFile(fileToUpload.path, fileToUpload.blob);
                     }
+                    // Delete any old-format originals from Drive so converted JPGs are the only version
+                    for (const oldPath of originalsToDeleteFromDrive) {
+                        try { await this.deleteFile(oldPath); } catch { /* not present = fine */ }
+                    }
                 } catch (uploaderErr) {
                     console.error(`Post-by-post upload error for item ${item.id}:`, uploaderErr);
                 } finally {
@@ -1111,7 +1185,8 @@ class LocalFileSystemManager implements IFileSystemManager {
 
                     const uploadingProgress = totalFiles > 0 ? (processedFiles / totalFiles) * 100 : 100;
                     const overallProgress = totalFiles > 0 ? Math.round(50 + (processedFiles / totalFiles) * 50) : 100;
-                    const uploadingMsg = `Uploading general ${entry.name}...`;
+                    const fileLabel = `[${processedFiles + 1}/${totalFiles}] ${filePath}`;
+                    const uploadingMsg = `↑ ${fileLabel}`;
 
                     if (onProgress) {
                         onProgress(uploadingMsg, overallProgress, {
@@ -1130,10 +1205,10 @@ class LocalFileSystemManager implements IFileSystemManager {
                         const exists = await this.resolvePath(filePath);
                         let finalPath = filePath;
 
-                        const isDatabaseOrMetadata = 
-                            filePath === 'kollektiv_gallery_manifest.json' || 
-                            filePath.endsWith('_manifest.json') || 
-                            filePath.endsWith('_cheatsheet.json') || 
+                        const isDatabaseOrMetadata =
+                            filePath === 'kollektiv_gallery_manifest.json' ||
+                            filePath.endsWith('_manifest.json') ||
+                            filePath.endsWith('_cheatsheet.json') ||
                             filePath.endsWith('_metadata.json');
 
                         if (exists && !isDatabaseOrMetadata) {
@@ -1143,7 +1218,7 @@ class LocalFileSystemManager implements IFileSystemManager {
                                     const dotIndex = entry.name.lastIndexOf('.');
                                     const nameWithoutExt = dotIndex !== -1 ? entry.name.substring(0, dotIndex) : entry.name;
                                     const ext = dotIndex !== -1 ? entry.name.substring(dotIndex) : '';
-                                    
+
                                     let copyIndex = 1;
                                     let copyPath = `${currentPath ? currentPath + '/' : ''}${nameWithoutExt} (${copyIndex})${ext}`;
                                     while (await this.resolvePath(copyPath) !== null) {
@@ -1165,12 +1240,13 @@ class LocalFileSystemManager implements IFileSystemManager {
                     processedFiles++;
                     const finalUploadingProgress = totalFiles > 0 ? (processedFiles / totalFiles) * 100 : 100;
                     const finalOverallProgress = totalFiles > 0 ? Math.round(50 + (processedFiles / totalFiles) * 50) : 100;
+                    const doneMsg = `✓ ${fileLabel}`;
 
                     if (onProgress) {
-                        onProgress(`Uploaded ${entry.name}.`, finalOverallProgress, {
+                        onProgress(doneMsg, finalOverallProgress, {
                             phase: 'uploading',
                             uploadingProgress: finalUploadingProgress,
-                            uploadingMsg: `Uploaded ${entry.name}.`,
+                            uploadingMsg: doneMsg,
                             overallProgress: finalOverallProgress
                         });
                     }

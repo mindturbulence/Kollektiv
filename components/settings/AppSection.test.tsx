@@ -57,6 +57,7 @@ const defaultProps = {
     activeSubTab: 'general',
     settings: { storageProvider: 'local', driveFolderId: '', driveFolderName: '' } as LLMSettings,
     handleSettingsChange: vi.fn(),
+    handleMultipleSettingsChange: vi.fn(),
     showGlobalFeedback: vi.fn(),
     setActiveSubTab: vi.fn(),
     handleAuthConnect: vi.fn(),
