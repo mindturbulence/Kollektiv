@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import { FilmIcon, PlayIcon } from './icons';
-import LoadingSpinner from './LoadingSpinner';
+import { ThinkingOrb } from 'thinking-orbs';
 import { downloadZip, makeUniqueName } from '../utils/zipDownload';
 import { COMPOSER_PRESETS } from '../constants';
 import GalleryPickerModal from './GalleryPickerModal';
@@ -633,7 +633,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                     )}
                                     {isJoining && (
                                         <div className="absolute inset-0 bg-transparent backdrop-blur-md z-40 flex flex-col items-center justify-center">
-                                            <LoadingSpinner />
+                                            <ThinkingOrb state="working" size={64} />
                                             <p className="font-black text-xs uppercase tracking-[0.4em] text-primary animate-pulse mt-6">PROCESSING VIDEO: {Math.round(joiningProgress)}%</p>
                                         </div>
                                     )}
@@ -716,7 +716,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
 
             {isExtracting && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-modal flex flex-col items-center justify-center text-center">
-                    <LoadingSpinner />
+                    <ThinkingOrb state="working" size={64} />
                     <p className="font-black text-xs uppercase tracking-[0.4em] text-primary animate-pulse mt-6">EXTRACTING FRAMES: {Math.round(extractionProgress)}%</p>
                 </div>
             )}

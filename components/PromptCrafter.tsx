@@ -5,7 +5,7 @@ import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, 
 import JSZip from 'jszip';
 import { crafterService } from '../services/crafterService';
 import type { WildcardFile, CrafterData } from '../types';
-import LoadingSpinner from './LoadingSpinner';
+import { ThinkingOrb } from 'thinking-orbs';
 import { SparklesIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
 import { useSettings } from '../contexts/SettingsContext';
@@ -639,7 +639,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
 
     if (isLoading) return (
         <div className="h-full w-full flex items-center justify-center bg-transparent">
-            <LoadingSpinner />
+            <ThinkingOrb state="working" size={64} />
         </div>
     );
     if (error) return <div className="p-4 text-error">{error}</div>;
@@ -947,7 +947,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         >
                             {aiAction && (
                                 <div className="absolute inset-0 bg-base-100/20 backdrop-blur-sm flex flex-col items-center justify-center z-10 animate-fade-in">
-                                    <LoadingSpinner />
+                                    <ThinkingOrb state="composing" size={64} />
                                     <p className="text-2xs font-normal text-xs font-sf-mono uppercase tracking-widest text-primary animate-pulse mt-4">{aiAction}</p>
                                 </div>
                             )}

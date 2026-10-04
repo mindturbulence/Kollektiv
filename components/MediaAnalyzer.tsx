@@ -9,7 +9,7 @@ import { useObjectUrls } from '../utils/useObjectUrls';
 import type { EnhancementResult } from '../types';
 import { PROMPT_DETAIL_LEVELS } from '../constants';
 import { PhotoIcon, CloseIcon, SparklesIcon } from './icons';
-import LoadingSpinner from './LoadingSpinner';
+import { ThinkingOrb } from 'thinking-orbs';
 import { takePendingFiles } from '../utils/pendingHandoff';
 import { SuggestionItem } from './SuggestionItem';
 import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
@@ -514,7 +514,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                 >
                                     <ScanLine delay={0} />
                                     <div className="relative z-10 flex flex-col items-center">
-                                        <LoadingSpinner className="w-16 h-16 text-primary mb-8" />
+                                        <ThinkingOrb state="working" size={64} />
                                         <h3 className="text-2xs font-black uppercase tracking-[0.5em] text-primary animate-pulse mb-2">{loadingMessage}</h3>
                                     </div>
                                 </motion.div>

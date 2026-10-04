@@ -1,10 +1,8 @@
 import React from 'react';
-import LoadingSpinner from './LoadingSpinner';
+import { ThinkingOrb } from 'thinking-orbs';
 
 const BlobLoader: React.FC = () => {
-  return (
-    <LoadingSpinner size={144} text="Processing" />
-  );
+  return <ThinkingOrb state="solving" size={64} />;
 };
 
 export default BlobLoader;

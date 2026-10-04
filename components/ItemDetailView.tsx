@@ -13,7 +13,7 @@ import {
 import FullscreenViewer from './FullscreenViewer';
 import { fileSystemManager, fileToBase64 } from '../utils/fileUtils';
 import { useSettings } from '../contexts/SettingsContext';
-import LoadingSpinner from './LoadingSpinner';
+import { ThinkingOrb } from 'thinking-orbs';
 import AutocompleteSelect from './AutocompleteSelect';
 import YouTubePublishModal from './YouTubePublishModal';
 import { audioService } from '../services/audioService';
@@ -133,7 +133,7 @@ const TransitionalMedia: React.FC<{
     }, [displayUrl, direction, prevUrl]);
 
     if (isLoading && !displayUrl) {
-        return <div className="w-full h-full flex items-center justify-center bg-transparent"><LoadingSpinner size={48} /></div>;
+        return <div className="w-full h-full flex items-center justify-center bg-transparent"><ThinkingOrb state="working" size={64} /></div>;
     }
 
     return (

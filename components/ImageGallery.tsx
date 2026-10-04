@@ -11,7 +11,7 @@ import { pageVariants } from './AnimatedPanels';
 import CategoryPanelToggle from './CategoryPanelToggle';
 import ItemDetailView from './ItemDetailView';
 import ConfirmationModal from './ConfirmationModal';
-import LoadingSpinner from './LoadingSpinner';
+import { ThinkingOrb } from 'thinking-orbs';
 import GalleryStatsPanel from './GalleryStatsPanel';
 import AddItemModal from './AddItemModal';
 import useLocalStorage from '../utils/useLocalStorage';
@@ -322,7 +322,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
   }, [selectedCategoryId, categories]);
 
   if (isLoading && items.length === 0) {
-    return <div className="h-full w-full flex items-center justify-center bg-transparent"><LoadingSpinner /></div>;
+    return <div className="h-full w-full flex items-center justify-center bg-transparent"><ThinkingOrb state="working" size={64} /></div>;
   }
 
   return (

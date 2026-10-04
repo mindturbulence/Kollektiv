@@ -4,7 +4,7 @@ import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, 
 import { useSettings } from '../contexts/SettingsContext';
 import { analyzePaletteMood, generateColorName } from '../services/llmService';
 import { UploadIcon, PaletteIcon, BookmarkIcon } from './icons';
-import LoadingSpinner from './LoadingSpinner';
+import { ThinkingOrb } from 'thinking-orbs';
 import type { Idea, GalleryItem } from '../types';
 import { fileSystemManager } from '../utils/fileUtils';
 import GalleryPickerModal from './GalleryPickerModal';
@@ -306,7 +306,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                         animate="visible"
                         className="flex-grow p-8 lg:p-12 overflow-y-auto"
                     >
-                        {isLoading ? <div className="py-24"><LoadingSpinner/></div> :
+                        {isLoading ? <div className="py-24 flex justify-center"><ThinkingOrb state="working" size={64} /></div> :
                          error ? <div className="alert alert-error rounded-none border-2"><span>{error}</span></div> :
                          palette.length > 0 ? (
                             <div className="space-y-12 animate-fade-in">
