@@ -258,6 +258,7 @@ export interface LLMSettings {
   storageProvider?: 'local' | 'drive';
   driveFolderId?: string;
   driveFolderName?: string;
+  autoSync?: boolean;
 
   // Gallery
   convertImageToJpgLocal?: boolean;

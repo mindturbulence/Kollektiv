@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Modal from './Modal';
 import { audioService } from '../services/audioService';
 
@@ -41,11 +41,25 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
   phase = 'idle',
   syncDirection = 'push'
 }) => {
+  const [uploadLog, setUploadLog] = useState<string[]>([]);
+  const logEndRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (isOpen) {
         audioService.playModalOpen();
+        setUploadLog([]);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (phase === 'uploading' && uploadingMessage.startsWith('✓')) {
+        setUploadLog(prev => [...prev, uploadingMessage].slice(-50));
+    }
+  }, [uploadingMessage, phase]);
+
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [uploadLog]);
 
   const handleClose = () => {
     audioService.playModalClose();
@@ -155,14 +169,28 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                                       {phase === 'uploading' ? `${Math.round(uploadingProgress)}%` : (phase === 'complete' ? '100%' : '0%')}
                                   </span>
                               </div>
-                              <p className="text-2xs text-base-content/60 font-mono truncate h-4">
-                                  {phase === 'uploading' 
-                                    ? uploadingMessage 
-                                    : (phase === 'complete' 
-                                      ? 'All files sync\'d successfully.' 
-                                      : (isPush ? 'Pending conversion block...' : 'Pending manifest analysis...'))
-                                  }
-                              </p>
+                              {phase === 'uploading' ? (
+                                  <div className="flex flex-col gap-1">
+                                      <p className="text-2xs text-secondary/80 font-mono truncate leading-4">
+                                          {uploadingMessage.startsWith('↑') ? uploadingMessage : (uploadLog.length > 0 ? 'Finalizing...' : 'Preparing...')}
+                                      </p>
+                                      {uploadLog.length > 0 && (
+                                          <div className="h-20 overflow-y-auto bg-black/20 border border-white/5 p-2">
+                                              {uploadLog.map((entry, i) => (
+                                                  <p key={i} className="text-2xs font-mono text-success/60 leading-4 truncate">{entry}</p>
+                                              ))}
+                                              <div ref={logEndRef} />
+                                          </div>
+                                      )}
+                                  </div>
+                              ) : (
+                                  <p className="text-2xs text-base-content/60 font-mono truncate h-4">
+                                      {phase === 'complete'
+                                        ? 'All files sync\'d successfully.'
+                                        : (isPush ? 'Pending conversion block...' : 'Pending manifest analysis...')
+                                      }
+                                  </p>
+                              )}
                               <div className="h-1.5 w-full bg-base-300 rounded overflow-hidden">
                                   <div 
                                       className="h-full bg-secondary transition-[width] duration-300 ease-out" 

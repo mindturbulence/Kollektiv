@@ -140,11 +140,17 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     const mainScrollRef = useRef<HTMLDivElement>(null);
     // Pre-computed PKCE params so window.open is called synchronously (avoids popup blockers)
     const spotifyPkceRef = useRef<{ verifier: string; challenge: string } | null>(null);
+    // Always-current settings ref so async callbacks (auth, GSI) don't capture stale closure values
+    const settingsRef = useRef(settings);
+    settingsRef.current = settings;
 
     const playSuccessChime = useCallback(() => { audioService.playSuccess(); }, []);
 
     const handleAuthResponse = useCallback(async (accessToken: string, mode: 'youtube' | 'google' | 'spotify', expiresIn?: number) => {
         if (authTimeoutRef.current) { window.clearTimeout(authTimeoutRef.current); authTimeoutRef.current = null; }
+        // Use settingsRef.current so we get the live settings even if the GSI callback
+        // was registered before this render (stale closure in initGsi).
+        const currentSettings = settingsRef.current;
         try {
             if (mode === 'youtube') {
                 const response = await fetch('/google-api/youtube/v3/channels?part=snippet,statistics&mine=true', {
@@ -155,12 +161,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 if (data.items && data.items.length > 0) {
                     const channel = data.items[0];
                     const updatedYouTube: YouTubeConnection = {
-                        ...settings.youtube, isConnected: true, channelName: channel.snippet.title,
+                        ...currentSettings.youtube, isConnected: true, channelName: channel.snippet.title,
                         accessToken: accessToken, subscriberCount: channel.statistics.subscriberCount,
                         videoCount: parseInt(channel.statistics.videoCount),
                         thumbnailUrl: channel.snippet.thumbnails.default.url, connectedAt: Date.now()
                     };
-                    const updatedSettings = { ...settings, youtube: updatedYouTube };
+                    const updatedSettings = { ...currentSettings, youtube: updatedYouTube };
                     setSettings(updatedSettings); updateSettings(updatedSettings); playSuccessChime();
                     showGlobalFeedback(`YouTube Linked: ${channel.snippet.title}`);
                 }
@@ -171,7 +177,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 if (!response.ok) throw new Error("Spotify profile fetch failed.");
                 const user = await response.json();
                 const updatedSpotify: SpotifyConnection = {
-                    ...settings.spotify,
+                    ...currentSettings.spotify,
                     isConnected: true,
                     displayName: user.display_name,
                     email: user.email,
@@ -180,7 +186,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     expiresAt: parseInt(localStorage.getItem('spotify_expires_at') || '0') || undefined,
                     connectedAt: Date.now(),
                 };
-                const updatedSettings = { ...settings, spotify: updatedSpotify };
+                const updatedSettings = { ...currentSettings, spotify: updatedSpotify };
                 setSettings(updatedSettings); updateSettings(updatedSettings); playSuccessChime();
                 showGlobalFeedback(`Spotify Linked: ${user.display_name}`);
             } else {
@@ -193,7 +199,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     { access_token: accessToken, expires_in: typeof expiresIn === 'number' ? expiresIn : 3600 },
                     { email: user.email, name: user.name, picture: user.picture },
                 );
-                const updatedSettings = { ...settings, googleIdentity: updatedGoogle };
+                const updatedSettings = { ...currentSettings, googleIdentity: updatedGoogle };
                 setSettings(updatedSettings); updateSettings(updatedSettings);
                 showGlobalFeedback(`Uplink confirmed. Scanning Google Drive for 'Kollektiv' folder...`);
                 fileSystemManager.accessToken = accessToken;
@@ -201,6 +207,14 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 if (folder) {
                     const finalSettings = { ...updatedSettings, driveFolderId: folder.id, driveFolderName: folder.name };
                     setSettings(finalSettings); updateSettings(finalSettings);
+                    // If the user was switching to drive mode, complete the fileSystemManager init now
+                    if (finalSettings.storageProvider === 'drive') {
+                        const initOk = await fileSystemManager.initialize(finalSettings, {});
+                        if (initOk) {
+                            // Mirror local config files to Drive so Drive isn't empty after first auth
+                            void fileSystemManager.pushConfigsToDrive();
+                        }
+                    }
                     showGlobalFeedback(`Uplink confirmed & standby Google Drive configured for ${user.email}`);
                 } else { setIsCreateFolderModalOpen(true); }
                 playSuccessChime();
@@ -209,7 +223,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             console.error("Auth Fetch Error:", error);
             showGlobalFeedback(`Integration Error: ${error.message}`, true);
         } finally { setIsWorking(false); setMaintenanceMsg(""); setMaintenanceProgress(0); }
-    }, [settings, updateSettings, showGlobalFeedback, playSuccessChime]);
+    }, [updateSettings, showGlobalFeedback, playSuccessChime]);
 
     const initGsi = useCallback((clientId: string) => {
         if (lastClientIdRef.current === clientId && tokenClientRef.current) return;
@@ -343,6 +357,16 @@ export const SetupPage: React.FC<SetupPageProps> = ({
 
     useEffect(() => { setSettings(globalSettings); }, [globalSettings]);
 
+    // Auto-sync: if enabled and Drive is active, start migration silently on mount
+    const hasAutoSynced = useRef(false);
+    useEffect(() => {
+        if (!hasAutoSynced.current && globalSettings.autoSync && globalSettings.storageProvider === 'drive' && fileSystemManager.isDirectorySelected()) {
+            hasAutoSynced.current = true;
+            void handleConfirmMigration();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // intentionally runs once on mount
+
     // Detect Spotify tokens written to localStorage by the popup callback.
     // Uses both a storage event (fires when popup writes to localStorage)
     // and a fallback interval to cover any missed events.
@@ -448,7 +472,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     const handleMultipleSettingsChange = useCallback((updates: Partial<LLMSettings>) => {
         const updated = { ...settings, ...updates };
         setSettings(updated);
-        if ('dashboardBackgroundType' in updates || 'isDashboardVideoEnabled' in updates) updateSettings(updated);
+        if ('dashboardBackgroundType' in updates || 'isDashboardVideoEnabled' in updates ||
+            'storageProvider' in updates || 'driveFolderId' in updates || 'driveFolderName' in updates)
+            updateSettings(updated);
     }, [settings, updateSettings]);
 
     const saveSettings = () => { updateSettings(settings); showGlobalFeedback('Settings synchronized with vault.'); };
@@ -498,7 +524,10 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             await fileSystemManager.migrateLocalToDrive(
                 (msg, progress, extra) => {
                     setMaintenanceMsg(msg);
-                    if (progress !== undefined) setMaintenanceProgress(progress);
+                    if (progress !== undefined) {
+                        setMaintenanceProgress(progress);
+                        appEventBus.emit('syncProgress', { progress: Math.round(progress), active: true });
+                    }
                     if (extra) {
                         if (extra.phase) setMigrationPhase(extra.phase);
                         if (extra.convertingProgress !== undefined) setConvertingProgress(extra.convertingProgress);
@@ -522,6 +551,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         } finally {
             setIsWorking(false); setMaintenanceProgress(0); setMaintenanceMsg("");
             setDuplicateFile(null); setIsMigrationPaused(false);
+            appEventBus.emit('syncProgress', { progress: 0, active: false });
         }
     };
 
@@ -536,6 +566,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 setMaintenanceMsg(msg);
                 if (progress !== undefined) {
                     setMaintenanceProgress(progress);
+                    appEventBus.emit('syncProgress', { progress: Math.round(progress), active: true });
                     if (progress < 10) { setMigrationPhase('converting'); setConvertingProgress(progress * 10); setConvertingMsg(msg); }
                     else { setMigrationPhase('uploading'); setUploadingProgress(progress); setUploadingMsg(msg); }
                 }
@@ -551,6 +582,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         } finally {
             setIsWorking(false); setMaintenanceProgress(0); setMaintenanceMsg("");
             setDuplicateFile(null); setIsMigrationPaused(false);
+            appEventBus.emit('syncProgress', { progress: 0, active: false });
         }
     };
 
@@ -580,6 +612,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         activeSubTab={activeSubTab}
                         settings={settings}
                         handleSettingsChange={handleSettingsChange}
+                        handleMultipleSettingsChange={handleMultipleSettingsChange}
                         showGlobalFeedback={showGlobalFeedback}
                         setActiveSubTab={setActiveSubTab}
                         handleAuthConnect={handleAuthConnect}
