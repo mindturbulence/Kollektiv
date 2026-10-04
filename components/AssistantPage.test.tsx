@@ -7,6 +7,7 @@ import AssistantPage from './AssistantPage';
 
 vi.mock('../utils/useAssistantSignals', () => ({ useAssistantSignals: vi.fn() }));
 vi.mock('../utils/tabHistory', () => ({ getPreviousTab: vi.fn() }));
+vi.mock('./VoiceOrbCanvas', () => ({ default: () => null }));
 vi.mock('../contexts/SettingsContext', () => ({
     useSettings: () => ({ settings: { assistantLanguage: 'en' } }),
 }));
