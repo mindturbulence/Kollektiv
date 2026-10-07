@@ -2,7 +2,7 @@ import React, { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { CloseIcon } from './icons';
-import { PAPER_THEME, useInPaperScope } from './PaperScope';
+import { PAPER_SCOPE_CLASS, useInPaperScope } from './PaperScope';
 
 interface ModalProps {
   isOpen: boolean;
@@ -80,9 +80,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, classNa
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          // The portal lands on document.body, outside the page's theme scope, so re-apply it here.
-          data-theme={inPaper ? PAPER_THEME : undefined}
-          className={`fixed inset-0 ${backdropClassName} z-modal flex items-center justify-center p-4`}
+          // The portal lands on document.body, outside the page's style scope, so re-apply it here.
+          className={`fixed inset-0 ${backdropClassName} z-modal flex items-center justify-center p-4${inPaper ? ` ${PAPER_SCOPE_CLASS}` : ''}`}
           // Target check so a drag that starts inside the panel doesn't close it.
           onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
           onKeyDown={handleKeyDown}

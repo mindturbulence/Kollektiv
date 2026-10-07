@@ -347,23 +347,26 @@ describe('DesignLibrary', () => {
     });
   });
 
-  it('renders inside the paper theme scope in every state, including the detail view', async () => {
+  it('renders inside the style scope in every state, including the detail view, without forcing a theme', async () => {
     storage.loadDesignLibrary.mockReturnValue(new Promise(() => {}));
     const loading = renderLib();
-    expect(loading.container.querySelector('[data-theme="paper"]')).toBeTruthy();
+    expect(loading.container.querySelector('.paper-scope')).toBeTruthy();
+    expect(loading.container.querySelector('[data-theme]')).toBeNull();
     cleanup();
 
     storage.loadDesignLibrary.mockResolvedValue({ recipes, collections: [], safeToSave: true });
     const { container } = renderLib();
     fireEvent.click((await screen.findByText('Linear Board')).closest('button')!);
-    const scope = container.querySelector('[data-theme="paper"]')!;
+    const scope = container.querySelector('.paper-scope')!;
     expect(scope.contains(screen.getByText('detail:b'))).toBe(true);
   });
 
-  it('keeps a dialog opened from the page inside the paper theme', async () => {
+  it('keeps a dialog opened from the page inside the style scope', async () => {
     renderLib();
     fireEvent.click(await screen.findByRole('button', { name: 'Delete Stripe Home' }));
-    expect(screen.getByRole('dialog').parentElement!.getAttribute('data-theme')).toBe('paper');
+    const backdrop = screen.getByRole('dialog').parentElement!;
+    expect(backdrop.classList.contains('paper-scope')).toBe(true);
+    expect(backdrop.hasAttribute('data-theme')).toBe(false);
   });
 
   it('deletes after confirmation and reloads', async () => {
