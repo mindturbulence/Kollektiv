@@ -108,7 +108,8 @@ describe('generateDesignSpecOllama', () => {
         fetchSpy.mockResolvedValue({ ok: true, json: async () => ({ message: { content: 'SPEC' } }) });
         const out = await generateDesignSpecOllama(images, 'SYS', baseSettings({ ollamaModel: 'qwen2.5vl:7b' }));
         expect(out).toBe('SPEC');
-        const [url, init] = fetchSpy.mock.calls[0];
+        const [url, init] = fetchSpy.mock.calls[1];
+        expect(fetchSpy.mock.calls[0][0]).toBe('/ollama-local/api/show');
         expect(url).toBe('/ollama-local/api/chat');
         const body = JSON.parse(init.body);
         expect(body.model).toBe('qwen2.5vl:7b');
@@ -123,6 +124,19 @@ describe('generateDesignSpecOllama', () => {
     it('tells the user to pick a vision model when the model cannot take images', async () => {
         fetchSpy.mockResolvedValue(fail(500, JSON.stringify({ error: 'this model is missing data required for image input' })));
         await expect(generateDesignSpecOllama(images, 'SYS', baseSettings())).rejects.toThrow(/"llama3" cannot read images\. Pick a vision-capable model/);
+    });
+
+    it('refuses before sending images when /api/show reports no vision capability', async () => {
+        fetchSpy.mockResolvedValueOnce({ ok: true, json: async () => ({ capabilities: ['completion', 'tools'] }) });
+        await expect(generateDesignSpecOllama(images, 'SYS', baseSettings())).rejects.toThrow(/"llama3" cannot read images/);
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('proceeds when /api/show lists vision', async () => {
+        fetchSpy
+            .mockResolvedValueOnce({ ok: true, json: async () => ({ capabilities: ['completion', 'vision'] }) })
+            .mockResolvedValueOnce({ ok: true, json: async () => ({ message: { content: 'SPEC' } }) });
+        await expect(generateDesignSpecOllama(images, 'SYS', baseSettings())).resolves.toBe('SPEC');
     });
 
     it('keeps the real message for other failures, e.g. a model that is not pulled', async () => {

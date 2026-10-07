@@ -635,6 +635,20 @@ export const suggestTagsRawOllama = async (base64ImageData: string, promptText: 
 
 // Not a bare /vision/: "model \"llama3.2-vision\" not found" must keep its own message.
 const NO_VISION = /image input|support(?:s|ed)? (?:for )?(?:images?|vision)|multimodal/i;
+const noVisionError = (model: string) =>
+    new Error(`The Ollama model "${model}" cannot read images. Pick a vision-capable model (e.g. qwen2.5vl, llama3.2-vision, gemma3) in Settings > Integrations.`);
+
+/** False only when Ollama positively reports the model lacks vision; unknown (old server, error) → true. */
+const ollamaModelHasVision = async (baseUrl: string, headers: HeadersInit, model: string): Promise<boolean> => {
+    try {
+        const res = await fetch(`${baseUrl}/api/show`, { method: 'POST', headers, body: JSON.stringify({ model }) });
+        if (!res.ok) return true;
+        const { capabilities } = (await res.json()) as { capabilities?: unknown };
+        return !Array.isArray(capabilities) || capabilities.includes('vision');
+    } catch {
+        return true;
+    }
+};
 
 /** Raw DESIGN.md text from several screenshots, on the user's configured Ollama model.
  *  Ollama takes bare base64 per image, so `mimeType` is not sent. */
@@ -643,6 +657,8 @@ export const generateDesignSpecOllama = async (images: { data: string; mimeType:
     if (!config.baseUrl || !config.model) {
         throw new Error('Ollama is not configured: set the base URL and pick a vision-capable model in Settings > Integrations.');
     }
+    // Some text-only models silently ignore images instead of returning an error.
+    if (!(await ollamaModelHasVision(config.baseUrl, config.headers, config.model))) throw noVisionError(config.model);
     let res: Response;
     try {
         res = await fetch(`${config.baseUrl}/api/chat`, {
@@ -669,7 +685,7 @@ export const generateDesignSpecOllama = async (images: { data: string; mimeType:
         let detail = body;
         try { detail = (JSON.parse(body) as { error?: string }).error ?? body; } catch { /* plain-text body */ }
         if (NO_VISION.test(detail)) {
-            throw new Error(`The Ollama model "${config.model}" cannot read images. Pick a vision-capable model (e.g. qwen2.5vl, llama3.2-vision, gemma3) in Settings > Integrations.`);
+            throw noVisionError(config.model);
         }
         throw new Error(`Ollama returned ${res.status}${detail ? `: ${detail.slice(0, 300)}` : ''}`);
     }
