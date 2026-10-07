@@ -335,7 +335,8 @@ describe('DesignRecipeDetail', () => {
     paste([{ kind: 'string', type: 'text/plain', getAsFile: () => null }]);
     expect(storage.addRecipeRefs).not.toHaveBeenCalled();
     paste([{ kind: 'file', type: 'image/png', getAsFile: () => file }]);
-    await waitFor(() => expect(storage.addRecipeRefs).toHaveBeenCalledWith('r1', [{ name: 'shot.png', blob: file }]));
+    // normalizeRef is async; the default 1 s window flaked when many test files ran in parallel on a loaded machine.
+    await waitFor(() => expect(storage.addRecipeRefs).toHaveBeenCalledWith('r1', [{ name: 'shot.png', blob: file }]), { timeout: 5000 });
   });
 
   it('refuses to add beyond the 6 reference cap', async () => {

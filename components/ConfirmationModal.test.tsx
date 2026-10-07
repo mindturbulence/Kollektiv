@@ -33,6 +33,7 @@ describe('ConfirmationModal (on the shared Modal)', () => {
     expect(screen.getByLabelText('Cancel action').textContent).toBe('Abort');
     expect(screen.getByLabelText('Confirm action').textContent).toBe('Execute');
     expect(screen.getByLabelText('Confirm action').className).toContain('btn-error');
+    expect(screen.getByText('Delete item')).toBeTruthy(); // the default layout still shows the title as its subtitle
   });
 
   it('optional heading and labels replace the defaults; aria-labels and behaviour stay', () => {
@@ -45,6 +46,7 @@ describe('ConfirmationModal (on the shared Modal)', () => {
     );
     expect(screen.getByRole('heading', { level: 3 }).textContent).toBe('Delete this recipe?');
     expect(screen.queryByText(/CONFIRM/)).toBeNull();
+    expect(screen.queryByText('Delete recipe')).toBeNull(); // no redundant visible subtitle under a custom heading
     expect(screen.getByLabelText('Confirm action').textContent).toBe('Delete');
     expect(screen.getByLabelText('Cancel action').textContent).toBe('Cancel');
     fireEvent.click(screen.getByLabelText('Confirm action'));

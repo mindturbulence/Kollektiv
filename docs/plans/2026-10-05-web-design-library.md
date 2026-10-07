@@ -185,6 +185,6 @@ without gallery items); recipes and `prompts/*.txt` come back.
 
 ## Out of scope (v1) / later
 
-- URL capture — `server.ts` already has CDP `/api/cdp/screenshot`; cheap follow-up.
+- ~~URL capture~~ — shipped as SD-09 (2026-10-07): `POST /api/capture-site`, its own sandboxed Chromium behind an SSRF-filtering proxy. It deliberately does NOT use the CDP bridge in `server.ts` (that bridge drives the user's own Chrome tab).
 - Fidelity score per recipe, DESIGN.md lint/Tailwind export via Google's CLI, app-wide search
   (`indexGalleryAndPrompts` in `utils/obsidianStorage.ts`).
