@@ -146,3 +146,15 @@ Key routing rules:
 - Save progress → invoke /context-save
 - Resume context → invoke /context-restore
 - Author a backlog-ready spec/issue → invoke /spec
+
+## Running commands (MANDATORY — keeps terminal windows from piling up)
+
+This project uses **pnpm + vitest** (not bun). Every command Claude runs must finish and exit on its own.
+
+- Run commands in the **foreground only**. Never use `run_in_background`, `Start-Process`, `start`, or `&`.
+- **Never start long-running processes**: `pnpm dev`, `pnpm start`, `npx tsx server.ts`, `pnpm preview`, `vitest --watch`. The user runs those in their own terminal. If one is needed, ask.
+- Tests: run the narrowest thing that proves the change — `pnpm exec vitest run <path/to/file.test.ts>`. Run the full `pnpm test` only before a commit.
+- `pnpm test:e2e` (Playwright) builds the app and starts a preview server, so run it only when the user asks or the change is UI-flow critical. Never run it in parallel with another test run.
+- Prefer the **Bash** tool; use PowerShell only for Windows-specific tasks. One shell, one command at a time.
+- If a command hangs past its timeout, stop and report it. Don't relaunch it with another shell.
+- Before finishing a task that ran tests or builds, confirm no stray `node`/`vite`/`playwright` processes were left behind (`tasklist | findstr -i "node chrome"`), and kill only the ones you started.
