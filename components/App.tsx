@@ -114,9 +114,9 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
                         <button onClick={() => window.location.reload()} className="form-btn form-btn-primary">Restart Application</button>
                         <button
                             onClick={async () => {
-                                if (confirm("This will clear all local settings and storage handles. Your actual files will NOT be deleted. Proceed?")) {
-                                    const { resetAllSettings } = await import('../utils/settingsStorage');
-                                    await resetAllSettings();
+                                if (confirm("This clears your saved settings and the vault folder connection, then reloads. Files inside your vault folder are NOT deleted. You will be asked to select it again. Proceed?")) {
+                                    const { resetStorageConfig } = await import('../utils/settingsStorage');
+                                    await resetStorageConfig();
                                     window.location.reload();
                                 }
                             }}
@@ -578,9 +578,9 @@ const AppContent: React.FC = () => {
 
                                 <button
                                     onClick={async () => {
-                                        if (confirm("This will clear all local settings and storage handles. Your actual files will NOT be deleted. Proceed?")) {
-                                            const { resetAllSettings } = await import('../utils/settingsStorage');
-                                            await resetAllSettings();
+                                        if (confirm("This clears your saved settings and the vault folder connection, then reloads. Files inside your vault folder are NOT deleted. You will be asked to select it again. Proceed?")) {
+                                            const { resetStorageConfig } = await import('../utils/settingsStorage');
+                                            await resetStorageConfig();
                                             window.location.reload();
                                         }
                                     }}

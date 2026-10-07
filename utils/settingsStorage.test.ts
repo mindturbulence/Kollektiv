@@ -5,8 +5,15 @@ import {
   defaultLLMSettings,
   trackTokenUsage,
   repairSettings,
+  resetAllSettings,
+  resetStorageConfig,
 } from './settingsStorage';
+import { clearAllHandles } from './db';
+import { fileSystemManager } from './fileUtils';
 import type { LLMSettings } from '../types';
+
+vi.mock('./db', () => ({ clearAllHandles: vi.fn() }));
+vi.mock('./fileUtils', () => ({ fileSystemManager: { reset: vi.fn() } }));
 
 // ── Helpers ──
 
@@ -240,6 +247,35 @@ describe('loadLLMSettings — shadow recovery', () => {
 
     const loaded = loadLLMSettings();
     expect(loaded.geminiApiKey).toBe('primary');
+  });
+});
+
+describe('resetStorageConfig / resetAllSettings', () => {
+  const calls: string[] = [];
+
+  beforeEach(() => {
+    calls.length = 0;
+    vi.mocked(fileSystemManager.reset).mockReset().mockImplementation(async () => { calls.push('reset'); });
+    vi.mocked(clearAllHandles).mockReset().mockImplementation(async () => { calls.push('clearHandles'); });
+    vi.mocked(localStorage.removeItem).mockImplementation((key: string) => { calls.push(`remove:${key}`); });
+  });
+
+  it('resetStorageConfig removes both settings keys and clears handles, never wiping vault files', async () => {
+    await resetStorageConfig();
+
+    expect(calls).toEqual([`remove:${SETTINGS_KEY}`, `remove:${SETTINGS_SHADOW_KEY}`, 'clearHandles']);
+    expect(fileSystemManager.reset).not.toHaveBeenCalled();
+  });
+
+  it('resetStorageConfig surfaces a clearAllHandles failure', async () => {
+    vi.mocked(clearAllHandles).mockRejectedValue(new Error('idb blocked'));
+    await expect(resetStorageConfig()).rejects.toThrow('idb blocked');
+  });
+
+  it('resetAllSettings wipes vault files first, then removes keys, then clears handles', async () => {
+    await resetAllSettings();
+
+    expect(calls).toEqual(['reset', `remove:${SETTINGS_KEY}`, `remove:${SETTINGS_SHADOW_KEY}`, 'clearHandles']);
   });
 });
 

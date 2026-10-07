@@ -338,17 +338,28 @@ export const loadLLMSettings = (): LLMSettings => {
   return { ...defaultLLMSettings };
 };
 
+/**
+ * CONFIG-ONLY RESET. Removes saved settings (localStorage) and the stored vault/directory
+ * handles (IndexedDB) so the app asks for the vault again. NEVER touches vault files,
+ * local or Google Drive. A rejection from clearAllHandles propagates to the caller.
+ */
+export const resetStorageConfig = async () => {
+    if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(SETTINGS_KEY);
+        window.localStorage.removeItem(SETTINGS_SHADOW_KEY);
+    }
+    await clearAllHandles();
+};
+
+/**
+ * FULL WIPE. Deletes every file inside the vault (local folder, or the Google Drive
+ * root folder in Drive mode), then does resetStorageConfig. Only for explicit
+ * "wipe storage" flows; recovery buttons must use resetStorageConfig.
+ */
 export const resetAllSettings = async () => {
-    // First, clear all files from the managed directory
     const { fileSystemManager } = await import('./fileUtils');
     await fileSystemManager.reset();
-    // Then, remove settings from local storage
-    if (typeof window !== 'undefined') {
-        (window as any).localStorage.removeItem(SETTINGS_KEY);
-        (window as any).localStorage.removeItem(SETTINGS_SHADOW_KEY);
-    }
-    // Finally, clear the directory handles from IndexedDB
-    await clearAllHandles();
+    await resetStorageConfig();
 };
 
 export const trackTokenUsage = (provider: 'gemini' | 'ollama' | 'ollama_cloud' | 'openrouter' | 'llamacpp' | 'anthropic', actualTokens: number): void => {
