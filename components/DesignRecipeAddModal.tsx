@@ -4,9 +4,37 @@ import { createRecipe } from '../utils/designLibraryStorage';
 import { emptyRecipeSpec, parseTags, RECIPE_PAGE_TYPES } from '../utils/designLibraryFilter';
 import { normalizeRef } from '../utils/designImage';
 import CollectionSelect from './CollectionSelect';
+import LoadingSpinner from './LoadingSpinner';
 import type { DesignCollection, RecipePageType } from '../types';
+import type { CaptureErrorCode, CaptureSiteResponse } from '../src/schemas/captureSite';
 
 export const MAX_RECIPE_REFS = 6;
+
+export const CAPTURE_ERROR_TEXT: Record<CaptureErrorCode, string> = {
+  invalid_url: 'Enter a full http:// or https:// address.',
+  blocked_host: 'That address is local or private, so it cannot be captured.',
+  forbidden_origin: 'The request was refused by the server.',
+  too_large: 'The screenshot is too large (over 8 MB). Paste a screenshot instead.',
+  rate_limited: 'Too many captures in a minute. Wait a moment and try again.',
+  busy: 'Another capture is still running. Try again when it finishes.',
+  capture_failed: 'The capture failed. Try again, or paste a screenshot instead.',
+  unreachable: 'The page could not be loaded. Check the address.',
+  capture_unavailable: 'No Chrome, Chromium or Edge is available on the server, so pages cannot be captured.',
+  timeout: 'The page took too long to load (30 s limit).',
+};
+// The server's own text is more specific for these (which rule failed, what to install).
+const SERVER_DETAIL_CODES: ReadonlySet<CaptureErrorCode> = new Set(['invalid_url', 'blocked_host', 'capture_unavailable']);
+
+const pngFile = (base64: string, name: string): File => {
+  const bin = atob(base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new File([bytes], name, { type: 'image/png' });
+};
+
+const captureName = (finalUrl: string): string => {
+  try { return `${new URL(finalUrl).hostname}.png`; } catch { return 'capture.png'; }
+};
 
 interface RefEntry {
   key: string;
@@ -38,7 +66,11 @@ const DesignRecipeAddModal: React.FC<Props> = ({ isOpen, onClose, onCreated, col
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [captureUrl, setCaptureUrl] = useState('');
+  const [capturing, setCapturing] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
 
+  const captureAbortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Mirrors `refs` so async ingest and cleanup see the latest list; `busy` serialises concurrent ingests (paste while converting).
   const refsRef = useRef<RefEntry[]>([]);
@@ -61,10 +93,12 @@ const DesignRecipeAddModal: React.FC<Props> = ({ isOpen, onClose, onCreated, col
     if (isOpen) return;
     revokeAll();
     commitRefs([]);
+    captureAbortRef.current?.abort();
     setTitle(''); setPageType('landing'); setTagsText(''); setSourceUrl('');
     setRefErrors([]); setSubmitError(null); setSaving(false); setDragging(false);
+    setCaptureUrl(''); setCapturing(false); setCaptureError(null);
   }, [isOpen, defaultCollectionId, revokeAll, commitRefs]);
-  useEffect(() => revokeAll, [revokeAll]);
+  useEffect(() => () => { revokeAll(); captureAbortRef.current?.abort(); }, [revokeAll]);
 
   const addFiles = useCallback(async (files: File[]) => {
     if (busyRef.current || files.length === 0) return;
@@ -90,6 +124,53 @@ const DesignRecipeAddModal: React.FC<Props> = ({ isOpen, onClose, onCreated, col
       setRefErrors(errors);
     }
   }, [commitRefs]);
+
+  const captureSite = async () => {
+    const url = captureUrl.trim();
+    if (!url || capturing || saving || refsRef.current.length >= MAX_RECIPE_REFS) return;
+    const controller = new AbortController();
+    captureAbortRef.current = controller;
+    setCapturing(true);
+    setCaptureError(null);
+    try {
+      let data: CaptureSiteResponse;
+      try {
+        const res = await fetch('/api/capture-site', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+          signal: controller.signal,
+        });
+        data = await res.json();
+      } catch {
+        if (!controller.signal.aborted) setCaptureError('Could not reach the Kollektiv server.');
+        return;
+      }
+      if (controller.signal.aborted) return;
+      if (!data.ok) {
+        // Responses from outer middleware (e.g. the global origin guard) carry no `code`.
+        const known = data.code in CAPTURE_ERROR_TEXT;
+        setCaptureError(
+          known && SERVER_DETAIL_CODES.has(data.code) && data.error ? data.error
+            : known ? CAPTURE_ERROR_TEXT[data.code]
+              : 'The capture failed.',
+        );
+        return;
+      }
+      // Never overwrite a source URL the user typed (including while the capture ran).
+      setSourceUrl((cur) => (cur.trim() ? cur : data.finalUrl));
+      setCaptureUrl('');
+      // addFiles ignores calls while a paste/drop is still converting; wait for it instead of dropping the capture.
+      while (busyRef.current) await new Promise((r) => setTimeout(r, 50));
+      if (controller.signal.aborted) return;
+      await addFiles([pngFile(data.imageBase64, captureName(data.finalUrl))]);
+    } finally {
+      if (captureAbortRef.current === controller) {
+        captureAbortRef.current = null;
+        if (!controller.signal.aborted) setCapturing(false);
+      }
+    }
+  };
 
   // Clipboard paste while the dialog is open: take image items only, leave text paste to the focused input.
   useEffect(() => {
@@ -175,6 +256,29 @@ const DesignRecipeAddModal: React.FC<Props> = ({ isOpen, onClose, onCreated, col
 
         <div className="flex flex-col gap-2">
           <span className={label}>Reference images ({refs.length}/{MAX_RECIPE_REFS})</span>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={captureUrl}
+              onChange={(e) => setCaptureUrl(e.target.value)}
+              // Enter would submit the recipe form; capture instead.
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void captureSite(); } }}
+              placeholder="Import from site: https://example.com"
+              aria-label="Import from site URL"
+              className="paper-input flex-1 min-w-0"
+              disabled={saving || capturing}
+            />
+            <button
+              type="button"
+              className="paper-btn inline-flex items-center gap-2"
+              onClick={() => void captureSite()}
+              disabled={saving || capturing || !captureUrl.trim() || refs.length >= MAX_RECIPE_REFS}
+            >
+              {capturing && <LoadingSpinner size={14} />}
+              {capturing ? 'Capturing…' : 'Capture'}
+            </button>
+          </div>
+          {captureError && <p role="alert" className="text-xs text-error break-words">{captureError}</p>}
           <div
             data-testid="ref-dropzone"
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}

@@ -20,6 +20,7 @@ import searchRoutes from "./routes/searchRoutes";
 import mcpRoutes from "./routes/mcpRoutes";
 import localModelRoutes from "./routes/localModelRoutes";
 import topazRoutes from "./routes/topazRoutes";
+import captureSiteRoutes from "./routes/captureSiteRoutes";
 // Request schemas
 import { AnthropicRequestSchema } from "./src/schemas/anthropic";
 
@@ -273,6 +274,9 @@ async function startServer() {
 
   // Reach channel routes (RSS, GitHub, Exa, Reddit, YouTube transcript, Twitter/X)
   app.use(reachRoutes);
+
+  // Web Design library "Import from site" — screenshots a public page in a sandboxed headless browser
+  app.use(captureSiteRoutes);
 
   // OpenAI Realtime API — mint ephemeral token for client-side WebRTC
   app.get("/api/openai/token", authRateLimiter, async (_req, res) => {
