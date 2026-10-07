@@ -128,4 +128,23 @@ describe('sanitizeMeasurements', () => {
     expect(m.type).toEqual([{ role: 'h1', family: ['Inter Display', 'sans-serif'], weight: 700, sizePx: 56, lineHeight: '60px', letterSpacing: '-1.2px', transform: 'none', color: '#111111' }]);
     expect(m.motion).toEqual({ transitions: [['0.2s ease', 4], ['0.3s cubic-bezier(0.4, 0, 0.2, 1)', 2]], animations: [['fadeIn', 3]], keyframes: ['fadeIn'] });
   });
+
+  it('is idempotent: re-sanitizing its own output (a saved measurements.json) loses nothing', () => {
+    const once = sanitizeMeasurements({
+      type: [{ role: 'h1', family: '"Inter Variable", sans-serif', weight: '510', size: '64px', lineHeight: '64px', letterSpacing: '-1.4px', transform: 'none', color: 'rgb(247, 248, 248)' }],
+      tech: { next: true, gsap: true },
+      colors: { text: [['rgb(1, 2, 3)', 4]] },
+      sections: [{ tag: 'section', y: 0, height: 10, counts: {}, columns: 2 }],
+      nav: [{ path: '/a', label: 'A' }],
+      assets: [{ kind: 'photo', section: 0, x: 1, y: 2, width: 3, height: 4, objectFit: 'cover' }],
+      text: [{ section: 0, tag: 'p', text: 'Hi' }],
+      rootVars: [['--x', '8px']],
+      fontsLoaded: [{ family: 'Inter', weight: '400', style: 'normal' }],
+      hover: [{ selector: 'a:hover', props: { color: '#000000' } }],
+      motion: { transitions: [['0.2s ease', 1]], animations: [['spin', 1]], keyframes: ['spin'] },
+    });
+    expect(once.type[0]).toMatchObject({ family: ['Inter Variable', 'sans-serif'], sizePx: 64 });
+    expect(once.tech).toEqual(['Next.js', 'GSAP']);
+    expect(sanitizeMeasurements(JSON.parse(JSON.stringify(once)))).toEqual(once);
+  });
 });

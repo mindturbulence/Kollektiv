@@ -471,7 +471,10 @@ export function sanitizeMeasurements(raw: unknown): PageMeasurements {
     const lineHeight = typeof t.lineHeight === 'string' && (t.lineHeight === 'normal' || isLength(t.lineHeight)) ? t.lineHeight : 'normal';
     const letterSpacing = typeof t.letterSpacing === 'string' && (t.letterSpacing === 'normal' || isLength(t.letterSpacing)) ? t.letterSpacing : 'normal';
     const transform = typeof t.transform === 'string' && /^(none|uppercase|lowercase|capitalize)$/.test(t.transform) ? t.transform : 'none';
-    return [{ role: t.role, family: fontList(t.family), weight: int(t.weight, 1000), sizePx: int(t.size, 1000), lineHeight, letterSpacing, transform, color: normalizeColor(t.color) }];
+    // Accepts the raw script shape (family string, size "56px") and its own output (family[], sizePx), so re-sanitizing a
+    // saved measurements.json is lossless.
+    const family = fontList(Array.isArray(t.family) ? t.family.filter((f) => typeof f === 'string').join(', ') : t.family);
+    return [{ role: t.role, family, weight: int(t.weight, 1000), sizePx: int(t.size ?? t.sizePx, 1000), lineHeight, letterSpacing, transform, color: normalizeColor(t.color) }];
   });
 
   const sections: SectionInfo[] = arr(r.sections).slice(0, LIMITS.sections).flatMap((s, i) => {
@@ -522,8 +525,11 @@ export function sanitizeMeasurements(raw: unknown): PageMeasurements {
       ? [{ position: f.position, y: int(f.y), height: int(f.height), background: normalizeColor(f.background), hiddenForCapture: f.hiddenForCapture === true }]
       : []);
 
-  const techRaw = isObj(r.tech) ? r.tech : {};
-  const tech = Object.keys(TECH_NAMES).filter((k) => techRaw[k] === true).map((k) => TECH_NAMES[k]);
+  // Raw: { next: true, … }. Already sanitized: ['Next.js', …] (only names from the fixed list survive either way).
+  const names = Object.values(TECH_NAMES);
+  const tech = Array.isArray(r.tech)
+    ? names.filter((n) => (r.tech as unknown[]).includes(n))
+    : Object.keys(TECH_NAMES).filter((k) => isObj(r.tech) && r.tech[k] === true).map((k) => TECH_NAMES[k]);
 
   const rootVars: [string, string][] = arr(r.rootVars).flatMap((e) => {
     if (!Array.isArray(e) || typeof e[0] !== 'string' || typeof e[1] !== 'string') return [];

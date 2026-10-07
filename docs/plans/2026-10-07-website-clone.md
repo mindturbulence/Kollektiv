@@ -167,6 +167,25 @@ The README advises running the agent without auto-approved shell/network permiss
 | Egress during capture | Existing filtering proxy, WebRTC/QUIC flags, service workers blocked, no clicks |
 | Cross-site use of the new route | Existing `sameOriginGuard` + capture-site guard (JSON only, same origin) |
 
+## Deviations made while building (CL-1/CL-2, 2026-10-07)
+
+- Screenshots are stored as **JPEG** (quality 85), not WebP: Playwright cannot write WebP, and JPEG keeps a 4500 px page
+  around 0.5 MB.
+- The entry point is a separate **Clone site** button and dialog next to Add recipe (it creates the recipe itself), not a
+  row inside the Add dialog.
+- Measured tokens are not overwritten after the AI step: the prompt gives the model the measured values and requires it
+  to use them. The measurements-only fallback fills the tokens directly from the measurements.
+- Code, not the model, writes **References, Site Map and Content** (rebuilt from the measurements every time). The model
+  writes Responsive, Assets (by asset number) and Tech Stack, placed before Signature so a cut-off answer is still
+  detected as truncated.
+- A recipe gets a `clone` marker (`capturedAt`, detected tech). For marked recipes the editor shows and counts the clone
+  sections, and its AI button becomes **Rewrite with AI**, which rewrites the spec from the saved `measurements.json`
+  and the two screenshots without a new capture (this is also how a measurements-only recipe is upgraded later).
+- Fallback rules: a provider that cannot read images (llama.cpp, OpenRouter auto, a text-only Ollama model) builds the
+  recipe from measurements and leaves Overview, Do's and Don'ts, Dials, Signature and Tech Stack empty so the badges
+  stay truthful; any other AI error keeps the capture and offers **Retry AI** or **Save from measurements only**.
+- The read-only Clone prompt preview moves to CL-3 (it needs CL-3's AGENTS.md compiler).
+
 ## Phases
 
 1. **Measure + capture** (`/api/clone-site`, measurement script, mobile context, JSON files), fixture tests that

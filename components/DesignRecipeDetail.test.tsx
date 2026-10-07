@@ -17,8 +17,12 @@ const storage = vi.hoisted(() => ({
   addRecipeRefs: vi.fn(),
   removeRecipeRef: vi.fn(),
   reorderRecipeRefs: vi.fn(),
+  loadRecipeFile: vi.fn(),
 }));
 vi.mock('../utils/designLibraryStorage', () => storage);
+
+const cloning = vi.hoisted(() => ({ siteFromRecipe: vi.fn((x: unknown) => ({ site: x })), writeCloneSpec: vi.fn() }));
+vi.mock('../services/cloneSiteService', () => cloning);
 
 vi.mock('../utils/fileUtils', () => ({
   fileSystemManager: { getFileAsBlob: vi.fn().mockResolvedValue(new Blob(['x'], { type: 'image/png' })) },
@@ -546,5 +550,35 @@ describe('DesignRecipeDetail', () => {
     storage.loadDesignLibrary.mockResolvedValue({ recipes: [], collections: [], safeToSave: true });
     renderDetail();
     expect(await screen.findByText(/recipe not found/i)).toBeTruthy();
+  });
+
+  describe('cloned recipes', () => {
+    const cloned: DesignRecipe = { ...recipe, clone: { capturedAt: 5, tech: ['Next.js'] } };
+    beforeEach(() => {
+      storage.loadDesignLibrary.mockResolvedValue({ recipes: [cloned], collections: [], safeToSave: true });
+      storage.loadRecipeFile.mockResolvedValue('{"desktop":{}}');
+    });
+
+    it('shows the clone sections as editable slots and counts them when empty', async () => {
+      renderDetail();
+      await screen.findByDisplayValue('Stripe Home');
+      for (const h of ['Responsive', 'Assets', 'Content', 'Site Map', 'Tech Stack']) expect(sectionBox(h).value).toBe('');
+      expect(screen.getByText('5 sections empty/missing')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Rewrite with AI' })).toBeTruthy();
+    });
+
+    it('Rewrite with AI uses the saved measurements and the refs, not the screenshot extractor', async () => {
+      const sections = { ...fullSections, Responsive: 'r', Assets: 'a', Content: 'c', 'Site Map': 's', 'Tech Stack': 'Vite' };
+      cloning.writeCloneSpec.mockResolvedValue({ spec: { frontMatter, sections }, truncated: false, missing: [], stripped: [], pageType: 'app', tags: ['dark'] });
+      renderDetail();
+      await screen.findByDisplayValue('Stripe Home');
+      fireEvent.click(screen.getByRole('button', { name: 'Rewrite with AI' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm action' }));
+      await waitFor(() => expect(sectionBox('Tech Stack').value).toBe('Vite'));
+      expect(storage.loadRecipeFile).toHaveBeenCalledWith('r1', 'measurements.json');
+      expect(cloning.siteFromRecipe).toHaveBeenCalledWith(expect.objectContaining({ title: 'Stripe Home', sourceUrl: 'https://stripe.com', capturedAt: 5, measurementsJson: '{"desktop":{}}' }));
+      expect(extraction.extractDesignSpec).not.toHaveBeenCalled();
+      expect(screen.getByText('All sections filled')).toBeTruthy();
+    });
   });
 });

@@ -501,6 +501,8 @@ export interface DesignRecipe {
   palette?: string[];
   /** Up to 2 chips such as "Inter / 56px" from DESIGN.md front matter. Same undefined/[] meaning as `palette`. */
   fonts?: string[];
+  /** Set on recipes made by "Clone a website": the measured data files exist and the clone sections are expected. */
+  clone?: { capturedAt: number; tech: string[] };
 }
 
 export interface DesignCollection {

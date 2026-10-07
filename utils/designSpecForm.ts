@@ -1,5 +1,5 @@
 import { parse, stringify } from 'yaml';
-import { DESIGN_HEADINGS, EST_MARKER, REQUIRED_FRONT_MATTER } from './designSpec';
+import { CLONE_HEADINGS, DESIGN_HEADINGS, EST_MARKER, REQUIRED_FRONT_MATTER } from './designSpec';
 
 export type ColorRow = { name: string; value: string };
 
@@ -90,11 +90,15 @@ export const findEmptyTokens = (value: unknown): string[] => findLeaves(value, (
 export const missingFrontMatter = (fm: Record<string, unknown>): string[] =>
   REQUIRED_FRONT_MATTER.filter((k) => !(k in fm));
 
-/** One draft text per standard heading (empty when absent) in heading order, then any extra sections found. */
-export function sectionDrafts(sections: Record<string, string>): Record<string, string> {
-  const known = new Set<string>(DESIGN_HEADINGS);
+/** Headings a recipe must fill: the standard ones, plus the clone sections for a cloned recipe. */
+export const expectedHeadings = (clone: boolean): readonly string[] => (clone ? [...DESIGN_HEADINGS, ...CLONE_HEADINGS] : DESIGN_HEADINGS);
+
+/** One draft text per expected heading (empty when absent) in heading order, then any extra sections found. */
+export function sectionDrafts(sections: Record<string, string>, clone = false): Record<string, string> {
+  const expected = expectedHeadings(clone);
+  const known = new Set<string>(expected);
   return {
-    ...Object.fromEntries(DESIGN_HEADINGS.map((h) => [h, sections[h] ?? ''])),
+    ...Object.fromEntries(expected.map((h) => [h, sections[h] ?? ''])),
     ...Object.fromEntries(Object.entries(sections).filter(([k]) => !known.has(k))),
   };
 }

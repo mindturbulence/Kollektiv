@@ -16,6 +16,9 @@ export const DESIGN_HEADINGS = [
   'Signature',
 ] as const;
 
+/** Extra sections of a recipe made by "Clone a website" (plan 2026-10-07). Optional for other recipes. */
+export const CLONE_HEADINGS = ['Responsive', 'Assets', 'Content', 'Site Map', 'Tech Stack'] as const;
+
 export const REQUIRED_FRONT_MATTER = ['name', 'colors', 'typography', 'rounded', 'spacing', 'components'] as const;
 
 export type DesignSpec = {
@@ -107,7 +110,7 @@ export function parseDesignSpec(raw: string): { spec: DesignSpec; missing: strin
   }
   if (!isRecord(fm)) throw new Error('Design spec front matter is not a YAML mapping.');
 
-  const canonical = new Map<string, string>(DESIGN_HEADINGS.map(h => [h.toLowerCase(), h]));
+  const canonical = new Map<string, string>([...DESIGN_HEADINGS, ...CLONE_HEADINGS].map(h => [h.toLowerCase(), h]));
   const sections: Record<string, string> = {};
   let current: string | null = null;
   let buf: string[] = [];
@@ -137,9 +140,10 @@ export function parseDesignSpec(raw: string): { spec: DesignSpec; missing: strin
 }
 
 export function serializeDesignSpec(spec: DesignSpec): string {
-  const known = new Set<string>(DESIGN_HEADINGS);
+  const standard = [...DESIGN_HEADINGS, ...CLONE_HEADINGS];
+  const known = new Set<string>(standard);
   const ordered = [
-    ...DESIGN_HEADINGS.filter(h => h in spec.sections),
+    ...standard.filter(h => h in spec.sections),
     ...Object.keys(spec.sections).filter(k => !known.has(k)),
   ];
   const body = ordered.map(h => `## ${h}\n\n${spec.sections[h]}\n\n`).join('');

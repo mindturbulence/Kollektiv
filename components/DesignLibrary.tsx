@@ -13,6 +13,7 @@ import TreeView, { type TreeViewItem } from './TreeView';
 import CategoryPanelToggle from './CategoryPanelToggle';
 import DesignLibrarySection from './settings/DesignLibrarySection';
 import DesignRecipeAddModal from './DesignRecipeAddModal';
+import CloneSiteModal from './CloneSiteModal';
 import DesignRecipeDetail from './DesignRecipeDetail';
 import UseRecipeModal from './UseRecipeModal';
 import DesignRecipeCard from './DesignRecipeCard';
@@ -92,6 +93,7 @@ const DesignLibraryView: React.FC<DesignLibraryProps> = ({ showGlobalFeedback, o
   const [pageType, setPageType] = useState<'all' | RecipePageType>('all');
   const [tag, setTag] = useState<string | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isCloneOpen, setIsCloneOpen] = useState(false);
   const [toDelete, setToDelete] = useState<DesignRecipe | null>(null);
   const [toUse, setToUse] = useState<DesignRecipe | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -177,6 +179,7 @@ const DesignLibraryView: React.FC<DesignLibraryProps> = ({ showGlobalFeedback, o
   const closeManage = () => { setManageOpen(false); void refresh(); };
 
   const openAdd = () => { audioService.playClick(); setActionError(null); setIsAddOpen(true); };
+  const openClone = () => { audioService.playClick(); setActionError(null); setIsCloneOpen(true); };
 
   const rebuildIndex = async () => {
     audioService.playClick();
@@ -338,9 +341,17 @@ const DesignLibraryView: React.FC<DesignLibraryProps> = ({ showGlobalFeedback, o
 
                 <button
                   type="button"
+                  onClick={openClone}
+                  disabled={!safeToSave}
+                  className="paper-btn shrink-0 ml-auto"
+                >
+                  Clone site
+                </button>
+                <button
+                  type="button"
                   onClick={openAdd}
                   disabled={!safeToSave}
-                  className="paper-btn paper-btn-primary shrink-0 ml-auto"
+                  className="paper-btn paper-btn-primary shrink-0"
                 >
                   Add recipe
                 </button>
@@ -468,6 +479,13 @@ const DesignLibraryView: React.FC<DesignLibraryProps> = ({ showGlobalFeedback, o
         </div>
       </div>
 
+      <CloneSiteModal
+        isOpen={isCloneOpen}
+        onClose={() => setIsCloneOpen(false)}
+        onCreated={(id, note) => { showGlobalFeedback(note ?? 'Site cloned'); openRecipe(id); }}
+        collections={collections}
+        defaultCollectionId={collections.some((c) => c.id === activeSelection) ? activeSelection : undefined}
+      />
       <DesignRecipeAddModal
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}

@@ -41,6 +41,12 @@ const stringsOrUndefined = (v: unknown): string[] | undefined =>
 const withCleanTokens = (r: DesignRecipe): DesignRecipe => {
   r.palette = stringsOrUndefined(r.palette);
   r.fonts = stringsOrUndefined(r.fonts);
+  // A malformed clone marker is dropped (the recipe then behaves like a hand-made one).
+  const clone: unknown = r.clone;
+  if (clone !== undefined) {
+    if (isObj(clone) && typeof clone.capturedAt === 'number') r.clone = { capturedAt: clone.capturedAt, tech: stringsOrUndefined(clone.tech) ?? [] };
+    else delete r.clone;
+  }
   return r;
 };
 
@@ -76,6 +82,9 @@ const saveManifest = async ({ data, safeToSave }: ManifestLoad<DesignLibraryMani
 };
 
 const recipeDir = (id: string) => `${LIBRARY_DIR}/${id}`;
+/** Data files a cloned recipe keeps next to DESIGN.md. A fixed list: names never come from the page. */
+export const CLONE_FILES = ['assets.json', 'content.json', 'measurements.json'] as const;
+export type CloneFile = (typeof CLONE_FILES)[number];
 const specPath = (id: string) => `${recipeDir(id)}/DESIGN.md`;
 
 const findRecipe = (m: DesignLibraryManifest, id: string): DesignRecipe => {
@@ -278,10 +287,17 @@ export async function createRecipe(input: {
   collectionId?: string;
   refs: { name: string; blob: Blob }[];
   spec: DesignSpec;
+  /** "Clone a website": the marker plus its data files (JSON text). */
+  clone?: { capturedAt: number; tech: string[]; files: Record<CloneFile, string> };
 }): Promise<DesignRecipe> {
   const loaded = await getManifestForWrite();
   const id = generateRecipeId();
   const refs = await writeRefs(id, [], input.refs);
+  if (input.clone) {
+    for (const name of CLONE_FILES) {
+      await fileSystemManager.saveFile(`${recipeDir(id)}/${name}`, new Blob([input.clone.files[name]], { type: 'application/json' }));
+    }
+  }
   await fileSystemManager.saveFile(
     specPath(id),
     new Blob([serializeDesignSpec(input.spec)], { type: 'text/markdown;charset=utf-8' }),
@@ -299,6 +315,7 @@ export async function createRecipe(input: {
     refs,
     overview: specOverview(input.spec),
     ...deriveRecipeTokens(input.spec.frontMatter),
+    ...(input.clone ? { clone: { capturedAt: input.clone.capturedAt, tech: input.clone.tech } } : {}),
   };
   loaded.data.recipes.push(recipe);
   await saveManifest(loaded);
@@ -360,6 +377,12 @@ export async function reorderRecipeRefs(id: string, orderedPaths: string[]): Pro
   recipe.updatedAt = Date.now();
   await saveManifest(loaded);
   return recipe;
+}
+
+/** A cloned recipe's data file as text; null when absent. */
+export async function loadRecipeFile(id: string, name: CloneFile): Promise<string | null> {
+  if (!CLONE_FILES.includes(name)) throw new Error(`Not a recipe data file: ${name}`);
+  return fileSystemManager.readFile(`${recipeDir(id)}/${name}`);
 }
 
 export async function loadRecipeSpec(id: string): Promise<ReturnType<typeof parseDesignSpec>> {
@@ -449,6 +472,10 @@ export async function deleteRecipe(id: string): Promise<void> {
   const recipe = findRecipe(loaded.data, id);
   await deleteVerified(specPath(id));
   for (const path of recipe.refs) await deleteVerified(path);
+  for (const name of CLONE_FILES) {
+    const path = `${recipeDir(id)}/${name}`;
+    if (await fileSystemManager.fileExists(path)) await deleteVerified(path);
+  }
   loaded.data.recipes = loaded.data.recipes.filter((r) => r.id !== id);
   await saveManifest(loaded);
 }
