@@ -23,6 +23,8 @@ import {
   type LookupAll,
 } from '../utils/captureUrlValidation';
 import type { CaptureErrorCode } from '../src/schemas/captureSite';
+import type { PageMeasurements } from '../src/schemas/cloneSite';
+import { HIDE_OVERLAYS_SCRIPT, MEASURE_SCRIPT, sanitizeMeasurements } from './siteMeasure';
 
 export class CaptureError extends Error {
   constructor(readonly code: CaptureErrorCode, message: string) {
@@ -217,13 +219,13 @@ async function launchBrowser(proxyPort: number, signal: AbortSignal): Promise<Br
 }
 
 /** Scroll through the page so lazy images and reveal-on-scroll content render; returns the capture height. */
-async function revealAndMeasure(page: Page): Promise<number> {
+async function revealAndMeasure(page: Page, viewport: { width: number; height: number } = CAPTURE_VIEWPORT): Promise<number> {
   const measure = async () => {
     const h = await page.evaluate(() => document.documentElement.scrollHeight);
-    return Math.min(CAPTURE_MAX_HEIGHT, Math.max(CAPTURE_VIEWPORT.height, Number.isFinite(h) ? Math.round(h) : 0));
+    return Math.min(CAPTURE_MAX_HEIGHT, Math.max(viewport.height, Number.isFinite(h) ? Math.round(h) : 0));
   };
   const height = await measure();
-  await page.mouse.move(CAPTURE_VIEWPORT.width / 2, CAPTURE_VIEWPORT.height / 2);
+  await page.mouse.move(viewport.width / 2, viewport.height / 2);
   for (let y = 0; y < height; y += 600) {
     await page.mouse.wheel(0, 600);
     await page.waitForTimeout(100);
@@ -282,6 +284,155 @@ export function createPlaywrightCapture(lookup: LookupAll): CaptureBackend {
       if (late) throw new CaptureError(late, NAV_ERROR_TEXT[late] ?? 'The page could not be loaded.');
       const title = (await page.title()).trim().slice(0, 200);
       return { finalUrl, title, width: CAPTURE_VIEWPORT.width, height, png };
+    } finally {
+      signal.removeEventListener('abort', onAbort);
+      if (browser) await browser.close().catch(() => undefined);
+      await proxy.close();
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Clone a website (CL-1): the same sandbox, plus measurements and a real mobile pass. Nothing the page loads is
+// kept except stylesheet text, held in memory only to read hover rules, @font-face names and root tokens.
+
+export const CLONE_MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
+const CLONE_MOBILE_UA =
+  'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
+const CSS_MAX_BYTES = 1024 * 1024;
+const CSS_TOTAL_BYTES = 4 * 1024 * 1024;
+const CLONE_JPEG_QUALITY = 85;
+
+export interface CloneShotResult {
+  width: number;
+  height: number;
+  jpeg: Buffer;
+}
+
+export interface CloneResult {
+  finalUrl: string;
+  title: string;
+  desktop: CloneShotResult;
+  mobile: CloneShotResult | null;
+  measurements: { desktop: PageMeasurements; mobile: PageMeasurements | null };
+}
+
+/** Captures and measures `url`; must stop work and release the browser once `signal` aborts. */
+export type CloneBackend = (url: URL, signal: AbortSignal) => Promise<CloneResult>;
+
+type ContextOptions = NonNullable<Parameters<Browser['newContext']>[0]>;
+interface PassResult {
+  finalUrl: string;
+  title: string;
+  shot: CloneShotResult;
+  measurements: PageMeasurements;
+}
+
+/**
+ * Loads `url` in a fresh context, settles it (reduced motion, network idle, wheel scroll), hides overlays,
+ * measures and screenshots it. With `collectCss` the stylesheet responses are appended to `css` (cross-origin
+ * sheets cannot be read through the CSSOM); the measurement always parses whatever `css` holds.
+ */
+async function capturePass(
+  browser: Browser,
+  url: URL,
+  options: ContextOptions,
+  viewport: { width: number; height: number },
+  proxy: FilteringProxy,
+  css: string[],
+  collectCss: boolean,
+): Promise<PassResult> {
+  const context = await browser.newContext({ ...options, viewport, reducedMotion: 'reduce', acceptDownloads: false, serviceWorkers: 'block', permissions: [] });
+  try {
+    const page = await context.newPage();
+    context.on('page', (p) => {
+      if (p !== page) void p.close().catch(() => undefined);
+    });
+    const reads: Promise<void>[] = [];
+    if (collectCss) {
+      let total = 0;
+      page.on('response', (response) => {
+        if (!(response.headers()['content-type'] ?? '').includes('text/css')) return;
+        reads.push(
+          response.body().then(
+            (body) => {
+              if (body.length > CSS_MAX_BYTES || total + body.length > CSS_TOTAL_BYTES) return;
+              total += body.length;
+              css.push(body.toString('utf8'));
+            },
+            () => undefined,
+          ),
+        );
+      });
+    }
+
+    let failed = false;
+    try {
+      await page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: NAV_TIMEOUT_MS });
+    } catch (e) {
+      if (e instanceof Error && e.name === 'TimeoutError') throw new CaptureError('timeout', 'The page took too long to load.');
+      failed = true;
+    }
+    const early = navigationErrorCode({ failed, finalUrl: page.url(), blockedCount: proxy.blockedCount() });
+    if (early) throw new CaptureError(early, NAV_ERROR_TEXT[early] ?? 'The page could not be loaded.');
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined);
+
+    let height = await revealAndMeasure(page, viewport);
+    await page.evaluate(HIDE_OVERLAYS_SCRIPT);
+    await Promise.all(reads);
+    await page.evaluate((texts) => { (window as unknown as { __kCss: string[] }).__kCss = texts; }, css);
+    const measurements = sanitizeMeasurements(await page.evaluate(MEASURE_SCRIPT));
+
+    const shoot = (clip?: { x: number; y: number; width: number; height: number }) =>
+      page.screenshot({ type: 'jpeg', quality: CLONE_JPEG_QUALITY, scale: 'css', fullPage: !!clip, clip, timeout: 10_000 });
+    let jpeg = await shoot({ x: 0, y: 0, width: viewport.width, height });
+    if (jpeg.length > CAPTURE_MAX_BYTES) {
+      height = viewport.height;
+      jpeg = await shoot();
+    }
+    const finalUrl = page.url();
+    const late = navigationErrorCode({ failed: false, finalUrl, blockedCount: proxy.blockedCount() });
+    if (late) throw new CaptureError(late, NAV_ERROR_TEXT[late] ?? 'The page could not be loaded.');
+    const title = (await page.title()).trim().slice(0, 200);
+    return { finalUrl, title, shot: { width: viewport.width, height, jpeg }, measurements };
+  } finally {
+    await context.close().catch(() => undefined);
+  }
+}
+
+/** The real clone backend: a desktop pass that also reads the stylesheets, then a separate mobile-device pass. */
+export function createPlaywrightClone(lookup: LookupAll): CloneBackend {
+  return async (url, signal) => {
+    const proxy = await startFilteringProxy((hostname) => resolvePublicAddress(hostname, lookup));
+    let browser: Browser | null = null;
+    const onAbort = () => {
+      void browser?.close().catch(() => undefined);
+    };
+    signal.addEventListener('abort', onAbort);
+    try {
+      browser = await launchBrowser(proxy.port, signal);
+      if (signal.aborted) throw new CaptureError('timeout', 'The capture took too long.');
+      const css: string[] = [];
+      const desktop = await capturePass(browser, url, { deviceScaleFactor: 1 }, CAPTURE_VIEWPORT, proxy, css, true);
+
+      // A real mobile load (UA, touch, DPR 2), not a resized desktop page. If it fails the desktop result stands.
+      let mobile: PassResult | null = null;
+      try {
+        if (!signal.aborted) {
+          const options = { deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: CLONE_MOBILE_UA };
+          mobile = await capturePass(browser, new URL(desktop.finalUrl), options, CLONE_MOBILE_VIEWPORT, proxy, css, false);
+        }
+      } catch (e) {
+        if (signal.aborted) throw e;
+        console.warn('[Site clone] mobile pass failed:', e instanceof Error ? e.message : e);
+      }
+      return {
+        finalUrl: desktop.finalUrl,
+        title: desktop.title,
+        desktop: desktop.shot,
+        mobile: mobile?.shot ?? null,
+        measurements: { desktop: desktop.measurements, mobile: mobile?.measurements ?? null },
+      };
     } finally {
       signal.removeEventListener('abort', onAbort);
       if (browser) await browser.close().catch(() => undefined);
