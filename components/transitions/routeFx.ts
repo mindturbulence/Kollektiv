@@ -17,7 +17,7 @@ export type FxGeometry = 'shutterV' | 'shutterH' | 'doors' | 'iris' | 'irisTop' 
 
 /** Tabs that share the single mounted PromptsPage (AnimatePresence key 'prompts_group'). */
 const WORKSPACE_GROUP: ActiveTab[] = ['prompts', 'crafter', 'refiner', 'prompt_analyzer', 'media_analyzer'];
-const ARCHIVE_GROUP: ActiveTab[] = ['gallery', 'prompt'];
+const ARCHIVE_GROUP: ActiveTab[] = ['gallery', 'prompt', 'design_library'];
 const TOOL_GROUP: ActiveTab[] = ['image_editor', 'video_editor', 'image_compare', 'color_palette_extractor', 'resizer', 'converter', 'assets_manager', 'video_to_frames', 'lora_editor', 'batch_runner'];
 
 export const ROUTE_LABELS: Record<ActiveTab, { name: string; sub: string; glyph: string }> = {
@@ -31,6 +31,7 @@ export const ROUTE_LABELS: Record<ActiveTab, { name: string; sub: string; glyph:
     media_analyzer: { name: 'MEDIA ANALYZER', sub: 'DECODING FRAME BUFFER', glyph: '▦' },
     prompt: { name: 'LIBRARY ARCHIVE', sub: 'DECRYPTING RECORDS', glyph: '❒' },
     gallery: { name: 'VAULT ARCHIVE', sub: 'DECOMPRESSING ASSETS', glyph: '⬚' },
+    design_library: { name: 'WEB DESIGN LIBRARY', sub: 'INDEXING DESIGN RECIPES', glyph: '◨' },
     settings: { name: 'ROOT ACCESS', sub: 'PRIVILEGE ESCALATION GRANTED', glyph: '⛨' },
     composer: { name: 'COMPOSER MODULE', sub: 'ASSEMBLING GRID MATRIX', glyph: '▥' },
     image_compare: { name: 'COMPARE TOOL', sub: 'MOUNTING DUAL BUFFER', glyph: '◫' },

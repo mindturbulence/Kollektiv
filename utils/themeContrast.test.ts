@@ -60,3 +60,37 @@ describe('theme contrast (WCAG)', () => {
     }
   }
 });
+
+// The page-scoped light theme of the Web Design Library: applied by data-theme="paper", never selectable.
+describe('paper theme (Web Design Library) contrast', () => {
+  const body = themeDefs.get('paper') ?? '';
+  const token = (key: string) => hexToken(body, key) ?? '';
+  const base = token('base-100');
+
+  // What `text-base-content/60` renders as on the surface (alpha blend per channel).
+  const mix = (fg: string, bg: string, alpha: number) =>
+    '#' + [1, 3, 5].map((i) => Math.round(parseInt(fg.slice(i, i + 2), 16) * alpha + parseInt(bg.slice(i, i + 2), 16) * (1 - alpha)).toString(16).padStart(2, '0')).join('');
+
+  it('is defined, light, and not offered in the theme picker', () => {
+    expect(body).toContain('"color-scheme": "light"');
+    expect(base).toBe('#fcfcfc');
+    expect(THEMES).not.toContain('paper');
+  });
+
+  it('base-content on base-100 >= 7', () => {
+    expect(contrastRatio(token('base-content'), base)).toBeGreaterThanOrEqual(7);
+  });
+
+  it('primary-content on primary >= 7 (black primary button)', () => {
+    expect(contrastRatio(token('primary-content'), token('primary'))).toBeGreaterThanOrEqual(7);
+  });
+
+  it('muted text (base-content at 60%) on base-100 and on base-200 >= 4.5', () => {
+    expect(contrastRatio(mix(token('base-content'), base, 0.6), base)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(mix(token('base-content'), token('base-200'), 0.6), token('base-200'))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(['info', 'success', 'warning', 'error'])('%s text on base-100 >= 4.5', (key) => {
+    expect(contrastRatio(token(key), base)).toBeGreaterThanOrEqual(4.5);
+  });
+});

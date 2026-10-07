@@ -1,7 +1,7 @@
 
 import type { EnhancementResult, LLMSettings, PromptModifiers } from '../types';
-import { translateToEnglishGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, suggestTagsRawGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, generateArtistDescriptionGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream, generateConstructorPresetGemini } from './geminiService';
-import { analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, suggestTagsRawOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
+import { translateToEnglishGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, suggestTagsRawGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, generateArtistDescriptionGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream, generateConstructorPresetGemini, generateDesignSpecGemini } from './geminiService';
+import { analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, suggestTagsRawOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream, generateDesignSpecOllama } from './ollamaService';
 import { refineSinglePromptLlamaCpp, enhancePromptLlamaCppStream, refineSinglePromptLlamaCppStream, reconstructFromIntentLlamaCpp } from './llamacppService';
 import { TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 import { lookupModelProfile, serializeModifierToken } from '../constants/modelProfiles';
@@ -498,6 +498,53 @@ export const suggestTagsRaw = async (base64ImageData: string, promptText: string
     return provider === 'ollama'
         ? suggestTagsRawOllama(base64ImageData, promptText, settings)
         : suggestTagsRawGemini(base64ImageData, promptText, settings);
+};
+
+/** One screenshot for generateDesignSpec: bare base64 plus its own MIME type. */
+export type DesignSpecImage = { data: string; mimeType: string };
+
+const DESIGN_SPEC_MAX_TOKENS = 8192;
+
+/** Collects a chat stream for the spec. These services report failures as plain text
+ *  ("System: ... key is missing" or "**Error calling X:** ..."), which must never reach
+ *  the spec parser as if it were a spec. */
+const collectDesignSpecStream = async (stream: AsyncGenerator<string>): Promise<string> => {
+    let text = '';
+    for await (const chunk of stream) text += chunk;
+    const head = text.trimStart();
+    if (!head) throw new Error('The model returned no text for the design spec.');
+    if (head.startsWith('System:') || head.startsWith('**Error calling')) throw new Error(head);
+    return text;
+};
+
+const designSpecMessages = (images: DesignSpecImage[], systemPrompt: string) => [
+    { role: 'system' as const, content: systemPrompt },
+    {
+        role: 'user' as const,
+        content: 'Extract the DESIGN.md as instructed.',
+        attachments: images.map((img, i) => ({ data: `data:${img.mimeType};base64,${img.data}`, mimeType: img.mimeType, fileName: `reference-${i + 1}` })),
+    },
+];
+
+/** Raw DESIGN.md text from screenshots. Vision providers only; no fallback to another provider
+ *  (the user's choice decides where their screenshots go). Add a provider here and in the list. */
+export const generateDesignSpec = async (images: DesignSpecImage[], systemPrompt: string, settings: LLMSettings): Promise<string> => {
+    const provider = requireProvider('Design spec', settings, ['gemini', 'ollama', 'anthropic', 'openrouter']);
+    if (provider === 'anthropic') {
+        const { streamChatAnthropic } = await import('./anthropicService');
+        return collectDesignSpecStream(streamChatAnthropic(designSpecMessages(images, systemPrompt), settings, { maxTokens: DESIGN_SPEC_MAX_TOKENS }));
+    }
+    if (provider === 'openrouter') {
+        const model = settings.openrouterModel?.trim() ?? '';
+        if (!model || model.toLowerCase() === 'openrouter/auto') {
+            throw new Error('Pick a vision model: set a specific vision-capable model (not openrouter/auto) in Settings -> Integrations -> OpenRouter.');
+        }
+        const { streamChatOpenRouter } = await import('./openrouterService');
+        return collectDesignSpecStream(streamChatOpenRouter(designSpecMessages(images, systemPrompt), settings, { maxTokens: DESIGN_SPEC_MAX_TOKENS }));
+    }
+    return provider === 'ollama'
+        ? generateDesignSpecOllama(images, systemPrompt, settings)
+        : generateDesignSpecGemini(images, systemPrompt, settings);
 };
 
 export const generatePromptFormulaWithAI = async (promptText: string, wildcards: string[], settings: LLMSettings): Promise<string> => {

@@ -9,9 +9,13 @@ interface ConfirmationModalProps {
   title: string;
   message: string;
   btnClassName?: string;
+  /** Replaces the HUD "CONFIRM." heading, e.g. a short question for light-surface dialogs. */
+  heading?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
 }
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, onConfirm, title, message, btnClassName = 'btn-error' }) => {
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, onConfirm, title, message, btnClassName = 'btn-error', heading, confirmLabel = 'Execute', cancelLabel = 'Abort' }) => {
   useEffect(() => {
     if (isOpen) {
         audioService.playModalOpen();
@@ -32,7 +36,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
     <Modal isOpen={isOpen} onClose={handleClose} title={title} bare size="lg" className="flex flex-col bg-transparent relative p-[3px] corner-frame overflow-visible">
         <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
           <header className="px-8 py-4 bg-transparent relative flex-shrink-0">
-              <h3 className="text-xl font-black tracking-tighter text-error leading-none uppercase">CONFIRM<span className="text-base-content/60">.</span></h3>
+              <h3 className="text-xl font-black tracking-tighter text-error leading-none uppercase">{heading ?? <>CONFIRM<span className="text-base-content/60">.</span></>}</h3>
               <p className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/60 mt-1.5">{title}</p>
           </header>
           
@@ -47,7 +51,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
               aria-label="Cancel action"
             >
               <span/><span/><span/><span/>
-              Abort
+              {cancelLabel}
             </button>
             <button
               onClick={handleConfirm}
@@ -55,7 +59,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
               aria-label="Confirm action"
             >
               <span/><span/><span/><span/>
-              Execute
+              {confirmLabel}
             </button>
           </footer>
         </div>

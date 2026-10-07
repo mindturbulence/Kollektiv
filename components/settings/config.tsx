@@ -31,6 +31,9 @@ export const subMenuConfig: Record<string, { id: string; label: string, icon: Re
         { id: 'categories', label: 'Gallery Folders', icon: <FolderClosedIcon className="w-4 h-4" />, description: "Organize image hierarchies." },
         { id: 'data', label: 'Import & Export', icon: <FolderClosedIcon className="w-4 h-4" />, description: "Export and manage gallery files." }
     ],
+    design: [
+        { id: 'collections', label: 'Collections', icon: <FolderClosedIcon className="w-4 h-4" />, description: "Organize design recipes into nested collections." }
+    ],
 };
 
 export const mainCategories: { id: ActiveSettingsTab; label: string; icon: React.ReactNode }[] = [
@@ -39,4 +42,5 @@ export const mainCategories: { id: ActiveSettingsTab; label: string; icon: React
     { id: 'integrations', label: 'INTEGRATIONS', icon: <LinkIcon className="w-5 h-5" /> },
     { id: 'prompt', label: 'PROMPTS', icon: <PromptIcon className="w-5 h-5" /> },
     { id: 'gallery', label: 'GALLERY', icon: <PhotoIcon className="w-5 h-5" /> },
+    { id: 'design', label: 'WEB DESIGN', icon: <PaintBrushIcon className="w-5 h-5" /> },
 ];

@@ -644,6 +644,34 @@ export default {
           "--rounded-btn": "0",
         },
       },
+      // Page-scoped light surface for the Web Design Library (components/PaperScope.tsx). Deliberately
+      // not in constants/themes.ts: never selectable, only applied via data-theme on that page.
+      // Keep the comment outside the braces: utils/themeContrast.test.ts parses this file with a regex.
+      {
+        paper: {
+          "color-scheme": "light",
+          primary: "#0a0a0a",
+          "primary-content": "#ffffff",
+          secondary: "#52525b",
+          "secondary-content": "#ffffff",
+          accent: "#0a0a0a",
+          "accent-content": "#ffffff",
+          neutral: "#0a0a0a",
+          "neutral-content": "#ffffff",
+          "base-100": "#fcfcfc",
+          "base-200": "#f4f4f5",
+          "base-300": "#e4e4e7",
+          "base-content": "#0a0a0a",
+          info: "#1d4ed8",
+          success: "#15803d",
+          warning: "#92400e",
+          error: "#b91c1c",
+          "--rounded-box": "0.75rem",
+          "--rounded-btn": "0.5rem",
+          "--rounded-badge": "9999px",
+          "--rounded-tab": "0.5rem",
+        },
+      },
     ],
   },
 };

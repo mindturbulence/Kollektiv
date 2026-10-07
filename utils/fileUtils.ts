@@ -44,6 +44,10 @@ export interface IFileSystemManager {
     pushConfigsToDrive(): Promise<{ succeeded: number; failed: number }>;
 }
 
+const DRIVE_FOLDER_MIME = 'application/vnd.google-apps.folder';
+// Vault section folders that syncDriveToLocal mirrors file-by-file (gallery has its own manifest-driven pass).
+const PULL_FOLDERS = ['prompts', 'design-library'];
+
 // --- Helper Classes for GDrive Integration ---
 class DriveDirectoryHandle {
     kind = 'directory' as const;
@@ -429,6 +433,7 @@ class LocalFileSystemManager implements IFileSystemManager {
         'artists_cheatsheet.json',
         'cheatsheet.json',
         'generations.json',
+        'kollektiv_design_library_manifest.json',
     ];
 
     /**
@@ -1305,114 +1310,188 @@ class LocalFileSystemManager implements IFileSystemManager {
             onProgress("Initializing Google Drive to Local Sync...", 0);
         }
 
-        // 1. Read manifest from GDrive
+        // Every write below must land in the local vault, every read must come from Drive.
+        // The previous provider (the user's storage mode) is restored however this ends.
         const oldProvider = this.storageProvider;
-        this.storageProvider = 'drive';
-        let driveManifestContent: string | null = null;
-        try {
-            driveManifestContent = await this.readFile('kollektiv_gallery_manifest.json');
-        } catch (e) {
-            console.error("Failed to read manifest from Drive:", e);
-        }
-        this.storageProvider = oldProvider;
-
-        if (!driveManifestContent) {
-            throw new Error("No gallery manifest found on Google Drive. Sync cannot proceed.");
-        }
-
-        // Parse drive manifest
-        let driveManifest: any = null;
-        try {
-            driveManifest = JSON.parse(driveManifestContent);
-        } catch {
-            throw new Error("Failed to parse gallery manifest from Google Drive.");
-        }
-
-        const categories = Array.isArray(driveManifest.categories) ? driveManifest.categories : [];
-        const galleryItems = Array.isArray(driveManifest.galleryItems) ? driveManifest.galleryItems : [];
-        const totalItems = galleryItems.length;
-
-        // Save categories and manifest locally
-        await this.saveFile('kollektiv_gallery_manifest.json', new Blob([driveManifestContent], { type: 'application/json' }));
-
-        // Sync items post-by-post from GDrive to Local
-        for (let i = 0; i < totalItems; i++) {
-            if (this.isMigrationAborted) {
-                throw new Error("Migration aborted by user.");
-            }
-            await checkPause();
-
-            const item = galleryItems[i];
-            const postTitle = item.title || item.id || 'Untitled Post';
-            const progressVal = Math.round((i / totalItems) * 100);
-
-            if (onProgress) {
-                onProgress(`Downloading "${postTitle}" (${i + 1}/${totalItems})...`, progressVal);
-            }
-
-            // A. Download metadata JSON from GDrive and save locally
-            const category = categories.find((c: any) => c.id === item.categoryId);
-            const categoryName = category?.name || '';
-            const pathSegments = ['gallery'];
-            if (categoryName) pathSegments.push(categoryName);
-            const metadataPath = [...pathSegments, `${item.id}_metadata.json`].join('/');
-
+        const fromDrive = async (path: string): Promise<Blob | null> => {
             this.storageProvider = 'drive';
-            const metaBlob = await this.getFileAsBlob(metadataPath);
-            this.storageProvider = 'local';
-            if (metaBlob) {
-                await this.saveFile(metadataPath, metaBlob);
+            try {
+                return await this.getFileAsBlob(path);
+            } finally {
+                this.storageProvider = 'local';
             }
+        };
 
-            // B. Download actual images/media from GDrive and save locally
-            if (Array.isArray(item.urls)) {
-                for (const url of item.urls) {
-                    if (url && !url.startsWith('data:') && !url.startsWith('http')) {
-                        this.storageProvider = 'drive';
-                        const fileBlob = await this.getFileAsBlob(url);
-                        this.storageProvider = 'local';
-                        if (fileBlob) {
-                            await this.saveFile(url, fileBlob);
+        try {
+            this.storageProvider = 'local';
+
+            // 1. Gallery (optional): a vault without gallery items has no manifest on Drive.
+            // resolvePath throws on Drive errors, so only a confirmed-absent manifest skips the gallery.
+            const hasGalleryManifest = (await this.resolvePath('kollektiv_gallery_manifest.json', false)) !== null;
+            if (hasGalleryManifest) {
+                this.storageProvider = 'drive';
+                let driveManifestContent: string | null = null;
+                try {
+                    driveManifestContent = await this.readFile('kollektiv_gallery_manifest.json');
+                } catch (e) {
+                    console.error("Failed to read manifest from Drive:", e);
+                }
+                this.storageProvider = 'local';
+
+                if (!driveManifestContent) {
+                    throw new Error("No gallery manifest found on Google Drive. Sync cannot proceed.");
+                }
+
+                // Parse drive manifest
+                let driveManifest: any = null;
+                try {
+                    driveManifest = JSON.parse(driveManifestContent);
+                } catch {
+                    throw new Error("Failed to parse gallery manifest from Google Drive.");
+                }
+
+                const categories = Array.isArray(driveManifest.categories) ? driveManifest.categories : [];
+                const galleryItems = Array.isArray(driveManifest.galleryItems) ? driveManifest.galleryItems : [];
+                const totalItems = galleryItems.length;
+
+                // Save categories and manifest locally
+                await this.saveFile('kollektiv_gallery_manifest.json', new Blob([driveManifestContent], { type: 'application/json' }));
+
+                // Sync items post-by-post from GDrive to Local
+                for (let i = 0; i < totalItems; i++) {
+                    if (this.isMigrationAborted) {
+                        throw new Error("Migration aborted by user.");
+                    }
+                    await checkPause();
+
+                    const item = galleryItems[i];
+                    const postTitle = item.title || item.id || 'Untitled Post';
+                    const progressVal = Math.round((i / totalItems) * 100);
+
+                    if (onProgress) {
+                        onProgress(`Downloading "${postTitle}" (${i + 1}/${totalItems})...`, progressVal);
+                    }
+
+                    // A. Download metadata JSON from GDrive and save locally
+                    const category = categories.find((c: any) => c.id === item.categoryId);
+                    const categoryName = category?.name || '';
+                    const pathSegments = ['gallery'];
+                    if (categoryName) pathSegments.push(categoryName);
+                    const metadataPath = [...pathSegments, `${item.id}_metadata.json`].join('/');
+
+                    const metaBlob = await fromDrive(metadataPath);
+                    if (metaBlob) {
+                        await this.saveFile(metadataPath, metaBlob);
+                    }
+
+                    // B. Download actual images/media from GDrive and save locally
+                    if (Array.isArray(item.urls)) {
+                        for (const url of item.urls) {
+                            if (url && !url.startsWith('data:') && !url.startsWith('http')) {
+                                const fileBlob = await fromDrive(url);
+                                if (fileBlob) {
+                                    await this.saveFile(url, fileBlob);
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
 
-        // Download any other workspace JSON files from GDrive
-        if (onProgress) {
-            onProgress("Syncing general workspace configurations...", 95);
-        }
-
-        this.storageProvider = 'drive';
-        const rootFiles: any[] = [];
-        try {
-            const q = `'${this.rootFolderId}' in parents and trashed = false`;
-            const url = `/google-api/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType)`;
-            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${this.accessToken}` } });
-            if (res.ok) {
-                const data = await res.json();
-                rootFiles.push(...(data.files || []));
+            // 2. Download any other workspace JSON files from GDrive
+            if (onProgress) {
+                onProgress("Syncing general workspace configurations...", 95);
             }
-        } catch (e) {
-            console.error("Failed to list general files from GDrive root:", e);
-        }
-        this.storageProvider = oldProvider;
 
-        for (const file of rootFiles) {
-            if (file.mimeType !== 'application/vnd.google-apps.folder' && file.name.endsWith('.json') && file.name !== 'kollektiv_gallery_manifest.json') {
-                this.storageProvider = 'drive';
-                const fileBlob = await this.getFileAsBlob(file.name);
-                this.storageProvider = 'local';
-                if (fileBlob) {
-                    await this.saveFile(file.name, fileBlob);
+            let rootFiles: { id: string; name: string; mimeType: string }[] = [];
+            try {
+                rootFiles = await this.listDriveFolder('');
+            } catch (e) {
+                console.error("Failed to list general files from GDrive root:", e);
+            }
+
+            for (const file of rootFiles) {
+                if (file.mimeType !== DRIVE_FOLDER_MIME && file.name.endsWith('.json') && file.name !== 'kollektiv_gallery_manifest.json') {
+                    const fileBlob = await fromDrive(file.name);
+                    if (fileBlob) {
+                        await this.saveFile(file.name, fileBlob);
+                    }
                 }
             }
-        }
 
-        if (onProgress) {
-            onProgress("Sync Complete!", 100);
+            // 3. Section folders (prompts/<id>.txt, design-library/<id>/...). One bad file
+            // must not stop the rest; failures are collected and reported once at the end.
+            const failed: string[] = [];
+            const walk = async (folder: string): Promise<void> => {
+                let entries: { id: string; name: string; mimeType: string }[];
+                try {
+                    entries = await this.listDriveFolder(folder);
+                } catch (e) {
+                    console.error("Failed to list Drive folder", folder, e);
+                    failed.push(`${folder}/`);
+                    return;
+                }
+                for (const entry of entries) {
+                    const path = `${folder}/${entry.name}`;
+                    if (entry.mimeType === DRIVE_FOLDER_MIME) {
+                        await walk(path);
+                        continue;
+                    }
+                    await checkPause();
+                    if (onProgress) {
+                        onProgress(`↓ ${path}`, 97);
+                    }
+                    try {
+                        const blob = await fromDrive(path);
+                        if (!blob) throw new Error("download failed");
+                        await this.saveFile(path, blob);
+                    } catch (e) {
+                        console.error("Pull failed for", path, e);
+                        failed.push(path);
+                    }
+                }
+            };
+            for (const folder of PULL_FOLDERS) {
+                await walk(folder);
+            }
+
+            if (failed.length > 0) {
+                throw new Error(`${failed.length} file(s) failed to download from Google Drive: ${failed.join(', ')}`);
+            }
+
+            if (onProgress) {
+                onProgress("Sync Complete!", 100);
+            }
+        } finally {
+            this.storageProvider = oldProvider;
         }
+    }
+
+    /** Children of a vault-relative Drive folder, all pages. [] when the folder does not exist. */
+    private async listDriveFolder(path: string): Promise<{ id: string; name: string; mimeType: string }[]> {
+        const folderId = await this.resolvePath(path, false);
+        if (!folderId) return [];
+
+        const files: { id: string; name: string; mimeType: string }[] = [];
+        let pageToken: string | undefined;
+        do {
+            const q = `'${folderId}' in parents and trashed = false`;
+            const url = `/google-api/drive/v3/files?q=${encodeURIComponent(q)}&fields=nextPageToken,files(id,name,mimeType)&pageSize=1000`
+                + (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '');
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${this.accessToken}` } });
+            if (!res.ok) {
+                throw new Error(`GDrive list folder "${path}" failed: ${await this.extractGoogleError(res)}`);
+            }
+            const data = await res.json();
+            files.push(...(data.files || []));
+            pageToken = data.nextPageToken;
+        } while (pageToken);
+
+        // Cache child ids so the per-file downloads that follow don't re-resolve each path.
+        for (const f of files) {
+            this.pathCache.set(path ? `${path}/${f.name}` : f.name, { id: f.id, mimeType: f.mimeType });
+        }
+        return files;
     }
 
     public async calculateTotalSize(): Promise<number> {

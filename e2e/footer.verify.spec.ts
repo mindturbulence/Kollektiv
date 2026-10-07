@@ -57,7 +57,7 @@ async function bootToAppShell(page: Page) {
 }
 test.use({ viewport: { width: 1920, height: 1080 } });
 test.describe.configure({ mode: 'parallel' });
-const TABS = ['dashboard','assistant','discovery','prompts','crafter','refiner','prompt_analyzer','media_analyzer','gallery','prompt','settings','composer','image_compare','color_palette_extractor','resizer','converter','assets_manager','video_to_frames','lora_editor','batch_runner','comfy_studio','a1111_studio','image_editor','video_editor'];
+const TABS = ['dashboard','assistant','discovery','prompts','crafter','refiner','prompt_analyzer','media_analyzer','gallery','design_library','prompt','settings','composer','image_compare','color_palette_extractor','resizer','converter','assets_manager','video_to_frames','lora_editor','batch_runner','comfy_studio','a1111_studio','image_editor','video_editor'];
 for (const tab of TABS) {
   test(`edge ${tab}`, async ({ page }) => {
     await page.addInitScript(t => { try { localStorage.setItem('activeTab', JSON.stringify(t)); } catch {} }, tab);

@@ -110,6 +110,7 @@ The architecture set is organized as a practical handbook for contributors and m
 - [docs/08_IMPLEMENTATION/ADD_NEW_TOOL.md](docs/08_IMPLEMENTATION/ADD_NEW_TOOL.md) — step-by-step guide for adding a new assistant tool and passing MCP gates
 - [docs/10_EXAMPLES/CREATE_CAPABILITY.md](docs/10_EXAMPLES/CREATE_CAPABILITY.md) — example path for adding a new capability
 - [docs/11_IMAGE_EDITOR/IMAGE_EDITOR.md](docs/11_IMAGE_EDITOR/IMAGE_EDITOR.md) — layered image editor: one compositor, doc/bitmap space, selections, two-tier adjustments, tests
+- [docs/12_WEB_DESIGN_LIBRARY/WEB_DESIGN_LIBRARY.md](docs/12_WEB_DESIGN_LIBRARY/WEB_DESIGN_LIBRARY.md) — personal design recipe library: screenshots + specs compiled into one-shot prompts for CLI agents, vision model extraction, nested collections
 - [contracts/interfaces.md](contracts/interfaces.md) — implementation-facing contracts and data shapes
 - [diagrams/README.md](diagrams/README.md) — diagram inventory and architecture views
 - [schemas/capability.manifest.json](schemas/capability.manifest.json) — example capability manifest schema

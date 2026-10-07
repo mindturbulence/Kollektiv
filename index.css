@@ -2809,3 +2809,283 @@ footer.footer {
   }
   .fx-hud-blink { animation: none; }
 }
+
+/* ==========================================================================
+   Paper: the light, page-scoped look of the Web Design Library.
+   Colours come from the DaisyUI `paper` theme (tailwind.config.js), applied with
+   data-theme="paper" by components/PaperScope.tsx and by Modal for its portal.
+   This block adds the shared look in one place: type, shape, and the .paper-*
+   classes. It must stay below every app-theme block above (equal specificity
+   wins by source order), and the rules that fight the app themes' !important
+   control styles carry :not(#paper): no element has that id, it only lifts the
+   specificity above those rules. Nothing here matches outside [data-theme="paper"].
+   ========================================================================== */
+[data-theme="paper"] {
+  /* The Kollektiv theme resolves its --k-* helpers on <html>, so re-derive them for this subtree. */
+  --k-line: oklch(var(--bc) / 0.1);
+  --k-line-strong: oklch(var(--bc) / 0.25);
+  --k-tint: oklch(var(--bc) / 0.05);
+  --k-surface: oklch(var(--b1));
+  --k-ring: 0 0 0 3px oklch(var(--bc) / 0.15);
+  --paper-hairline: oklch(var(--bc) / 0.1);
+  --paper-hairline-strong: oklch(var(--bc) / 0.25);
+  accent-color: oklch(var(--p));
+  scrollbar-color: oklch(var(--bc) / 0.25) oklch(var(--b1));
+  text-shadow: none;
+}
+
+/* Inter everywhere except code-like content (.font-mono / .font-sf-mono / code / pre keep their mono face). */
+[data-theme="paper"] *:not(.font-mono):not(.font-sf-mono):not(code):not(pre):not(#paper) {
+  font-family: "Inter", sans-serif !important;
+}
+[data-theme="paper"] :is(.uppercase, button, .btn):not(#paper) { text-transform: none !important; }
+[data-theme="paper"] :is(.uppercase, [class*="tracking-"], button, .btn):not(#paper) { letter-spacing: normal !important; }
+[data-theme="paper"] .font-black:not(#paper) { font-weight: 600 !important; }
+[data-theme="paper"] .text-primary:not(#paper) { text-shadow: none !important; }
+
+/* Shared components rendered inside the scope (EmptyState, ConfirmationModal, NestedCategoryManager, TreeView). */
+[data-theme="paper"] :is(.btn, .form-btn):not(#paper) { border-radius: var(--rounded-btn) !important; }
+[data-theme="paper"] .corner-frame::before { display: none; }
+[data-theme="paper"] .corner-frame:not(#paper) { border-color: transparent !important; }
+[data-theme="paper"] [role="dialog"]:not(#paper) {
+  background-color: oklch(var(--b1)) !important;
+  border-radius: var(--rounded-box) !important;
+  box-shadow: 0 24px 60px -24px rgb(0 0 0 / 0.35);
+}
+
+[data-theme="paper"] .paper-title:not(#paper) {
+  font-weight: 600 !important;
+  letter-spacing: -0.02em !important;
+  text-wrap: balance;
+}
+
+[data-theme="paper"] .paper-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: oklch(var(--bc) / 0.7);
+}
+
+[data-theme="paper"] .paper-card {
+  border: 1px solid var(--paper-hairline);
+  border-radius: 0.75rem;
+  background-color: oklch(var(--b1));
+  overflow: hidden;
+  transition: border-color var(--duration-fast, 150ms) ease, box-shadow var(--duration-fast, 150ms) ease;
+}
+[data-theme="paper"] .paper-card:hover { border-color: var(--paper-hairline-strong); box-shadow: 0 8px 24px -16px rgb(0 0 0 / 0.25); }
+
+[data-theme="paper"] .paper-notice {
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Buttons. Size/tone are modifier classes defined after the base, because a utility such as h-7 would lose to the base by source order. */
+[data-theme="paper"] .paper-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--paper-hairline);
+  border-radius: 0.5rem;
+  background-color: oklch(var(--b1));
+  color: oklch(var(--bc));
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--duration-quick, 150ms) ease, border-color var(--duration-quick, 150ms) ease, color var(--duration-quick, 150ms) ease, opacity var(--duration-quick, 150ms) ease;
+}
+[data-theme="paper"] .paper-btn:hover:not(:disabled) { background-color: oklch(var(--b2)); border-color: var(--paper-hairline-strong); }
+/* Disabled fades colours, not opacity: cards reveal their buttons with an opacity utility that this rule would otherwise override. */
+[data-theme="paper"] .paper-btn:disabled { color: oklch(var(--bc) / 0.4); cursor: not-allowed; border-style: solid; }
+[data-theme="paper"] .paper-btn-primary:disabled { background-color: oklch(var(--p) / 0.35); border-color: transparent; color: oklch(var(--pc)); }
+[data-theme="paper"] .paper-btn-primary { background-color: oklch(var(--p)); border-color: oklch(var(--p)); color: oklch(var(--pc)); }
+[data-theme="paper"] .paper-btn-primary:hover:not(:disabled) { background-color: oklch(var(--p) / 0.85); border-color: oklch(var(--p) / 0.85); }
+[data-theme="paper"] .paper-btn-ghost { background-color: transparent; border-color: transparent; color: oklch(var(--bc) / 0.7); }
+[data-theme="paper"] .paper-btn-ghost:hover:not(:disabled) { background-color: oklch(var(--b2)); border-color: transparent; color: oklch(var(--bc)); }
+[data-theme="paper"] .paper-btn-danger { color: oklch(var(--er)); }
+[data-theme="paper"] .paper-btn-sm { height: 1.75rem; padding: 0 0.625rem; font-size: 12px; }
+[data-theme="paper"] .paper-btn-icon { width: 1.75rem; height: 1.75rem; padding: 0; }
+[data-theme="paper"] .paper-btn-lg { width: 100%; height: 2.75rem; font-size: 14px; }
+
+/* Pill chips: toggles carry aria-pressed, so the active look follows the accessible state. */
+[data-theme="paper"] .paper-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 1.875rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--paper-hairline);
+  border-radius: 9999px;
+  background-color: oklch(var(--b1));
+  color: oklch(var(--bc) / 0.7);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--duration-quick, 150ms) ease, border-color var(--duration-quick, 150ms) ease, color var(--duration-quick, 150ms) ease;
+}
+[data-theme="paper"] .paper-chip:hover { border-color: var(--paper-hairline-strong); color: oklch(var(--bc)); }
+[data-theme="paper"] .paper-chip[aria-pressed="true"] { background-color: oklch(var(--p)); border-color: oklch(var(--p)); color: oklch(var(--pc)); }
+/* Static label pill (page type, tags). */
+[data-theme="paper"] .paper-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  background-color: oklch(var(--b2));
+  color: oklch(var(--bc) / 0.7);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* Text fields: id-boosted because the app theme styles bare input/textarea/select with !important. */
+[data-theme="paper"] .paper-input:not(#paper) {
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--paper-hairline) !important;
+  border-radius: 0.5rem !important;
+  background-color: oklch(var(--b1)) !important;
+  color: oklch(var(--bc)) !important;
+  font-size: 14px;
+  font-weight: 400;
+  transition: border-color var(--duration-quick, 150ms) ease, box-shadow var(--duration-quick, 150ms) ease !important;
+}
+[data-theme="paper"] textarea.paper-input:not(#paper) { padding: 0.5rem 0.75rem; line-height: 1.5; }
+[data-theme="paper"] .paper-input-search:not(#paper) { padding-left: 2.5rem; padding-right: 2.5rem; }
+[data-theme="paper"] .paper-input:not(#paper):focus {
+  outline: none !important;
+  border-color: oklch(var(--bc) / 0.5) !important;
+  box-shadow: var(--k-ring) !important;
+}
+[data-theme="paper"] .paper-input:not(#paper):disabled { opacity: 0.5 !important; cursor: not-allowed; }
+[data-theme="paper"] .paper-input::placeholder { color: oklch(var(--bc) / 0.5) !important; }
+
+/* Underline tabs (filters, so they carry aria-pressed like chips). */
+[data-theme="paper"] .paper-tab {
+  flex-shrink: 0;
+  padding: 0.5rem 0;
+  border-bottom: 2px solid transparent;
+  color: oklch(var(--bc) / 0.55);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--duration-quick, 150ms) ease, border-color var(--duration-quick, 150ms) ease;
+}
+[data-theme="paper"] .paper-tab:hover { color: oklch(var(--bc)); }
+[data-theme="paper"] .paper-tab[aria-pressed="true"] { color: oklch(var(--bc)); border-bottom-color: oklch(var(--bc)); }
+
+/* Split button halves (main action + chevron); modifiers because .paper-btn's radius beats rounded-* utilities. */
+[data-theme="paper"] .paper-btn-split-start { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+[data-theme="paper"] .paper-btn-split-end { width: 2.25rem; padding: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; border-left-color: oklch(var(--pc) / 0.25); }
+
+/* ==========================================================================
+   Paper, part 2 (SD-08: visual QA). Same rules as above: additive, every selector
+   starts with [data-theme="paper"], :not(#paper) lifts specificity over the app
+   themes' !important rules. The sheet is the [data-theme="paper"] element itself,
+   hence the compound selector (a descendant selector could never match it).
+   ========================================================================== */
+[data-theme="paper"].paper-sheet:not(#paper) { border-radius: 1rem !important; }
+
+/* Theme leak guard. Audited rules that reach elements inside the scope although the colours come from variables:
+   Kollektiv (default): .btn/.form-btn neutral surface + mono caps + glow, .bg-base-100 gradient, .text-primary glow, input radius, outline p/0.6;
+   pipboy/explorer/prompt: `*` radius 0, pipboy .font-mono green + .bg-base-200 + .border-base-* green;
+   Vanguard/Hiigara/arwes: .btn-primary gradient + scanline ::after, .input/.form-input dark wells; arwes .bg-base-100/.card/.corner-frame radius 0 + .text-primary flicker. */
+[data-theme="paper"] :is(.btn, .form-btn):not(#paper) {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+[data-theme="paper"] :is(.btn-primary, .form-btn-primary):not(#paper) {
+  background: oklch(var(--p)) !important;
+  border: 1px solid oklch(var(--p)) !important;
+  color: oklch(var(--pc)) !important;
+  animation: none !important;
+}
+[data-theme="paper"] :is(.btn-primary, .form-btn-primary):hover:not(:disabled):not(#paper) { background: oklch(var(--p) / 0.85) !important; }
+[data-theme="paper"] :is(.btn-primary, .form-btn-primary)::after { display: none !important; }
+[data-theme="paper"] .btn-ghost:not(#paper) { background-color: transparent !important; border-color: transparent !important; color: oklch(var(--bc) / 0.7) !important; }
+[data-theme="paper"] .btn-ghost:hover:not(:disabled):not(#paper) { background-color: oklch(var(--b2)) !important; color: oklch(var(--bc)) !important; }
+[data-theme="paper"] :is(.card, .bg-base-100):not(#paper) { background: oklch(var(--b1)) !important; }
+[data-theme="paper"] .bg-base-200:not(#paper) { background-color: oklch(var(--b2)) !important; }
+[data-theme="paper"] .border-base-content:not(#paper) { border-color: oklch(var(--bc)) !important; }
+[data-theme="paper"] .border-base-300:not(#paper) { border-color: oklch(var(--b3)) !important; }
+[data-theme="paper"] :is(.font-mono, code):not(#paper) { color: inherit !important; text-shadow: none !important; }
+[data-theme="paper"] .text-primary:not(#paper) { filter: none !important; animation: none !important; }
+[data-theme="paper"] :is(.input, .select, .textarea, .form-input, .form-select, .form-textarea):not(.paper-input):not(#paper) {
+  background-color: oklch(var(--b1)) !important;
+  border-color: var(--paper-hairline) !important;
+  color: oklch(var(--bc)) !important;
+  border-radius: 0.5rem !important;
+}
+/* Radius 0 from the `*` rules and arwes, restored for the paper shapes and the Tailwind radii used here. */
+[data-theme="paper"] .paper-card:not(#paper) { border-radius: 0.75rem !important; }
+[data-theme="paper"] :is(.paper-notice, .paper-btn):not(#paper) { border-radius: 0.5rem !important; }
+[data-theme="paper"] .paper-btn-split-start:not(#paper) { border-radius: 0.5rem 0 0 0.5rem !important; }
+[data-theme="paper"] .paper-btn-split-end:not(#paper) { border-radius: 0 0.5rem 0.5rem 0 !important; }
+[data-theme="paper"] :is(.paper-chip, .paper-tag, .rounded-full):not(#paper) { border-radius: 9999px !important; }
+[data-theme="paper"] .rounded-2xl:not(#paper) { border-radius: 1rem !important; }
+[data-theme="paper"] .rounded-xl:not(#paper) { border-radius: 0.75rem !important; }
+[data-theme="paper"] .rounded-lg:not(#paper) { border-radius: 0.5rem !important; }
+[data-theme="paper"] .rounded-md:not(#paper) { border-radius: 0.375rem !important; }
+
+/* Keyboard focus: one near-black ring everywhere. Text fields and the listbox are special: the field rules above set
+   outline: none !important, and the listbox keeps DOM focus while an option is "active" (aria-activedescendant), so the option shows the ring. */
+[data-theme="paper"] :is(a, button, summary, input, select, textarea, [role="button"], [tabindex="0"]):focus-visible:not([role="listbox"]):not(#paper) {
+  outline: 2px solid oklch(var(--bc));
+  outline-offset: 2px;
+}
+[data-theme="paper"] :is(.paper-input, .input, .select, .textarea, .form-input, .form-select, .form-textarea):focus-visible:not(#paper) {
+  outline: 2px solid oklch(var(--bc)) !important;
+  outline-offset: 2px;
+}
+[data-theme="paper"] [role="listbox"]:focus-visible:not(#paper) { outline: none; box-shadow: none; }
+[data-theme="paper"] [role="listbox"]:focus-visible > [aria-selected="true"]:not(#paper) { outline: 2px solid oklch(var(--bc)); outline-offset: -2px; }
+
+/* ConfirmationModal (shared, HUD-styled) inside the scope: no snake border, no corner marks; Cancel is a ghost button, the destructive confirm
+   reads like .paper-btn-danger (red text, red hairline). */
+[data-theme="paper"] .btn-snake > span:empty:not(#paper) { display: none; }
+[data-theme="paper"] [role="dialog"] > .absolute.pointer-events-none:not(#paper) { display: none; }
+[data-theme="paper"] .btn-error:not(#paper) {
+  background-color: oklch(var(--b1)) !important;
+  border: 1px solid oklch(var(--er) / 0.4) !important;
+  color: oklch(var(--er)) !important;
+}
+[data-theme="paper"] .btn-error:hover:not(:disabled):not(#paper) {
+  background-color: oklch(var(--er) / 0.08) !important;
+  border-color: oklch(var(--er)) !important;
+}
+
+/* CategoryPanelToggle (shared, no paper class): a white capsule with a hairline and a soft shadow. */
+[data-theme="paper"] button:is([aria-label="Collapse Panel"], [aria-label="Expand Panel"]):not(#paper) {
+  background-color: #fff;
+  border: 1px solid var(--paper-hairline-strong);
+  border-radius: 9999px !important;
+  color: oklch(var(--bc));
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.15), 0 4px 12px -4px rgb(0 0 0 / 0.2);
+  backdrop-filter: none;
+}
+[data-theme="paper"] button:is([aria-label="Collapse Panel"], [aria-label="Expand Panel"]):hover:not(#paper) { background-color: oklch(var(--b2)); }
+
+/* TreeView (shared): rows get a hover and a selected state on the light surface (the selected row is the one with .text-primary). */
+[data-theme="paper"] nav[aria-label="Category navigation"] button:not(#paper) {
+  border-radius: 0.5rem !important;
+  font-size: 13px;
+  transition: background-color var(--duration-quick, 150ms) ease, color var(--duration-quick, 150ms) ease;
+}
+[data-theme="paper"] nav[aria-label="Category navigation"] button:hover:not(#paper) { background-color: oklch(var(--b2)); color: oklch(var(--bc)); }
+[data-theme="paper"] nav[aria-label="Category navigation"] button.text-primary:not(#paper) { background-color: oklch(var(--b2)); color: oklch(var(--bc)); }
+[data-theme="paper"] nav[aria-label="Category navigation"] button span.truncate:not(#paper) { font-weight: 400; }
+[data-theme="paper"] nav[aria-label="Category navigation"] button.text-primary span.truncate:not(#paper) { font-weight: 500; }
+/* Count pill: base-content/80 on base-300 is ~11:1 (the stock base-300/50 + /70 text was ~5:1 and lower on a selected row). */
+[data-theme="paper"] nav[aria-label="Category navigation"] button > span.font-mono:not(#paper) {
+  background-color: oklch(var(--b3));
+  color: oklch(var(--bc) / 0.8) !important;
+}

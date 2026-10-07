@@ -60,6 +60,11 @@ const fileManifest: FileManifestEntry[] = [
         path: 'generations.json',
         type: 'json',
         getDefaultContent: () => ({ entries: [] }),
+    },
+    {
+        path: 'kollektiv_design_library_manifest.json',
+        type: 'json',
+        getDefaultContent: () => ({ recipes: [], collections: [] }),
     }
 ];
 
@@ -416,8 +421,8 @@ export const optimizeManifests = async (onProgress: (msg: string) => void): Prom
     try {
         onProgress('> COMPRESSING REGISTRIES...');
         await new Promise(r => setTimeout(r, 200));
-        const files = ['kollektiv_gallery_manifest.json', 'prompts_manifest.json', 'crafter_manifest.json', 'refiner_presets_manifest.json', 'composer_presets_manifest.json'];
-        
+        const files = ['kollektiv_gallery_manifest.json', 'prompts_manifest.json', 'crafter_manifest.json', 'refiner_presets_manifest.json', 'composer_presets_manifest.json', 'kollektiv_design_library_manifest.json'];
+
         for (const file of files) {
             try {
                 const content = await fileSystemManager.readFile(file);
