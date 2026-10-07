@@ -103,6 +103,17 @@ export function sameOriginGuard(allowAnyHost: boolean) {
       res.status(403).json({ error: 'Host not allowed' });
       return;
     }
+    // Browsers send Sec-Fetch-Site on every request, including no-cors ones (<img>, <script>, form
+    // posts) that may omit Origin; MCP clients and curl send none. Cross-site navigations stay
+    // allowed (OAuth callbacks land here), except on the browser-control routes.
+    const fetchSite = req.headers['sec-fetch-site'];
+    if (
+      (fetchSite === 'cross-site' || fetchSite === 'same-site') &&
+      (req.headers['sec-fetch-mode'] !== 'navigate' || (req.path ?? '').startsWith('/api/cdp/'))
+    ) {
+      res.status(403).json({ error: 'Cross-site request blocked' });
+      return;
+    }
     const origin = req.headers.origin;
     if (origin) {
       let originHost: string | null = null;

@@ -10,6 +10,22 @@
 
 import { JSDOM } from "jsdom";
 import { Defuddle } from "defuddle/node";
+import dns from "dns";
+import { BlockedHostError, resolvePublicAddress, type LookupAll } from "../utils/captureUrlValidation";
+import { startFilteringProxy, type FilteringProxy } from "./siteCapture";
+
+const systemLookup: LookupAll = (hostname) => dns.promises.lookup(hostname, { all: true, verbatim: true });
+
+/** SSRF guard: http(s) only, no credentials, host must resolve only to public addresses. Throws otherwise. */
+export async function assertPublicHttpUrl(raw: string, lookup: LookupAll = systemLookup): Promise<URL> {
+  const url = new URL(raw);
+  if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("Only http(s) URLs can be scraped");
+  if (url.username || url.password) throw new Error("URLs with credentials are not allowed");
+  await resolvePublicAddress(url.hostname, lookup);
+  return url;
+}
+
+const MAX_REDIRECTS = 5;
 
 // ─── User-Agent rotation ─────────────────────────────────────────────
 
@@ -54,16 +70,28 @@ async function fetchWithRetry(
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15_000);
 
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          "User-Agent": randomUA(),
-          Accept:
-            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.9",
-        },
-        redirect: "follow",
-      });
+      // Redirects are followed by hand so every hop passes the SSRF guard.
+      // ponytail: fetch re-resolves DNS after the check, so a rebinding host can still race it;
+      // route through startFilteringProxy (needs an undici ProxyAgent) if that matters.
+      let current = url;
+      let response: Response;
+      for (let hop = 0; ; hop++) {
+        await assertPublicHttpUrl(current);
+        response = await fetch(current, {
+          signal: controller.signal,
+          headers: {
+            "User-Agent": randomUA(),
+            Accept:
+              "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+          },
+          redirect: "manual",
+        });
+        const location = response.headers.get("location");
+        if (response.status < 300 || response.status >= 400 || !location) break;
+        if (hop >= MAX_REDIRECTS) throw new Error("Too many redirects");
+        current = new URL(location, current).href;
+      }
       clearTimeout(timeout);
 
       if (!response.ok) {
@@ -71,8 +99,9 @@ async function fetchWithRetry(
       }
 
       const html = await response.text();
-      return { html, finalUrl: response.url || url };
+      return { html, finalUrl: current };
     } catch (err: any) {
+      if (err instanceof BlockedHostError) throw err; // policy refusal: retrying cannot help
       lastErr = err;
       // Wait before retry (exponential backoff)
       if (attempt < retries) {
@@ -187,9 +216,17 @@ export async function scrapeUrlPlaywright(url: string): Promise<ScrapedContent> 
     return { url, title: "", content: "", textContent: "", excerpt: "", success: false, error: "Invalid URL" };
   }
 
+  let proxy: FilteringProxy | undefined;
   try {
+    await assertPublicHttpUrl(url);
+    // Every request the page makes (redirects, sub-resources) goes through the SSRF-filtering proxy.
+    proxy = await startFilteringProxy((hostname) => resolvePublicAddress(hostname, systemLookup));
     const { chromium } = await import("playwright-core");
-    const browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch({
+      headless: true,
+      proxy: { server: `http://127.0.0.1:${proxy.port}`, bypass: "<-loopback>" },
+      args: ["--disable-quic", "--force-webrtc-ip-handling-policy=disable_non_proxied_udp"],
+    });
     try {
       const context = await browser.newContext({
         userAgent: randomUA(),
@@ -241,6 +278,8 @@ export async function scrapeUrlPlaywright(url: string): Promise<ScrapedContent> 
       success: false,
       error: err?.message || String(err),
     };
+  } finally {
+    await proxy?.close();
   }
 }
 

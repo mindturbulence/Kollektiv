@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { extractContent } from './webScraper';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { extractContent, scrapeUrl, assertPublicHttpUrl } from './webScraper';
 
 // ─── Fixtures ──────────────────────────────────────────────────────────
 
@@ -321,5 +321,35 @@ describe('extractContent markdown quality', () => {
   it('produces markdown code fences for <pre><code> blocks', async () => {
     const result = await extractContent(CODE_HTML, 'https://example.com');
     expect(result.content).toContain('```');
+  });
+});
+
+describe('SSRF guard', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('refuses private, loopback and metadata targets without fetching', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    for (const url of ['http://127.0.0.1:7500/api/cdp/content', 'http://169.254.169.254/latest/', 'http://localhost/', 'http://[::1]/']) {
+      const r = await scrapeUrl(url);
+      expect(r.success, url).toBe(false);
+      expect(r.error, url).toMatch(/Blocked host/);
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('refuses a public URL that redirects to a private address', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(new Response(null, { status: 302, headers: { location: 'http://169.254.169.254/latest/meta-data' } }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const r = await scrapeUrl('http://93.184.215.14/');
+    expect(r.success).toBe(false);
+    expect(r.error).toMatch(/Blocked host: 169.254.169.254/);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses names that resolve privately and non-http schemes', async () => {
+    await expect(assertPublicHttpUrl('https://rebind.example/', async () => [{ address: '10.0.0.5' }])).rejects.toThrow(/Blocked host/);
+    await expect(assertPublicHttpUrl('file:///etc/passwd')).rejects.toThrow(/http/);
+    await expect(assertPublicHttpUrl('https://site.example/', async () => [{ address: '93.184.215.14' }])).resolves.toBeInstanceOf(URL);
   });
 });

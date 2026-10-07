@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_PROXY_ALLOWED_HOSTS,
   isAllowedProxyTarget,
+  isDisallowedAddress,
 } from './proxyTargetValidation';
 
 describe('isAllowedProxyTarget', () => {
@@ -112,5 +113,18 @@ describe('isAllowedProxyTarget', () => {
       // example.com is not in static allowlist and no user list supplied
       expect(isAllowedProxyTarget('https://example.com/x')).toBe(false);
     });
+  });
+});
+
+describe('isDisallowedAddress', () => {
+  it('blocks bracketed IPv6 (URL.hostname form), IPv4-mapped IPv6 and CGNAT', () => {
+    for (const h of ['[::1]', '[::ffff:127.0.0.1]', '[fe80::1]', '100.64.0.1', '255.255.255.255']) {
+      expect(isDisallowedAddress(h), h).toBe(true);
+    }
+    expect(isDisallowedAddress(new URL('http://[::ffff:169.254.169.254]/').hostname)).toBe(true);
+  });
+
+  it('allows public addresses and names', () => {
+    for (const h of ['8.8.8.8', '[2606:4700::1111]', 'example.com']) expect(isDisallowedAddress(h), h).toBe(false);
   });
 });
