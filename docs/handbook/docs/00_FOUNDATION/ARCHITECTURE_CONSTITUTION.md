@@ -393,6 +393,7 @@ The Express server (run via `npx tsx server.ts`, default `127.0.0.1:7500`) acts 
 | `ALL /comfy-local/*` | Same pattern for ComfyUI (`127.0.0.1:8188`). Backs local image generation via `services/comfyService.ts`, polling `/history` rather than a WebSocket. Live-verified 2026-07-28. |
 | `ALL /proxy-remote/*` | Generic remote proxy; target from `x-target-url` header, validated against provider allowlist. |
 | `POST /api/anthropic/chat` | Anthropic Messages API proxy (api_key + subscription modes). Streams SSE. |
+| `POST /api/capture-site` | Web Design Library "Import from site": screenshots a public web page (`routes/captureSiteRoutes.ts`, backend `services/siteCapture.ts`, rules `utils/captureUrlValidation.ts`). Own sandboxed headless Chromium via `playwright-core` — never the CDP bridge / the user's Chrome. Same-origin + JSON-only guard, http/https on ports 80/443 only, no IP literals or internal names, every request the browser makes goes through an in-process filtering proxy that resolves the host itself and connects only to a vetted public IP. 6/min, one at a time, 30 s, ≤ 8 MB PNG. Error `code`s: `invalid_url`, `blocked_host`, `forbidden_origin`, `rate_limited`, `busy`, `timeout`, `too_large`, `unreachable`, `capture_unavailable`, `capture_failed`. |
 | `POST /api/mcp/proxy` | MCP JSON-RPC proxy (Streamable-HTTP compatible). |
 | `GET /api/health` | `{status:"ok"}`. |
 | `GET /api/topaz-status` / `POST /api/topaz-upscale` | Topaz Gigapixel CLI bridge (multer upload, temp files cleaned up). |

@@ -37,7 +37,8 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
         <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
           <header className="px-8 py-4 bg-transparent relative flex-shrink-0">
               <h3 className="text-xl font-black tracking-tighter text-error leading-none uppercase">{heading ?? <>CONFIRM<span className="text-base-content/60">.</span></>}</h3>
-              <p className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/60 mt-1.5">{title}</p>
+              {/* A custom heading already says what this is; `title` still labels the dialog for assistive tech via Modal. */}
+              {heading === undefined && <p className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/60 mt-1.5">{title}</p>}
           </header>
           
           <div className="p-8 flex-grow">

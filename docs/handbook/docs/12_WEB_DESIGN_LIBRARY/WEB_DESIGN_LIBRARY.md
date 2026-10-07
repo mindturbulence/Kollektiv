@@ -25,6 +25,11 @@ Vault → **Web Design** (`design_library` tab). A personal library of *design r
 | Extraction | `services/designSpecPrompt.ts` (system prompt), `services/designSpecService.ts` (`extractDesignSpec`), `generateDesignSpec` in `services/llmService.ts` |
 | Images / palette | `utils/designImage.ts`, `utils/paletteExtract.ts` (`extractDesignPalette`) |
 | Collections logic | `utils/designCollections.ts` (tree helpers; CRUD is in the storage module) |
+| Import from site | `components/DesignRecipeAddModal.tsx` (URL row), `routes/captureSiteRoutes.ts`, `services/siteCapture.ts`, `utils/captureUrlValidation.ts`, `src/schemas/captureSite.ts` |
+
+## Import from site
+
+The Add dialog can capture a public web page as a reference screenshot (and fills the source URL if empty). It needs the app's server (`POST /api/capture-site`, not available in a plain `vite preview`). The server starts its **own** sandboxed headless Chromium (Playwright's, else Edge, else Chrome; otherwise the error code `capture_unavailable`) with a throwaway profile — it never uses the CDP bridge, so your own Chrome tabs and cookies are untouched. Only `http`/`https` on ports 80/443, no IP literals or internal names; every request the browser makes (redirects and sub-resources included) goes through an in-process proxy that resolves the host itself and connects only to a vetted public IP. Same-origin + JSON-only requests, 6 per minute, one at a time, 30 s, PNG ≤ 8 MB, 1440 px wide and at most 4500 px tall. The page is untrusted: only the PNG, final URL and title come back and nothing is sent to an AI model.
 
 ## Extraction
 
@@ -38,4 +43,6 @@ Vault → **Web Design** (`design_library` tab). A personal library of *design r
 - Deleting a recipe leaves empty `design-library/<id>/` folders (no directory-removal API in the file manager).
 - Export clears `design/refs/*` and its three files before writing; a failure mid-write leaves a partial export.
 - Drive pull restores `prompts/` and `design-library/` (see `syncDriveToLocal`).
-- Verified by unit tests only: real provider calls, real Drive, real folder picker/clipboard/ZIP and a browser walk are owner-verified items at the end of `docs/plans/TASKS.md` § 8. The recipes were checked end to end only in the WDL-05 spike (Claude as extractor and builder, three public landing pages); Codex and Gemini were not tried.
+- Ollama extraction is slow on CPU: with `num_ctx` 32768 a `qwen3-vl:2b` run on a machine without GPU offload (`ollama ps` shows `size_vram: 0`) had not finished after 10+ minutes. Use a GPU-backed vision model, or expect to wait.
+- Import from site: the first capture after the server starts can be slow and may time out once (retry works); pages may serve a bot page to the default headless user agent; the WebRTC leak switch is set but unverified.
+- Verification status (details in `docs/plans/TASKS.md` § 8): unit tests plus a real-browser walk (grid, Library view, upload through the picker, export into a stubbed folder, index recovery, layouts at 390–1440 px) and real captures of public sites by the SD-09 work. **Not verified:** real Gemini/Anthropic/OpenRouter extraction, a finished Ollama extraction, real Drive pull, the real folder picker/clipboard/ZIP, and the Import-from-site row in a real browser. The recipes were checked end to end only in the WDL-05 spike (Claude as extractor and builder, three public landing pages); Codex and Gemini were not tried.
