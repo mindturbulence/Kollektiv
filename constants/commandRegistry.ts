@@ -22,6 +22,7 @@ const NAVIGATION_COMMANDS: CommandItem[] = [
   { id: 'nav-analyzer', label: 'Prompt Analyzer', category: 'Navigation', keywords: ['dissect', 'breakdown', 'anatomy'], execute: () => appEventBus.emit('navigate', 'prompt_analyzer' as ActiveTab) },
   { id: 'nav-abstractor', label: 'Media Abstractor', category: 'Navigation', keywords: ['analyze', 'image', 'vision', 'abstract'], execute: () => appEventBus.emit('navigate', 'media_analyzer' as ActiveTab) },
   { id: 'nav-gallery', label: 'Gallery (Vault)', category: 'Navigation', keywords: ['media', 'images', 'videos', 'archive'], shortcut: '⌘3', execute: () => appEventBus.emit('navigate', 'gallery' as ActiveTab) },
+  { id: 'nav-design-library', label: 'Web Design (Vault)', category: 'Navigation', keywords: ['design', 'recipe', 'screenshots', 'prompt', 'ui'], execute: () => appEventBus.emit('navigate', 'design_library' as ActiveTab) },
   { id: 'nav-library', label: 'Prompt Library', category: 'Navigation', keywords: ['saved', 'prompts', 'templates'], shortcut: '⌘4', execute: () => appEventBus.emit('navigate', 'prompt' as ActiveTab) },
   { id: 'nav-composer', label: 'Grid Composer', category: 'Navigation', keywords: ['contact', 'sheet', 'grid', 'matte'], execute: () => appEventBus.emit('navigate', 'composer' as ActiveTab) },
   { id: 'nav-compare', label: 'Image Compare', category: 'Navigation', keywords: ['diff', 'side', 'viewer'], execute: () => appEventBus.emit('navigate', 'image_compare' as ActiveTab) },

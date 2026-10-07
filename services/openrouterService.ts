@@ -17,7 +17,8 @@ export const fetchOpenRouterModels = async (): Promise<string[]> => {
 
 export async function* streamChatOpenRouter(
     messages: { role: 'user' | 'assistant' | 'system', content: string, attachments?: { data: string, mimeType: string, fileName?: string }[] }[],
-    settings: LLMSettings
+    settings: LLMSettings,
+    options?: { maxTokens?: number }
 ): AsyncGenerator<string> {
     const apiKey = settings.openrouterApiKey;
     if (!apiKey) {
@@ -75,7 +76,8 @@ export async function* streamChatOpenRouter(
             body: JSON.stringify({
                 model: modelName,
                 messages: formattedMessages,
-                stream: true
+                stream: true,
+                ...(options?.maxTokens !== undefined && { max_tokens: options.maxTokens })
             })
         });
 

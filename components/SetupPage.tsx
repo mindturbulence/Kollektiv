@@ -24,6 +24,7 @@ import AppearanceSection from './settings/AppearanceSection';
 import IntegrationsSection from './settings/IntegrationsSection';
 import PromptsSection from './settings/PromptsSection';
 import GallerySection from './settings/GallerySection';
+import DesignLibrarySection from './settings/DesignLibrarySection';
 
 
 interface SetupPageProps {
@@ -678,6 +679,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         handleSettingsChange={handleSettingsChange}
                     />
                 );
+                break;
+            case 'design':
+                content = <DesignLibrarySection />;
                 break;
         }
         return (

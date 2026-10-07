@@ -8,8 +8,8 @@ import { ThinkingOrb } from 'thinking-orbs';
 import type { Idea, GalleryItem } from '../types';
 import { fileSystemManager } from '../utils/fileUtils';
 import GalleryPickerModal from './GalleryPickerModal';
+import { medianCut, type RGBColor } from '../utils/paletteExtract';
 
-type RGBColor = [number, number, number];
 
 interface ColorInfo {
   name: string;
@@ -101,42 +101,6 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
     return `hsl(${h}, ${s}%, ${l}%)`;
   };
 
-  const medianCut = (pixels: RGBColor[], maxClusters: number): RGBColor[] => {
-    if (pixels.length === 0 || maxClusters < 1) return [];
-    const buckets: RGBColor[][] = [pixels];
-    while (buckets.length < maxClusters) {
-      let largestBucketIndex = -1;
-      let largestBucketSize = -1;
-      let largestBucketDimensionRange = -1;
-      for (let i = 0; i < buckets.length; i++) {
-        if (buckets[i].length > largestBucketSize) {
-          const rangeR = Math.max(...buckets[i].map(p => p[0])) - Math.min(...buckets[i].map(p => p[0]));
-          const rangeG = Math.max(...buckets[i].map(p => p[1])) - Math.min(...buckets[i].map(p => p[1]));
-          const rangeB = Math.max(...buckets[i].map(p => p[2])) - Math.min(...buckets[i].map(p => p[2]));
-          const maxRange = Math.max(rangeR, rangeG, rangeB);
-          if (maxRange > largestBucketDimensionRange) { largestBucketIndex = i; largestBucketSize = buckets[i].length; largestBucketDimensionRange = maxRange; }
-        }
-      }
-      if (largestBucketIndex === -1) break;
-      const bucketToSort = buckets[largestBucketIndex];
-      const rangeR = Math.max(...bucketToSort.map(p => p[0])) - Math.min(...bucketToSort.map(p => p[0]));
-      const rangeG = Math.max(...bucketToSort.map(p => p[1])) - Math.min(...bucketToSort.map(p => p[1]));
-      const rangeB = Math.max(...bucketToSort.map(p => p[2])) - Math.min(...bucketToSort.map(p => p[2]));
-      let sortDimension = 0;
-      if (rangeG > rangeR && rangeG > rangeB) sortDimension = 1;
-      if (rangeB > rangeR && rangeB > rangeG) sortDimension = 2;
-      bucketToSort.sort((a, b) => a[sortDimension] - b[sortDimension]);
-      const mid = Math.floor(bucketToSort.length / 2);
-      buckets.splice(largestBucketIndex, 1, bucketToSort.slice(0, mid), bucketToSort.slice(mid));
-    }
-    return buckets.map(bucket => {
-      const avgR = bucket.reduce((sum, p) => sum + p[0], 0) / bucket.length;
-      const avgG = bucket.reduce((sum, p) => sum + p[1], 0) / bucket.length;
-      const avgB = bucket.reduce((sum, p) => sum + p[2], 0) / bucket.length;
-      return [avgR, avgG, avgB];
-    });
-  };
-  
   const extractPalette = useCallback(async (sourceUrl: string, clusters: number) => {
     if (typeof window === 'undefined' || !(window as any).Image || !(window as any).document) return;
     setIsLoading(true);

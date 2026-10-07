@@ -3,7 +3,8 @@ import { trackTokenUsage } from '../utils/settingsStorage';
 
 export async function* streamChatAnthropic(
     messages: { role: 'user' | 'assistant' | 'system', content: string, attachments?: { data: string, mimeType: string, fileName?: string }[] }[],
-    settings: LLMSettings
+    settings: LLMSettings,
+    options?: { maxTokens?: number }
 ): AsyncGenerator<string> {
     const isSubscriptionMode = settings.anthropicConnectionMode === 'subscription';
     
@@ -21,7 +22,8 @@ export async function* streamChatAnthropic(
             body: JSON.stringify({
                 messages,
                 settings,
-                stream: true
+                stream: true,
+                ...(options?.maxTokens !== undefined && { maxTokens: options.maxTokens })
             })
         });
 

@@ -69,6 +69,7 @@ export type ActiveTab =
   | 'media_analyzer'
   | 'prompt'
   | 'gallery'
+  | 'design_library'
 
   | 'resizer'
   | 'converter'
@@ -85,7 +86,7 @@ export type ActiveTab =
   | 'a1111_studio'
   | 'settings';
 
-export type ActiveSettingsTab = 'app' | 'appearance' | 'integrations' | 'prompt' | 'gallery';
+export type ActiveSettingsTab = 'app' | 'appearance' | 'integrations' | 'prompt' | 'gallery' | 'design';
 
 export interface AppError {
   message: string;
@@ -475,6 +476,49 @@ export interface GalleryCategory {
   name: string;
   parentId?: string;
   order: number;
+}
+
+// --- Web Design Library (Vault → Web Design) ---
+export type RecipePageType = 'landing' | 'dashboard' | 'portfolio' | 'ecommerce' | 'docs' | 'app' | 'other';
+/** Adapt = borrow the design system with our brand/content; Reproduce = match the reference closely. */
+export type RecipeMode = 'adapt' | 'reproduce';
+
+/** Index entry in kollektiv_design_library_manifest.json; the spec itself lives in design-library/<id>/DESIGN.md. */
+export interface DesignRecipe {
+  id: string;
+  createdAt: number;
+  updatedAt: number;
+  title: string;
+  pageType: RecipePageType;
+  tags: string[];
+  collectionId?: string;
+  sourceUrl?: string;
+  /** Vault-relative paths of the reference screenshots (PNG/JPEG/WebP). */
+  refs: string[];
+  /** Denormalised from DESIGN.md › Overview for search and cards. */
+  overview: string;
+  /** Up to 5 lowercase `#rrggbb` colours from DESIGN.md front matter. undefined = not derived yet, [] = derived, none usable. */
+  palette?: string[];
+  /** Up to 2 chips such as "Inter / 56px" from DESIGN.md front matter. Same undefined/[] meaning as `palette`. */
+  fonts?: string[];
+}
+
+export interface DesignCollection {
+  id: string;
+  name: string;
+  parentId?: string;
+  order: number;
+}
+
+/** Per-project brief typed in the "Use recipe" dialog; project and pages are required, the rest optional. */
+export interface RecipeBrief {
+  project: string;
+  pages: string;
+  job?: string;
+  audience?: string;
+  content?: string;
+  stack?: string;
+  constraints?: string;
 }
 
 // --- Cheatsheets ---

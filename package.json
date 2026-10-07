@@ -60,6 +60,7 @@
     "simple-rnnoise-wasm": "^1.1.0",
     "thinking-orbs": "^0.3.2",
     "uuid": "^9.0.1",
+    "yaml": "^2.9.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {

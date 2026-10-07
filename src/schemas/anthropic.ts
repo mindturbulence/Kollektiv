@@ -18,4 +18,5 @@ export const AnthropicRequestSchema = z.object({
     anthropicModel: z.string().optional(),
   }).optional(),
   stream: z.boolean().optional(),
+  maxTokens: z.number().int().min(1).max(16000).optional(),
 });

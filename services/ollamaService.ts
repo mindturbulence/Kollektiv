@@ -1,6 +1,7 @@
 import { handleGeminiError } from '../utils/errorHandler'; 
 import type { LLMSettings, EnhancementResult } from '../types';
 import { trackTokenUsage } from '../utils/settingsStorage';
+import { DESIGN_SPEC_USER_TEXT } from './designSpecPrompt';
 
 /**
  * Checks if a URL is targeting the local machine's default Ollama port.
@@ -630,6 +631,52 @@ export const suggestTagsRawOllama = async (base64ImageData: string, promptText: 
         const data = await apiResponse.json();
         return data.message?.content || '';
     } catch (err) { throw handleGeminiError(err, 'analysis'); }
+};
+
+// Not a bare /vision/: "model \"llama3.2-vision\" not found" must keep its own message.
+const NO_VISION = /image input|support(?:s|ed)? (?:for )?(?:images?|vision)|multimodal/i;
+
+/** Raw DESIGN.md text from several screenshots, on the user's configured Ollama model.
+ *  Ollama takes bare base64 per image, so `mimeType` is not sent. */
+export const generateDesignSpecOllama = async (images: { data: string; mimeType: string }[], systemInstruction: string, settings: LLMSettings): Promise<string> => {
+    const config = getOllamaConfig(settings);
+    if (!config.baseUrl || !config.model) {
+        throw new Error('Ollama is not configured: set the base URL and pick a vision-capable model in Settings > Integrations.');
+    }
+    let res: Response;
+    try {
+        res = await fetch(`${config.baseUrl}/api/chat`, {
+            method: 'POST',
+            headers: config.headers,
+            body: JSON.stringify({
+                model: config.model,
+                messages: [
+                    { role: 'system', content: systemInstruction },
+                    { role: 'user', content: DESIGN_SPEC_USER_TEXT, images: images.map((i) => i.data) },
+                ],
+                stream: false,
+                ...BASE_CONFIG,
+                // ponytail: fixed window sized for ~5 screenshots + 8192 output; Ollama's default is far smaller and cuts the spec off.
+                options: { ...BASE_CONFIG.options, num_predict: 8192, num_ctx: 32768 },
+            }),
+        });
+    } catch (err) {
+        throw handleGeminiError(err, 'extracting a design spec with Ollama');
+    }
+    // Thrown outside handleGeminiError, which rewrites any message mentioning 400 or JSON into generic text.
+    if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        let detail = body;
+        try { detail = (JSON.parse(body) as { error?: string }).error ?? body; } catch { /* plain-text body */ }
+        if (NO_VISION.test(detail)) {
+            throw new Error(`The Ollama model "${config.model}" cannot read images. Pick a vision-capable model (e.g. qwen2.5vl, llama3.2-vision, gemma3) in Settings > Integrations.`);
+        }
+        throw new Error(`Ollama returned ${res.status}${detail ? `: ${detail.slice(0, 300)}` : ''}`);
+    }
+    const data = (await res.json()) as { message?: { content?: string }; prompt_eval_count?: number; eval_count?: number };
+    const tokens = (data.prompt_eval_count || 0) + (data.eval_count || 0);
+    if (tokens > 0) trackTokenUsage(settings.activeLLM === 'ollama_cloud' ? 'ollama_cloud' : 'ollama', tokens);
+    return data.message?.content || '';
 };
 
 export const generatePromptFormulaOllama = async (promptText: string, settings: LLMSettings, systemInstruction: string): Promise<string> => {

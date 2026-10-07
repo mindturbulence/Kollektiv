@@ -313,7 +313,7 @@ async function startServer() {
   // Anthropic API Proxy Endpoint
   app.post("/api/anthropic/chat", authRateLimiter, validate(AnthropicRequestSchema), async (req, res) => {
     try {
-      const { messages, settings, stream } = req.body;
+      const { messages, settings, stream, maxTokens } = req.body;
       
       const isSubscriptionMode = settings.anthropicConnectionMode === 'subscription';
       const apiKey = isSubscriptionMode 
@@ -369,7 +369,7 @@ async function startServer() {
       const requestBody: any = {
         model: settings.anthropicModel || DEFAULT_ANTHROPIC_MODEL,
         messages: formattedMessages,
-        max_tokens: 4096,
+        max_tokens: maxTokens ?? 4096,
         stream: stream !== false
       };
 

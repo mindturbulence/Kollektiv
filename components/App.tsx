@@ -34,6 +34,7 @@ import DiscoveryPage from './DiscoveryPage';
 import PromptsPage from './PromptsPage';
 import SavedPrompts from './SavedPrompts';
 import ImageGallery from './ImageGallery';
+import DesignLibrary from './DesignLibrary';
 
 import { SetupPage } from './SetupPage';
 import ComposerPage from './ComposerPage';
@@ -207,6 +208,7 @@ const AppContent: React.FC = () => {
             case 'prompt_analyzer': return `ANALYZER | ${base}`;
             case 'media_analyzer': return `MEDIA | ${base}`;
             case 'gallery': return `VAULT | ${base}`;
+            case 'design_library': return `WEB DESIGN | ${base}`;
             case 'prompt': return `LIBRARY | ${base}`;
             case 'settings': return `SETTINGS | ${base}`;
             case 'composer': return `COMPOSER | ${base}`;
@@ -452,6 +454,7 @@ const AppContent: React.FC = () => {
             case 'media_analyzer': return <PromptsPage key="prompts" forcedView="analyzer" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState}                            onStateHandled={handleClearPromptsPageState} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
             case 'prompt': return <SavedPrompts key="prompts" {...categoryPanelProps}                    onSendToEnhancer={handleSendToEnhancer} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} isExiting={false} />;
             case 'gallery': return <ImageGallery key="gallery" {...categoryPanelProps} isSidebarPinned={false} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'design_library': return <DesignLibrary key="design_library" showGlobalFeedback={showGlobalFeedback} />;
 
             case 'settings': return <SetupPage key="settings" activeSettingsTab={activeSettingsTab} setActiveSettingsTab={setActiveSettingsTab} activeSubTab={activeSettingsSubTab} setActiveSubTab={setActiveSettingsSubTab} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
             case 'composer': return <ComposerPage key="composer" showGlobalFeedback={showGlobalFeedback} isExiting={false} />;

@@ -27,6 +27,32 @@ describe('ConfirmationModal (on the shared Modal)', () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
+  it('default render keeps the HUD wording and button labels', () => {
+    render(<ConfirmationModal isOpen onClose={vi.fn()} onConfirm={vi.fn()} title="Delete item" message="Really delete?" />);
+    expect(screen.getByRole('heading', { level: 3 }).innerHTML).toBe('CONFIRM<span class="text-base-content/60">.</span>');
+    expect(screen.getByLabelText('Cancel action').textContent).toBe('Abort');
+    expect(screen.getByLabelText('Confirm action').textContent).toBe('Execute');
+    expect(screen.getByLabelText('Confirm action').className).toContain('btn-error');
+  });
+
+  it('optional heading and labels replace the defaults; aria-labels and behaviour stay', () => {
+    const onClose = vi.fn(), onConfirm = vi.fn();
+    render(
+      <ConfirmationModal
+        isOpen onClose={onClose} onConfirm={onConfirm} title="Delete recipe" message="Sure?"
+        heading="Delete this recipe?" confirmLabel="Delete" cancelLabel="Cancel"
+      />,
+    );
+    expect(screen.getByRole('heading', { level: 3 }).textContent).toBe('Delete this recipe?');
+    expect(screen.queryByText(/CONFIRM/)).toBeNull();
+    expect(screen.getByLabelText('Confirm action').textContent).toBe('Delete');
+    expect(screen.getByLabelText('Cancel action').textContent).toBe('Cancel');
+    fireEvent.click(screen.getByLabelText('Confirm action'));
+    fireEvent.click(screen.getByLabelText('Cancel action'));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps focus inside: Tab from the last button wraps to the first', () => {
     render(<ConfirmationModal isOpen onClose={vi.fn()} onConfirm={vi.fn()} title="t" message="m" />);
     const abort = screen.getByLabelText('Cancel action');

@@ -30,6 +30,7 @@ export const NAV_GROUPS: NavGroup[] = [
     id: 'vault', label: 'Vault', items: [
       { id: 'prompt', label: 'Prompt' },
       { id: 'gallery', label: 'Media' },
+      { id: 'design_library', label: 'Web Design' },
     ],
   },
   {

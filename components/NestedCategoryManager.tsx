@@ -18,13 +18,14 @@ interface Category {
 
 interface NestedCategoryManagerProps {
   title: string;
-  type: 'gallery' | 'prompt';
+  type: 'gallery' | 'prompt' | 'design';
   loadFn: () => Promise<Category[]>;
   addFn: (name: string, parentId?: string) => Promise<Category[]>;
   updateFn: (id: string, updates: any) => Promise<Category[]>;
   deleteFn: (id: string) => Promise<Category[]>;
   saveOrderFn: (categories: Category[]) => Promise<void>;
-  deleteConfirmationMessage: (name: string) => string;
+  /** The id lets a caller describe what the delete will do to that specific entry (e.g. counts). */
+  deleteConfirmationMessage: (name: string, id: string) => string;
 }
 
 // Circular-safe helper: find all categories that are NOT the target itself or any of its descendants
@@ -281,12 +282,29 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addParentId, setAddParentId] = useState<string | undefined>(undefined);
   const [addName, setAddName] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     void loadFn().then(setCategories);
   }, [loadFn]);
 
-  const handleReorder = async (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => {
+  // A rejected callback (duplicate name, blocked manifest, cycle...) is shown instead of vanishing as an unhandled
+  // rejection; the list is reloaded because reorders are applied optimistically.
+  const guard = async (fn: () => Promise<void>) => {
+      setError(null);
+      try {
+          await fn();
+      } catch (e) {
+          setError(e instanceof Error ? e.message : String(e));
+          void loadFn().then(setCategories, () => {});
+      }
+  };
+
+  const errorAlert = error && (
+      <p role="alert" className="text-xs text-error break-words">{error}</p>
+  );
+
+  const handleReorder = (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => guard(async () => {
       const cat = categories.find(c => c.id === id);
       if (!cat) return;
       const siblings = categories.filter(c => c.parentId === cat.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -313,9 +331,9 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
       
       setCategories(updatedAll);
       await saveOrderFn(updatedAll);
-  };
+  });
 
-  const handleSortAZ = async () => {
+  const handleSortAZ = () => guard(async () => {
       const allSorted = [...categories];
       const sortRecursively = (parentId?: string) => {
           const children = allSorted
@@ -331,19 +349,19 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
       sortRecursively(undefined);
       setCategories(allSorted);
       await saveOrderFn(allSorted);
-  };
+  });
 
-  const handleReparent = async (id: string, newParentId?: string) => {
+  const handleReparent = (id: string, newParentId?: string) => guard(async () => {
       const updated = await updateFn(id, { parentId: newParentId });
       setCategories(updated);
-  };
+  });
 
-  const handleInlineRename = async (id: string, newName: string) => {
+  const handleInlineRename = (id: string, newName: string) => guard(async () => {
       const updated = await updateFn(id, { name: newName });
       setCategories(updated);
-  };
+  });
 
-  const handleConfirmAdd = async () => {
+  const handleConfirmAdd = () => guard(async () => {
       if (addName.trim()) {
           const updated = await addFn(addName.trim(), addParentId);
           setCategories(updated);
@@ -351,6 +369,12 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
           setAddName('');
           setAddParentId(undefined);
       }
+  });
+
+  const handleConfirmDelete = () => {
+      const target = categoryToDelete;
+      setIsModalOpen(false);
+      if (target) void guard(async () => { setCategories(await deleteFn(target.id)); });
   };
 
   const rootCategories = categories.filter(c => !c.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -394,6 +418,8 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
             </div>
         </header>
 
+        {!isAddModalOpen && errorAlert && <div className="px-6 pb-3 flex-shrink-0">{errorAlert}</div>}
+
         <div className="flex-grow overflow-y-auto bg-transparent">
             {categories.length > 0 ? (
                 <div className="flex flex-col pb-20">
@@ -422,7 +448,7 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
         </div>
 
         {isAddModalOpen && (
-            <Modal isOpen={true} onClose={() => setIsAddModalOpen(false)} title="Add category" bare size="7xl" className="" backdropClassName="bg-black/80">
+            <Modal isOpen={true} onClose={() => { setError(null); setIsAddModalOpen(false); }} title="Add category" bare size="7xl" className="" backdropClassName="bg-black/80">
                 <div className="flex flex-col bg-transparent w-full max-w-lg mx-auto relative p-[3px] corner-frame overflow-visible" onClick={e => e.stopPropagation()}>
                     <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
                         <header className="p-8 border-b border-base-300 bg-transparent">
@@ -434,9 +460,10 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
                                 <label className="text-2xs font-black uppercase tracking-widest text-base-content/60 mb-2">Folder Name</label>
                                 <input type="text" value={addName} onChange={e => setAddName((e.currentTarget as any).value)} className="form-input w-full" autoFocus onKeyDown={e => e.key === 'Enter' && handleConfirmAdd()} />
                             </div>
+                            {errorAlert}
                         </div>
                         <footer className="p-4 border-t border-base-300 flex justify-end gap-2 bg-transparent">
-                            <button onClick={() => { audioService.playClick(); setIsAddModalOpen(false); }} className="form-btn px-8">Abort</button>
+                            <button onClick={() => { audioService.playClick(); setError(null); setIsAddModalOpen(false); }} className="form-btn px-8">Abort</button>
                             <button onClick={() => { audioService.playClick(); void handleConfirmAdd(); }} disabled={!addName.trim()} className="form-btn form-btn-primary px-8 shadow-lg">Create</button>
                         </footer>
                     </div>
@@ -447,9 +474,9 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
         <ConfirmationModal
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
-            onConfirm={async () => { if(categoryToDelete) { const updated = await deleteFn(categoryToDelete.id); setCategories(updated); } setIsModalOpen(false); }}
+            onConfirm={handleConfirmDelete}
             title="Purge Folder"
-            message={categoryToDelete ? deleteConfirmationMessage(categoryToDelete.name) : ''}
+            message={categoryToDelete ? deleteConfirmationMessage(categoryToDelete.name, categoryToDelete.id) : ''}
         />
     </div>
   );

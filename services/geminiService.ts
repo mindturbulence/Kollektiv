@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import { handleGeminiError } from '../utils/errorHandler';
 import type { EnhancementResult, LLMSettings } from '../types';
 import { trackTokenUsage } from '../utils/settingsStorage';
+import { DESIGN_SPEC_USER_TEXT } from './designSpecPrompt';
 
 export const getGeminiClient = (settings: LLMSettings): GoogleGenAI => {
     const apiKey = settings?.geminiApiKey || process.env.GEMINI_API_KEY;
@@ -450,6 +451,29 @@ export const suggestTagsRawGemini = async (base64ImageData: string, promptText: 
         });
         return response.text || '';
     } catch (err) { throw handleGeminiError(err, 'analysis'); }
+};
+
+/** Raw DESIGN.md text from several screenshots; parsing and validation live in services/designSpecService.ts. */
+export const generateDesignSpecGemini = async (images: { data: string; mimeType: string }[], systemInstruction: string, settings: LLMSettings): Promise<string> => {
+    try {
+        const ai = getGeminiClient(settings);
+        const response = await ai.models.generateContent({
+            model: getMappedModel(DEFAULT_MODEL),
+            contents: [
+                ...images.map(({ data, mimeType }) => ({ inlineData: { mimeType, data } })),
+                { text: DESIGN_SPEC_USER_TEXT },
+            ],
+            config: {
+                systemInstruction,
+                maxOutputTokens: 8192,
+                thinkingConfig: { thinkingBudget: 0 }
+            }
+        });
+        if (response.usageMetadata?.totalTokenCount) {
+            trackTokenUsage('gemini', response.usageMetadata.totalTokenCount);
+        }
+        return response.text || '';
+    } catch (err) { throw handleGeminiError(err, 'extract a design spec with Gemini'); }
 };
 
 export const generateWithImagen = async (prompt: string, aspectRatio: string = '1:1', settings?: LLMSettings): Promise<string> => {
