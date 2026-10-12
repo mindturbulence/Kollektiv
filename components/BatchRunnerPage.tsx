@@ -5,10 +5,11 @@ import { loadSavedPrompts } from '../utils/promptStorage';
 import { loadGalleryItems } from '../utils/galleryStorage';
 import { useSettings } from '../contexts/SettingsContext';
 import type { SavedPrompt, GalleryItem } from '../types';
+import { PaperScope } from './PaperScope';
 
 type InputTab = 'prompt' | 'gallery_item';
 
-const BatchRunnerPage: React.FC = () => {
+const BatchRunnerView: React.FC = () => {
   const { settings } = useSettings();
   const { state, start, cancel, reset } = useBatchRun();
 
@@ -21,7 +22,6 @@ const BatchRunnerPage: React.FC = () => {
 
   const selectedOp = BATCH_OPERATIONS.find(o => o.id === selectedOpId);
 
-  // Load input items for the selected operation
   useEffect(() => {
     const kind = selectedOp?.inputKind ?? 'prompt';
     setInputTab(kind);
@@ -65,37 +65,34 @@ const BatchRunnerPage: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col font-mono">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-lg font-black uppercase tracking-tighter">Batch Runner</h1>
-        <p className="text-xs text-base-content/60 mt-1">
-          Run an operation across multiple items with live progress.
-        </p>
-      </div>
+    <div className="h-full flex flex-col">
+      <header className="pb-4 md:pb-6">
+        <span className="text-xs font-medium text-base-content/60 block">Dev</span>
+        <h1 className="paper-title text-2xl md:text-3xl lg:text-4xl leading-none">Batch Runner</h1>
+        <p className="text-sm text-base-content/60 pt-1">Run an operation across multiple items with live progress.</p>
+      </header>
 
       <div className="flex-1 flex gap-6 min-h-0">
         {/* Left: Configuration */}
-        <div className="w-72 shrink-0 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
+        <div className="w-72 shrink-0 flex flex-col gap-4 overflow-y-auto">
           {/* Operation picker */}
-          <div>
-            <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60 block mb-2">
-              Operation
-            </label>
-            <div className="flex flex-col gap-1">
+          <div className="paper-card flex flex-col">
+            <div className="flex-shrink-0 h-10 px-4 flex items-center border-b border-base-content/10">
+              <span className="text-xs font-semibold">Operation</span>
+            </div>
+            <div className="flex flex-col gap-1 p-3">
               {BATCH_OPERATIONS.map(op => (
                 <button
                   key={op.id}
+                  type="button"
                   onClick={() => setSelectedOpId(op.id)}
-                  className={`text-left px-3 py-2 text-xs font-mono rounded transition-colors ${
-                    selectedOpId === op.id
-                      ? 'bg-primary/15 text-primary border border-primary/20'
-                      : 'bg-base-300/30 text-base-content/60 hover:bg-base-300/50 border border-transparent'
-                  }`}
+                  className={`paper-btn w-full justify-start text-left ${selectedOpId === op.id ? 'paper-btn-primary' : 'paper-btn-ghost'}`}
                 >
-                  {op.label}
-                  <span className="block text-2xs text-base-content/60 mt-0.5">
-                    {op.inputKind === 'prompt' ? 'Saved prompts' : 'Gallery items'}
+                  <span className="flex flex-col items-start gap-0.5">
+                    <span>{op.label}</span>
+                    <span className="text-2xs opacity-70">
+                      {op.inputKind === 'prompt' ? 'Saved prompts' : 'Gallery items'}
+                    </span>
                   </span>
                 </button>
               ))}
@@ -103,40 +100,39 @@ const BatchRunnerPage: React.FC = () => {
           </div>
 
           {/* Input source */}
-          <div>
-            <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60 block mb-2">
-              {inputTab === 'prompt' ? 'Saved Prompts' : 'Gallery Items'}
-            </label>
-            {loadingInputs ? (
-              <div className="text-2xs text-base-content/60 animate-pulse">Loading…</div>
-            ) : items.length === 0 ? (
-              <div className="text-2xs text-base-content/60">No items found.</div>
-            ) : (
-              <div className="flex flex-col gap-0.5 max-h-[300px] overflow-y-auto custom-scrollbar">
-                {items.map(item => {
-                  const label = 'title' in item ? String(item.title ?? '') : '';
-                  const display = label || item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => toggleId(item.id)}
-                      className={`text-left px-2 py-1 text-2xs font-mono rounded truncate transition-colors ${
-                        selectedIds.has(item.id)
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-base-content/60 hover:bg-base-content/5'
-                      }`}
-                    >
-                      {display}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+          <div className="paper-card flex flex-col">
+            <div className="flex-shrink-0 h-10 px-4 flex items-center border-b border-base-content/10">
+              <span className="text-xs font-semibold">{inputTab === 'prompt' ? 'Saved Prompts' : 'Gallery Items'}</span>
+            </div>
+            <div className="p-3">
+              {loadingInputs ? (
+                <div className="text-2xs text-base-content/60 animate-pulse">Loading…</div>
+              ) : items.length === 0 ? (
+                <div className="text-2xs text-base-content/60">No items found.</div>
+              ) : (
+                <div className="flex flex-col gap-0.5 max-h-[300px] overflow-y-auto custom-scrollbar">
+                  {items.map(item => {
+                    const label = 'title' in item ? String(item.title ?? '') : '';
+                    const display = label || item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => toggleId(item.id)}
+                        className={`paper-btn paper-btn-sm w-full justify-start text-left truncate ${selectedIds.has(item.id) ? 'paper-btn-primary' : 'paper-btn-ghost'}`}
+                      >
+                        {display}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Pre-run summary */}
-          <div className="bg-base-300/20 border border-base-content/10 rounded p-3 text-2xs">
-            <div className="text-base-content/60 uppercase tracking-wider mb-1">Summary</div>
+          <div className="paper-card p-3 text-2xs">
+            <div className="text-xs font-semibold mb-1">Summary</div>
             <div className="text-base-content/60">
               {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} · {activeProvider}
             </div>
@@ -146,24 +142,27 @@ const BatchRunnerPage: React.FC = () => {
           <div className="flex gap-2">
             {state.running ? (
               <button
+                type="button"
                 onClick={cancel}
-                className="flex-1 h-8 text-2xs font-bold uppercase tracking-widest rounded bg-error/20 text-error hover:bg-error/30 transition-colors"
+                className="paper-btn paper-btn-danger flex-1"
               >
                 Cancel ({state.doneCount}/{state.total})
               </button>
             ) : (
               <button
+                type="button"
                 onClick={handleRun}
                 disabled={!selectedOpId || selectedItems.length === 0}
-                className="flex-1 h-8 text-2xs font-bold uppercase tracking-widest rounded bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                className="paper-btn paper-btn-primary flex-1"
               >
                 Run
               </button>
             )}
             {state.summary && !state.running && (
               <button
+                type="button"
                 onClick={reset}
-                className="h-8 px-3 text-2xs font-bold uppercase tracking-widest rounded bg-base-content/5 text-base-content/60 hover:bg-base-content/10 transition-colors"
+                className="paper-btn paper-btn-sm self-center"
               >
                 Clear
               </button>
@@ -189,9 +188,9 @@ const BatchRunnerPage: React.FC = () => {
 
           {state.summary && !state.running && (
             <div className="mb-3 flex gap-3 text-2xs">
-              <span className="text-green-500/70">{state.summary.completed} done</span>
-              {state.summary.failed > 0 && <span className="text-error/70">{state.summary.failed} failed</span>}
-              {state.summary.cancelled && <span className="text-warning/70">Cancelled</span>}
+              <span className="text-success">{state.summary.completed} done</span>
+              {state.summary.failed > 0 && <span className="text-error">{state.summary.failed} failed</span>}
+              {state.summary.cancelled && <span className="text-warning">Cancelled</span>}
               <span className="text-base-content/60">{(state.summary.totalMs / 1000).toFixed(1)}s</span>
             </div>
           )}
@@ -208,15 +207,14 @@ const BatchRunnerPage: React.FC = () => {
             {state.results.map((r, i) => (
               <div
                 key={i}
-                className={`flex items-start gap-2 px-3 py-2 rounded text-2xs font-mono ${
-                  r.status === 'done' ? 'bg-green-500/5 border border-green-500/10' :
-                  r.status === 'failed' ? 'bg-error/5 border border-error/10' :
-                  r.status === 'cancelled' ? 'bg-warning/5 border border-warning/10' :
-                  'bg-base-300/20'
+                className={`paper-card flex items-start gap-2 px-3 py-2 text-2xs font-mono ${
+                  r.status === 'done' ? '!border-success/20 !bg-success/5' :
+                  r.status === 'failed' ? '!border-error/20 !bg-error/5' :
+                  r.status === 'cancelled' ? '!border-warning/20 !bg-warning/5' : ''
                 }`}
               >
                 <span className={`shrink-0 w-1.5 h-1.5 rounded-full mt-1 ${
-                  r.status === 'done' ? 'bg-green-500' :
+                  r.status === 'done' ? 'bg-success' :
                   r.status === 'failed' ? 'bg-error' :
                   r.status === 'cancelled' ? 'bg-warning' :
                   'bg-base-content/20'
@@ -243,6 +241,10 @@ const BatchRunnerPage: React.FC = () => {
     </div>
   );
 };
+
+const BatchRunnerPage: React.FC = () => (
+  <PaperScope><BatchRunnerView /></PaperScope>
+);
 
 export { BatchRunnerPage };
 export default BatchRunnerPage;
