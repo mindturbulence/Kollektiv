@@ -1,6 +1,6 @@
 import type { CaptureErrorCode } from './captureSite';
 
-// POST /api/clone-site (CL-1, plan docs/plans/2026-10-07-website-clone.md). Same request body and error codes as
+// POST /api/clone-site (CL-1; see docs/handbook/docs/12_WEB_DESIGN_LIBRARY/WEB_DESIGN_LIBRARY.md). Same request body and error codes as
 // /api/capture-site. Everything below came out of an untrusted page and has been through sanitizeMeasurements:
 // strings that are not a colour, length, font family, path or known name were dropped. Visible text is the one
 // free-text field (`text`, `heading`, labels, alt) and must stay fenced as data wherever it is used.

@@ -1,5 +1,5 @@
 /**
- * System prompt for "Clone a website" (CL-2, plan docs/plans/2026-10-07-website-clone.md). Unlike the screenshot
+ * System prompt for "Clone a website" (CL-2; see docs/handbook/docs/12_WEB_DESIGN_LIBRARY/WEB_DESIGN_LIBRARY.md). Unlike the screenshot
  * prompt in designSpecPrompt.ts, the model gets measured values from the live page and must use them verbatim.
  * Page copy reaches the model only inside the fenced untrusted block. The clone sections come before Signature so a
  * cut-off answer still shows up as truncated (parseDesignSpec checks for Signature).

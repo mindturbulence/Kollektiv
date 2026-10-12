@@ -1,5 +1,5 @@
 // ─── Looks Lab (#looks-lab) — Phase 0 diagnostics page ──────────────────────
-// Runs the Phase 0 measurements of docs/plans/2026-09-28-image-editor-looks.md
+// Runs the Phase 0 measurements of the Looks plan (docs/handbook/docs/11_IMAGE_EDITOR/IMAGE_EDITOR.md)
 // on the user's real GPU and browser (headless test browsers use a software
 // GPU, so their numbers don't count). Standalone route: no app shell, no vault.
 

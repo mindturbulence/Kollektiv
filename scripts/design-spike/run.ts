@@ -7,6 +7,7 @@ import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { medianCut } from '../../utils/paletteExtract';
 import { fitWithin } from '../../utils/designImage';
+import { DESIGN_SPEC_PROMPT } from '../../services/designSpecPrompt';
 import { parseDesignSpec, serializeDesignSpec } from '../../utils/designSpec';
 import { compileRecipePrompt, renderBriefMd } from '../../utils/designRecipePrompt';
 import type { RecipeBrief } from '../../types';
@@ -138,15 +139,7 @@ async function palette(browser: Browser, file: string, clusters = 8): Promise<st
   return medianCut(pixels, clusters).map(toHex);
 }
 
-function extractionPrompt(): string {
-  const plan = readFileSync(resolve('docs/plans/2026-10-05-web-design-library.md'), 'utf8');
-  const m = /## Extraction prompt[\s\S]*?```\n([\s\S]*?)\n```/.exec(plan);
-  if (!m) throw new Error('extraction prompt block not found in plan');
-  return m[1];
-}
-
 async function extract(browser: Browser, names: string[]): Promise<void> {
-  const tpl = extractionPrompt();
   for (const s of SITES.filter(x => names.length === 0 || names.includes(x.name))) {
     const dir = p('extract', s.name);
     ensure(dir);
@@ -154,7 +147,7 @@ async function extract(browser: Browser, names: string[]): Promise<void> {
     if (!existsSync(palFile)) writeFileSync(palFile, JSON.stringify(await palette(browser, p('refs', `${s.name}.png`))));
     const pal = JSON.parse(readFileSync(palFile, 'utf8')) as string[];
     const sysFile = join(dir, 'system-prompt.txt');
-    writeFileSync(sysFile, tpl.replace('{palette}', pal.join(', ')));
+    writeFileSync(sysFile, DESIGN_SPEC_PROMPT.replace(/\{(palette|imgWidth|viewportWidth|scale|images)\}/g, (_, k: string) => ({ palette: pal.join(', '), imgWidth: '1440', viewportWidth: '1440', scale: '1', images: '1) full-page screenshot' })[k] ?? ''));
     for (let attempt = 1; attempt <= 2; attempt++) {
       const rawFile = join(dir, `raw-${attempt}.md`);
       if (!existsSync(rawFile)) {

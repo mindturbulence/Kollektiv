@@ -1,8 +1,7 @@
 import type { RGBColor } from '../utils/paletteExtract';
 
 /**
- * System prompt for generateDesignSpec. Single source of truth in code; the plan
- * (docs/plans/2026-10-05-web-design-library.md § Extraction prompt) explains it. Only the last
+ * System prompt for generateDesignSpec. Single source of truth in code. Only the last
  * line ({images}) is added here, to tell the model which screenshot to measure on.
  */
 export const DESIGN_SPEC_PROMPT = `You are a senior product designer reverse-engineering a website design system from screenshots.

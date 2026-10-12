@@ -1,6 +1,6 @@
 # Web Design Library
 
-Vault → **Web Design** (`design_library` tab). A personal library of *design recipes*: reference screenshots plus a structured design spec, turned at use-time into a one-shot prompt for a file-reading coding agent (Claude Code, Codex, Gemini CLI). Decisions, council review and the WDL-05 spike result live in [the plan](../../../plans/2026-10-05-web-design-library.md); this page is the map of what exists.
+Vault → **Web Design** (`design_library` tab). A personal library of *design recipes*: reference screenshots plus a structured design spec, turned at use-time into a one-shot prompt for a file-reading coding agent (Claude Code, Codex, Gemini CLI). Decisions, council review and the WDL-05 spike result are in the original plans, kept in git history at commit `1bff4895` (`docs/plans/2026-10-05-web-design-library.md`, `docs/plans/2026-10-07-website-clone.md`); this page is the map of what exists.
 
 ## How it works
 

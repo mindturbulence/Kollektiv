@@ -174,7 +174,7 @@ Kollektiv includes specialized UI environments designed for high-focus creative 
 - **Pip-Boy**: retro-futuristic CRT aesthetic with digital jitter and terminal typography
 - **Abyss**: deep dark mode for absolute focus
 - **Vanguard** / **Hiigara**: amber and blue HUD variants
-- **Sanrita**: the light theme — deep green accent on a near-white base
+- **Heron**: warm dark base with an off-white text and an orange accent (the former light theme, inverted to dark 2026-10-12)
 
 26 themes are selectable in Settings → Appearance or cycled with the header palette button / the command palette's "Next Theme". The list lives in `constants/themes.ts` and every entry is contrast-checked by `utils/themeContrast.test.ts`.
 
