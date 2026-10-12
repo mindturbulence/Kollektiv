@@ -329,7 +329,7 @@ export function parseDocs(raw: string): Partial<ProjectDocs> {
   const parts = raw.split(/^=+\s*(PRD|BRD|TASKS|ISSUES)\.md\s*=+\s*$/m);
   for (let i = 1; i < parts.length; i += 2) {
     const name = `${parts[i]}.md` as ProjectDocName;
-    const body = parts[i + 1]?.replace(/^```(?:markdown|md)?\s*\n|\n```\s*$/g, '').trim();
+    const body = parts[i + 1]?.replace(/^\n?```(?:markdown|md)?\s*\n|\n```\s*$/g, '').trim();
     if (body) out[name] = `${body}\n`;
   }
   return out;
