@@ -77,7 +77,7 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 > (`sameOriginGuard`), image editor made correct (transforms, crop, lossless autosave,
 > selections), design tokens for type/z-index/motion, shared `Modal` and `EmptyState`,
 > typed `AppEvents` event bus, entry bundle 4.1 → 2.6 MB, CI with a Playwright job, and the
-> `sanrita` light theme. Unused `helmet`/`cors`/`vfile` removed. 1549 tests, e2e green.
+> `Heron` light theme. Unused `helmet`/`cors`/`vfile` removed. 1549 tests, e2e green.
 > Record: [ARCHITECTURE_CONSTITUTION.md → Phase 8](docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md);
 > open items: `docs/plans/TASKS.md`.
 

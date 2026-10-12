@@ -42,7 +42,7 @@ Tailwind 3 + DaisyUI 4 utility classes. No CSS-in-JS, no styled-components.
 - **No `transition-all`.** Name the properties that actually change (`transition-colors`, `transition-opacity`, `transition-[width]`, …). The repo is at zero.
 - **Readable text ≥ `/60` opacity** of `base-content`; decorative ≥ `/50`.
 - **Dialogs use `components/Modal.tsx`; empty states use `components/EmptyState.tsx`.** Don't hand-roll another `fixed inset-0` overlay.
-- **Themes are light and dark.** `sanrita` is a light theme, so hard-coded `white`/`black` (`text-white`, `bg-black/40`, …) breaks it — use DaisyUI tokens. The selectable list is `THEMES` in `constants/themes.ts`; adding one there runs it through `utils/themeContrast.test.ts`.
+- **Themes are light and dark.** `Heron` is a light theme, so hard-coded `white`/`black` (`text-white`, `bg-black/40`, …) breaks it — use DaisyUI tokens. The selectable list is `THEMES` in `constants/themes.ts`; adding one there runs it through `utils/themeContrast.test.ts`.
 
 
 ## 4. State, Settings and Storage

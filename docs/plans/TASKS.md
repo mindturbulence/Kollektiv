@@ -62,7 +62,7 @@ Boundary: Assets Manager = external multi-root browser; Vault gallery = ingested
 - [x] **T2** — ESLint: 321 errors + 72 warnings → **0 and 0**, and the CI step is blocking (2026-09-30). Autofixes that typecheck; test-file overrides for `unbound-method`/`no-require-imports`; `require-await` off (Jev 0.80: interface-conforming async methods); `literal | string` → `(string & {})`; unused `catch (e)` → `catch`; explained suppressions for deliberate coercions, the LoRA calculator's `new Function` and two crossfade effects that read the previous image. The last 9 hook warnings were reviewed one by one: two were real stale-closure bugs (img2img reference image/strength ignored after a change; Refiner modifier weights ignored after a change), now fixed. **M**
 - [x] Page content visible at t=0: `TerminalText` start delays capped at 150 ms in the component (all 22 call sites); the decrypt effect stays. (2026-09-29)
 - [x] Motion leftovers (2026-09-30): ScanLine animates a transform not `top`; `.animate-fade-in` uses the 250 ms token; AboutModal scales from 0.92 not 0; CustomCursor uses `gsap.quickTo`; ChromaticText flickers on a 60 ms timer instead of a per-frame rAF loop; the 12 boot blinds lost their stacked backdrop-blur; InitialLoader's forced waits trimmed (system text 3.2 s → 1.2 s, completion 1 s → 0.25 s, crossfades 1 s → 0.5 s).
-- [ ] Light theme (`sanrita`) polish: ~200 hard-coded `white`/`black`; dark dashboard artwork reads as grey haze. **M**
+- [ ] Light theme (`Heron`) polish: ~200 hard-coded `white`/`black`; dark dashboard artwork reads as grey haze. **M**
 - [ ] V12 phone width (390 px) — deferred by design (desktop-first). **L**
 
 ## 4. Home
