@@ -13,6 +13,7 @@ import TreeView, { type TreeViewItem } from './TreeView';
 import CategoryPanelToggle from './CategoryPanelToggle';
 import DesignLibrarySection from './settings/DesignLibrarySection';
 import DesignRecipeAddModal from './DesignRecipeAddModal';
+import CloneSiteModal from './CloneSiteModal';
 import DesignRecipeDetail from './DesignRecipeDetail';
 import UseRecipeModal from './UseRecipeModal';
 import DesignRecipeCard from './DesignRecipeCard';
@@ -71,6 +72,15 @@ const saveView = (view: LibraryView): void => {
   }
 };
 
+const PanelCorners: React.FC = () => (
+  <>
+    <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+    <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+    <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+    <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
+  </>
+);
+
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
 const errorText =(e: unknown): string => (e instanceof Error ? e.message : String(e));
@@ -92,6 +102,7 @@ const DesignLibraryView: React.FC<DesignLibraryProps> = ({ showGlobalFeedback, o
   const [pageType, setPageType] = useState<'all' | RecipePageType>('all');
   const [tag, setTag] = useState<string | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isCloneOpen, setIsCloneOpen] = useState(false);
   const [toDelete, setToDelete] = useState<DesignRecipe | null>(null);
   const [toUse, setToUse] = useState<DesignRecipe | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -177,6 +188,7 @@ const DesignLibraryView: React.FC<DesignLibraryProps> = ({ showGlobalFeedback, o
   const closeManage = () => { setManageOpen(false); void refresh(); };
 
   const openAdd = () => { audioService.playClick(); setActionError(null); setIsAddOpen(true); };
+  const openClone = () => { audioService.playClick(); setActionError(null); setIsCloneOpen(true); };
 
   const rebuildIndex = async () => {
     audioService.playClick();
@@ -244,45 +256,44 @@ const DesignLibraryView: React.FC<DesignLibraryProps> = ({ showGlobalFeedback, o
       {/* Below md the panel is an overlay (out of flow), so collapsed it costs the content no width. */}
       <aside className={`absolute inset-y-2 left-2 md:relative md:inset-auto z-dropdown flex-shrink-0 transition-[width] duration-300 ease-in-out flex flex-col overflow-visible ${panelCollapsed ? 'w-0' : 'w-64'}`}>
         <CategoryPanelToggle isCollapsed={panelCollapsed} onToggle={() => setPanelCollapsed((c) => !c)} position="right" />
-        <div className={`paper-card flex flex-col h-full w-full relative transition-opacity duration-300 ${panelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
-          <div className="flex-shrink-0 h-12 px-4 flex items-center justify-between border-b border-base-content/10">
-            <h2 className="text-sm font-semibold">Collections</h2>
-            <button
-              type="button"
-              onClick={() => { audioService.playClick(); setManageOpen(true); }}
-              className="paper-btn paper-btn-ghost paper-btn-sm"
-            >
-              Manage
-            </button>
+        <div className={`flex flex-col h-full w-full relative p-[3px] corner-frame transition-opacity duration-300 ${panelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
+          <div className="flex flex-col h-full w-full relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
+            <div className="flex-shrink-0 h-16 px-4 flex items-center justify-between bg-base-100/80 backdrop-blur-md panel-header">
+              <h2 className="text-xs font-sf-mono uppercase text-primary">Collections</h2>
+              <button
+                type="button"
+                onClick={() => { audioService.playClick(); setManageOpen(true); }}
+                className="paper-btn paper-btn-ghost paper-btn-sm"
+              >
+                Manage
+              </button>
+            </div>
+            <div className="flex-grow overflow-y-auto p-3 w-full">
+              <TreeView items={treeItems} selectedId={activeSelection} onSelect={selectCollection} />
+            </div>
           </div>
-          <div className="flex-grow overflow-y-auto p-3 w-full">
-            <TreeView items={treeItems} selectedId={activeSelection} onSelect={selectCollection} />
-          </div>
+          <PanelCorners />
         </div>
       </aside>
-      <div className="relative z-raised flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-          {/* Library view: the panes get at least 24rem and share the column's height; when the viewport is too short for chrome + panes the whole column scrolls instead of squeezing them. */}
-          <div className={`h-full w-full overflow-y-auto ${isLibrary ? 'flex flex-col' : ''}`}>
-            <header className={`shrink-0 ${isLibrary ? 'pb-2' : 'pb-4 md:pb-6'}`}>
-              <div className={isLibrary ? 'flex items-center justify-between gap-3' : 'flex flex-col lg:flex-row lg:items-end justify-between gap-3 lg:gap-4'}>
-                <div className="space-y-1 min-w-0">
-                  {!isLibrary && <span className="text-xs font-medium text-base-content/60 block">Vault</span>}
-                  <h1 className={`paper-title leading-none ${isLibrary ? 'text-3xl' : 'text-2xl md:text-3xl lg:text-4xl'}`}>Web Design</h1>
-                  {!isLibrary && <p className="text-sm text-base-content/60 pt-1">Reference designs you can turn into a prompt for your coding agent.</p>}
-                </div>
-                <dl className={`grid grid-cols-3 shrink-0 ${isLibrary ? 'gap-2' : 'gap-2 md:gap-3'}`}>
-                  {statTiles.map(({ label, value, Icon }) => (
-                    <div key={label} className={`paper-card flex items-start justify-between gap-2 ${isLibrary ? 'px-3 py-1.5' : 'px-3 py-2 md:min-w-28 lg:gap-4 lg:px-4 lg:py-3'}`}>
-                      <div className={`flex ${isLibrary ? 'flex-row-reverse items-baseline gap-1.5' : 'flex-col-reverse'}`}>
-                        <dt className={`text-xs text-base-content/60 ${isLibrary ? '' : 'mt-1'}`}>{label}</dt>
-                        <dd className={`font-semibold leading-none ${isLibrary ? 'text-lg' : 'text-2xl'}`}>{value}</dd>
-                      </div>
-                      {!isLibrary && <Icon className="w-4 h-4 text-base-content/40" aria-hidden="true" />}
-                    </div>
-                  ))}
-                </dl>
+      <div className="relative z-raised flex-1 flex flex-col h-full min-w-0 p-[3px] corner-frame">
+        <div className="flex flex-col h-full w-full min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
+            <header className="shrink-0 h-16 px-6 flex items-center justify-between gap-4 bg-base-100/80 backdrop-blur-md panel-header">
+              <div className="min-w-0 flex items-baseline gap-3">
+                <h1 className="text-xs font-sf-mono uppercase text-primary shrink-0">Web Design</h1>
+                {!isLibrary && <p className="hidden xl:block text-2xs text-base-content/60 truncate">Reference designs you can turn into a prompt for your coding agent.</p>}
               </div>
+              <dl className="flex shrink-0 items-center gap-4">
+                {statTiles.map(({ label, value, Icon }) => (
+                  <div key={label} className="flex items-baseline gap-1.5">
+                    <Icon className="w-3.5 h-3.5 self-center text-base-content/40" aria-hidden="true" />
+                    <dd className="text-sm font-bold leading-none">{value}</dd>
+                    <dt className="text-2xs uppercase tracking-widest text-base-content/60">{label}</dt>
+                  </div>
+                ))}
+              </dl>
             </header>
+          {/* Library view: the panes get at least 24rem and share the column's height; when the viewport is too short for chrome + panes the whole column scrolls instead of squeezing them. */}
+          <div className={`flex-grow min-h-0 w-full overflow-y-auto p-6 ${isLibrary ? 'flex flex-col' : ''}`}>
 
             {!safeToSave && (
               <p role="status" className="paper-notice mb-3 border border-warning/30 bg-warning/10 text-warning">
@@ -335,15 +346,6 @@ const DesignLibraryView: React.FC<DesignLibraryProps> = ({ showGlobalFeedback, o
                     </button>
                   )}
                 </div>
-
-                <button
-                  type="button"
-                  onClick={openAdd}
-                  disabled={!safeToSave}
-                  className="paper-btn paper-btn-primary shrink-0 ml-auto"
-                >
-                  Add recipe
-                </button>
               </div>
 
               {/* Rows that can overflow scroll sideways with the scrollbar hidden. Their p-1 gutter keeps focus rings from being
@@ -465,9 +467,36 @@ const DesignLibraryView: React.FC<DesignLibraryProps> = ({ showGlobalFeedback, o
               </ul>
             )}
           </div>
+          <footer className="h-14 flex items-stretch justify-end flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer">
+            <button
+              type="button"
+              onClick={openClone}
+              disabled={!safeToSave}
+              className="btn btn-sm btn-ghost h-full rounded-none px-6 tracking-wider text-base-content/60 hover:text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+            >
+              <span /><span /><span /><span />CLONE SITE
+            </button>
+            <button
+              type="button"
+              onClick={openAdd}
+              disabled={!safeToSave}
+              className="btn btn-sm btn-ghost h-full rounded-none px-6 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+            >
+              <span /><span /><span /><span />ADD RECIPE
+            </button>
+          </footer>
         </div>
+        <PanelCorners />
+      </div>
       </div>
 
+      <CloneSiteModal
+        isOpen={isCloneOpen}
+        onClose={() => setIsCloneOpen(false)}
+        onCreated={(id, note) => { showGlobalFeedback(note ?? 'Site cloned'); openRecipe(id); }}
+        collections={collections}
+        defaultCollectionId={collections.some((c) => c.id === activeSelection) ? activeSelection : undefined}
+      />
       <DesignRecipeAddModal
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
@@ -481,7 +510,7 @@ const DesignLibraryView: React.FC<DesignLibraryProps> = ({ showGlobalFeedback, o
         </Modal>
       )}
       {toUse && (
-        <UseRecipeModal recipeId={toUse.id} recipeTitle={toUse.title} onClose={() => setToUse(null)} showGlobalFeedback={showGlobalFeedback} />
+        <UseRecipeModal recipeId={toUse.id} recipeTitle={toUse.title} isClone={!!toUse.clone} onClose={() => setToUse(null)} showGlobalFeedback={showGlobalFeedback} />
       )}
       {toDelete && (
         <ConfirmationModal

@@ -14,9 +14,9 @@ const full: RecipeBrief = {
 const minimal: RecipeBrief = { project: 'Acme', pages: 'landing page' };
 
 describe('compileRecipePrompt', () => {
-  it('adapt and reproduce differ in intro, avoid line and verify wording', () => {
+  it('adapt and clone differ in intro, avoid line and verify wording', () => {
     const a = compileRecipePrompt(full, 'adapt');
-    const r = compileRecipePrompt(full, 'reproduce');
+    const r = compileRecipePrompt(full, 'clone');
     expect(a).toContain('Use OUR brand, copy and imagery');
     expect(a).toContain('Also avoid, unless DESIGN.md or the refs show it');
     expect(a).toContain('not content.');
@@ -40,7 +40,7 @@ describe('compileRecipePrompt', () => {
   });
 
   it('always carries project, pages, dial anchors and browser fallback', () => {
-    const p = compileRecipePrompt(minimal, 'reproduce');
+    const p = compileRecipePrompt(minimal, 'clone');
     expect(p).toContain('Build landing page for Acme in this repo');
     expect(p).toContain('Dials: variance 1 = strict grid');
     expect(p).toContain('Only if no browser runs, check the code section by section');

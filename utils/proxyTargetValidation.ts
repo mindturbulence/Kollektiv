@@ -1,4 +1,5 @@
 import net from 'net';
+import { bareHost, isPublicAddress } from './captureUrlValidation';
 
 /**
  * Static allowlist of domains the /proxy-remote endpoint trusts by default.
@@ -92,40 +93,12 @@ export const isAllowedProxyTarget = (
  * proxy targets specifically).
  */
 export const isDisallowedAddress = (hostname: string): boolean => {
-  // Pure literal IP? Reject private/loopback/link-local.
-  if (net.isIP(hostname)) {
-    if (net.isIPv4(hostname)) {
-      const parts = hostname.split('.').map(Number);
-      if (parts.length !== 4 || parts.some((p) => isNaN(p))) return true;
-      const [a, b] = parts;
-      // 127.0.0.0/8
-      if (a === 127) return true;
-      // 10.0.0.0/8
-      if (a === 10) return true;
-      // 172.16.0.0/12
-      if (a === 172 && b >= 16 && b <= 31) return true;
-      // 192.168.0.0/16
-      if (a === 192 && b === 168) return true;
-      // 169.254.0.0/16 (link-local — AWS metadata!)
-      if (a === 169 && b === 254) return true;
-      // 0.0.0.0/8
-      if (a === 0) return true;
-      // Multicast 224.0.0.0/4
-      if (a >= 224 && a <= 239) return true;
-    } else if (net.isIPv6(hostname)) {
-      // ::1 (loopback), fc00::/7 (ULA), fe80::/10 (link-local)
-      const lower = hostname.toLowerCase();
-      if (lower === '::1' || lower === '[::1]') return true;
-      if (lower.startsWith('fc') || lower.startsWith('fd')) return true;
-      if (lower.startsWith('fe8') || lower.startsWith('fe9') ||
-          lower.startsWith('fea') || lower.startsWith('feb')) return true;
-    }
-    return false;
-  }
-  // Hostname literal: only block obvious loopback names. Localhost
-  // hostnames resolve to 127/::1 in DNS; explicit IP rejection above
-  // catches direct numerical attempts. Allow users to add `localhost`
-  // to their per-user allowlist if they really need it.
-  if (hostname === 'localhost' || hostname.endsWith('.localhost')) return true;
-  return false;
+  // URL.hostname keeps IPv6 brackets ("[::1]"), which net.isIP rejects, so strip them first.
+  const host = bareHost(hostname);
+  // IP literal: only public unicast passes (covers CGNAT, IPv4-mapped/NAT64 IPv6, reserved ranges).
+  if (net.isIP(host)) return !isPublicAddress(host);
+  // Hostname literal: only block obvious loopback names; no DNS lookup here, so a public name
+  // that resolves privately still passes (scrapers use resolvePublicAddress for that). Users can
+  // add `localhost` to their per-user allowlist if they really need it.
+  return host === 'localhost' || host.endsWith('.localhost');
 };

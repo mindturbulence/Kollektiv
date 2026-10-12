@@ -347,23 +347,26 @@ describe('DesignLibrary', () => {
     });
   });
 
-  it('renders inside the paper theme scope in every state, including the detail view', async () => {
+  it('renders inside the style scope in every state, including the detail view, without forcing a theme', async () => {
     storage.loadDesignLibrary.mockReturnValue(new Promise(() => {}));
     const loading = renderLib();
-    expect(loading.container.querySelector('[data-theme="paper"]')).toBeTruthy();
+    expect(loading.container.querySelector('.paper-scope')).toBeTruthy();
+    expect(loading.container.querySelector('[data-theme]')).toBeNull();
     cleanup();
 
     storage.loadDesignLibrary.mockResolvedValue({ recipes, collections: [], safeToSave: true });
     const { container } = renderLib();
     fireEvent.click((await screen.findByText('Linear Board')).closest('button')!);
-    const scope = container.querySelector('[data-theme="paper"]')!;
+    const scope = container.querySelector('.paper-scope')!;
     expect(scope.contains(screen.getByText('detail:b'))).toBe(true);
   });
 
-  it('keeps a dialog opened from the page inside the paper theme', async () => {
+  it('keeps a dialog opened from the page inside the style scope', async () => {
     renderLib();
     fireEvent.click(await screen.findByRole('button', { name: 'Delete Stripe Home' }));
-    expect(screen.getByRole('dialog').parentElement!.getAttribute('data-theme')).toBe('paper');
+    const backdrop = screen.getByRole('dialog').parentElement!;
+    expect(backdrop.classList.contains('paper-scope')).toBe(true);
+    expect(backdrop.hasAttribute('data-theme')).toBe(false);
   });
 
   it('deletes after confirmation and reloads', async () => {
@@ -843,18 +846,15 @@ describe('DesignLibrary', () => {
       expect(asideOf(container).className).toContain('w-64');
     });
 
-    it('Library view is compact: no description or eyebrow, tiles inline, toolbar not sticky, panes at least 24rem', async () => {
+    it('Library view is compact: no description, toolbar not sticky, panes at least 24rem', async () => {
       stubWidth(1440);
       localStorage.setItem(VIEW_KEY, 'library');
       const { container } = renderLib();
       await screen.findByRole('listbox', { name: 'Recipes' });
       expect(screen.queryByText(/Reference designs you can turn into a prompt/)).toBeNull();
-      expect(screen.queryByText('Vault')).toBeNull();
-      expect(screen.getByText('Recipes', { selector: 'dt' }).parentElement!.className).toContain('flex-row-reverse');
-      expect(screen.getByText('Recipes', { selector: 'dt' }).closest('.paper-card')!.className).not.toContain('min-w-28');
       expect(group('Tags').closest('.border-b')!.className).not.toContain('sticky');
       expect(screen.getByRole('listbox').closest('.min-h-\\[24rem\\]')).toBeTruthy();
-      expect(container.querySelector('h1')!.className).toContain('text-3xl');
+      expect(container.querySelector('h1')!.textContent).toBe('Web Design');
     });
 
     it('Gallery view keeps the full header and the sticky toolbar', async () => {
@@ -862,7 +862,6 @@ describe('DesignLibrary', () => {
       renderLib();
       await screen.findByText('Stripe Home');
       expect(screen.getByText(/Reference designs you can turn into a prompt/)).toBeTruthy();
-      expect(screen.getByText('Vault')).toBeTruthy();
       expect(group('Tags').closest('.border-b')!.className).toContain('sticky');
     });
 
@@ -888,16 +887,10 @@ describe('DesignLibrary', () => {
       expect(group('Tags').className).not.toContain('overflow-x-auto');
     });
 
-    it('stacks the header and shows one grid column on a phone', async () => {
+    it('shows one grid column on a phone', async () => {
       stubWidth(390);
       const { container } = renderLib();
       await screen.findByText('Stripe Home');
-      const dl = container.querySelector('dl')!;
-      expect(dl.className).toContain('grid-cols-3');
-      expect(dl.parentElement!.className).toContain('flex-col');
-      const tile = screen.getByText('Recipes', { selector: 'dt' }).closest('.paper-card')!;
-      expect(tile.className).toContain('md:min-w-28');
-      expect(tile.className).not.toMatch(/(^|\s)min-w-28/);
       const grid = container.querySelector('ul.grid')!;
       expect(grid.className).toContain('grid-cols-1');
     });

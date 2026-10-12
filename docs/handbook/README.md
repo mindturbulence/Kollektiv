@@ -77,7 +77,7 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 > (`sameOriginGuard`), image editor made correct (transforms, crop, lossless autosave,
 > selections), design tokens for type/z-index/motion, shared `Modal` and `EmptyState`,
 > typed `AppEvents` event bus, entry bundle 4.1 → 2.6 MB, CI with a Playwright job, and the
-> `sanrita` light theme. Unused `helmet`/`cors`/`vfile` removed. 1549 tests, e2e green.
+> `Heron` light theme. Unused `helmet`/`cors`/`vfile` removed. 1549 tests, e2e green.
 > Record: [ARCHITECTURE_CONSTITUTION.md → Phase 8](docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md);
 > open items: `docs/plans/TASKS.md`.
 
@@ -174,7 +174,7 @@ Kollektiv includes specialized UI environments designed for high-focus creative 
 - **Pip-Boy**: retro-futuristic CRT aesthetic with digital jitter and terminal typography
 - **Abyss**: deep dark mode for absolute focus
 - **Vanguard** / **Hiigara**: amber and blue HUD variants
-- **Sanrita**: the light theme — deep green accent on a near-white base
+- **Heron**: warm dark base with an off-white text and an orange accent (the former light theme, inverted to dark 2026-10-12)
 
 26 themes are selectable in Settings → Appearance or cycled with the header palette button / the command palette's "Next Theme". The list lives in `constants/themes.ts` and every entry is contrast-checked by `utils/themeContrast.test.ts`.
 

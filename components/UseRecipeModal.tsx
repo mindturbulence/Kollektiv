@@ -14,10 +14,16 @@ import { compileRecipePrompt } from '../utils/designRecipePrompt';
 import { DESIGN_AGENTS, loadAgent, saveAgent, type DesignAgentId } from '../utils/designAgents';
 import Modal from './Modal';
 import ConfirmationModal from './ConfirmationModal';
+import LoadingSpinner from './LoadingSpinner';
+import { loadLLMSettings } from '../utils/settingsStorage';
+import { buildStarterFiles, cloneOneShotPrompt, PROJECT_DOCS, slugify, type ProjectDocName, type ProjectDocs } from '../utils/cloneExport';
+import { generateProjectDocs, loadCloneSource, type CloneSource } from '../services/cloneDocsService';
 
 interface Props {
   recipeId: string;
   recipeTitle: string;
+  /** A recipe made by "Clone a website": Clone mode exports a starter project instead of design/. */
+  isClone?: boolean;
   onClose: () => void;
   showGlobalFeedback: (message: string, isError?: boolean) => void;
 }
@@ -45,7 +51,7 @@ const MORE_FIELDS = [
 
 const MODES: { value: RecipeMode; title: string; hint: string }[] = [
   { value: 'adapt', title: 'Adapt', hint: 'borrow the system, use your brand and copy' },
-  { value: 'reproduce', title: 'Reproduce', hint: 'match the screenshots closely' },
+  { value: 'clone', title: 'Clone', hint: 'match the screenshots closely' },
 ];
 
 async function tryCopy(text: string): Promise<boolean> {
@@ -57,7 +63,7 @@ async function tryCopy(text: string): Promise<boolean> {
   }
 }
 
-const UseRecipeModal: React.FC<Props> = ({ recipeId, recipeTitle, onClose, showGlobalFeedback }) => {
+const UseRecipeModal: React.FC<Props> = ({ recipeId, recipeTitle, isClone = false, onClose, showGlobalFeedback }) => {
   const [draft] = useState(loadBriefDraft);
   const [brief, setBrief] = useState<RecipeBrief>(draft.brief);
   const [mode, setMode] = useState<RecipeMode>(draft.mode);
@@ -69,6 +75,10 @@ const UseRecipeModal: React.FC<Props> = ({ recipeId, recipeTitle, onClose, showG
   const [fallbackPrompt, setFallbackPrompt] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingOverwrite | null>(null);
   const [agent, setAgent] = useState<DesignAgentId>(loadAgent);
+  // Starter project (cloned recipe, Clone mode). The permission tick is per export, never remembered.
+  const [permission, setPermission] = useState(false);
+  const [prepared, setPrepared] = useState<{ source: CloneSource; docs: ProjectDocs; note: string | null } | null>(null);
+  const starterMode = isClone && mode === 'clone';
 
   const canPick = typeof window.showDirectoryPicker === 'function';
 
@@ -83,8 +93,8 @@ const UseRecipeModal: React.FC<Props> = ({ recipeId, recipeTitle, onClose, showG
   const projectMissing = !brief.project.trim();
   const pagesMissing = !brief.pages.trim();
 
-  const run = async (fn: () => Promise<void>) => {
-    if (!brief.project.trim() || !brief.pages.trim()) {
+  const run = async (fn: () => Promise<void>, requireBrief = true) => {
+    if (requireBrief && (!brief.project.trim() || !brief.pages.trim())) {
       setShowRequired(true);
       return;
     }
@@ -166,6 +176,35 @@ const UseRecipeModal: React.FC<Props> = ({ recipeId, recipeTitle, onClose, showG
 
   const copyOnly = () => run(() => deliverPrompt(compileRecipePrompt(brief, mode), 'Nothing was exported.'));
 
+  // ---- starter project (cloned recipe in Clone mode) ----
+  const loadRecipe = async () => {
+    const { recipes } = await loadDesignLibrary();
+    const recipe = recipes.find((r) => r.id === recipeId);
+    if (!recipe) throw new Error(`Design recipe not found: ${recipeId}`);
+    return recipe;
+  };
+
+  const prepareDocs = () => run(async () => {
+    const source = await loadCloneSource(await loadRecipe(), brief, permission);
+    const result = await generateProjectDocs(source.context, loadLLMSettings());
+    const note = result.error
+      ? `The AI engine could not write the documents (${result.error}), so they come from templates. Edit them below if needed.`
+      : result.fromTemplate.length ? `${result.fromTemplate.join(', ')} came from templates (the AI answer left them out).` : null;
+    setPrepared({ source, docs: result.docs, note });
+  }, false);
+
+  const downloadStarter = () => run(async () => {
+    if (!prepared) return;
+    // The tick may have changed after the documents were prepared; the files follow the current tick.
+    const source = { ...prepared.source, context: { ...prepared.source.context, permission } };
+    const { slug, files, prompt } = buildStarterFiles({ ...source, docs: prepared.docs });
+    await createZipAndDownload(files.map((f) => ({ name: f.path, content: f.content })), `${slug}.zip`);
+    await deliverPrompt(prompt, `Downloaded ${slug}.zip.`);
+    showGlobalFeedback('Starter project exported');
+  }, false);
+
+  const editDoc = (name: ProjectDocName, text: string) => setPrepared((p) => (p ? { ...p, docs: { ...p.docs, [name]: text } } : p));
+
   const copyFallback = async () => {
     if (fallbackPrompt && (await tryCopy(fallbackPrompt))) {
       setFallbackPrompt(null);
@@ -190,7 +229,8 @@ const UseRecipeModal: React.FC<Props> = ({ recipeId, recipeTitle, onClose, showG
   );
 
   const briefComplete = !projectMissing && !pagesMissing;
-  const previewPrompt = briefComplete ? compileRecipePrompt(brief, mode, { zip: !canPick }) : '';
+  const starterSlug = slugify(brief.project.trim() || recipeTitle);
+  const previewPrompt = starterMode ? cloneOneShotPrompt(starterSlug) : briefComplete ? compileRecipePrompt(brief, mode, { zip: !canPick }) : '';
   const agentHint = DESIGN_AGENTS.find((a) => a.id === agent)?.hint;
 
   const stepNumber = (n: number) => (
@@ -205,8 +245,13 @@ const UseRecipeModal: React.FC<Props> = ({ recipeId, recipeTitle, onClose, showG
         <div className="min-h-0 flex-1 overflow-y-auto">
         <fieldset disabled={busy} className="min-w-0 p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="flex flex-col gap-4 min-w-0">
-          {requiredField('Project', 'project', 'e.g. Acme Analytics', projectMissing)}
-          {requiredField('Pages / sections', 'pages', 'e.g. landing page: hero, features, pricing, footer', pagesMissing)}
+          {starterMode && (
+            <p className="text-xs text-base-content/60">
+              Starter project: project and pages are optional (the recipe already holds the page). Leave Stack empty to use the stack the clone recommended.
+            </p>
+          )}
+          {requiredField('Project', 'project', 'e.g. Acme Analytics', projectMissing && !starterMode)}
+          {requiredField('Pages / sections', 'pages', 'e.g. landing page: hero, features, pricing, footer', pagesMissing && !starterMode)}
 
           <details open={moreOpen} onToggle={(e) => setMoreOpen(e.currentTarget.open)} className="flex flex-col gap-3">
             <summary className={`${label} cursor-pointer`}>More</summary>
@@ -262,12 +307,56 @@ const UseRecipeModal: React.FC<Props> = ({ recipeId, recipeTitle, onClose, showG
                 aria-label="Prompt preview"
                 className="paper-input w-full resize-none bg-base-200 font-sf-mono text-xs max-h-36 md:max-h-none"
               />
-              <button type="button" className="paper-btn paper-btn-primary paper-btn-lg" onClick={() => void (canPick ? exportToFolder() : downloadZip())}>
-                {busy ? 'Working…' : canPick ? 'Export files & copy prompt' : 'Download ZIP & copy prompt'}
-              </button>
-              <button type="button" className="paper-btn paper-btn-ghost" onClick={() => void copyOnly()}>Copy prompt only</button>
-              <p className="text-xs text-base-content/60">Copy prompt only skips the files, so the agent will not see the screenshots.</p>
+              {starterMode ? (
+                <>
+                  <label className="flex items-start gap-2 text-xs">
+                    <input type="checkbox" checked={permission} onChange={(e) => setPermission(e.target.checked)} />
+                    <span>This is my site, or I have permission to reuse its text. Unticked, the agent writes original copy of the same length.</span>
+                  </label>
+                  {!prepared ? (
+                    <button type="button" className="paper-btn paper-btn-primary paper-btn-lg inline-flex items-center gap-2" onClick={() => void prepareDocs()}>
+                      {busy && <LoadingSpinner size={14} />}
+                      {busy ? 'Writing PRD, BRD, TASKS, ISSUES…' : 'Prepare project documents'}
+                    </button>
+                  ) : (
+                    <button type="button" className="paper-btn paper-btn-primary paper-btn-lg" onClick={() => void downloadStarter()}>
+                      {busy ? 'Working…' : 'Download starter project & copy prompt'}
+                    </button>
+                  )}
+                  <p className="text-xs text-base-content/60">
+                    A ZIP with AGENTS.md (plus CLAUDE.md and GEMINI.md pointing to it), docs/ (PRD, BRD, DESIGN, TASKS, ISSUES) and design/
+                    (screenshots, asset and text data). The agent installs the recommended stack and recreates every asset; nothing from the site is copied.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="paper-btn paper-btn-primary paper-btn-lg" onClick={() => void (canPick ? exportToFolder() : downloadZip())}>
+                    {busy ? 'Working…' : canPick ? 'Export files & copy prompt' : 'Download ZIP & copy prompt'}
+                  </button>
+                  <button type="button" className="paper-btn paper-btn-ghost" onClick={() => void copyOnly()}>Copy prompt only</button>
+                  <p className="text-xs text-base-content/60">Copy prompt only skips the files, so the agent will not see the screenshots.</p>
+                </>
+              )}
             </div>
+
+            {starterMode && prepared && (
+              <div className="flex flex-col gap-2">
+                {prepared.note && <p role="status" className="paper-notice border border-warning/30 bg-warning/10 text-warning break-words">{prepared.note}</p>}
+                {PROJECT_DOCS.map((name) => (
+                  <details key={name} className="flex flex-col gap-1">
+                    <summary className={`${label} cursor-pointer`}>docs/{name}</summary>
+                    <textarea
+                      value={prepared.docs[name]}
+                      onChange={(e) => editDoc(name, e.target.value)}
+                      rows={10}
+                      aria-label={`docs/${name}`}
+                      className="paper-input w-full font-sf-mono text-xs mt-1"
+                    />
+                  </details>
+                ))}
+                <button type="button" className="paper-btn paper-btn-ghost paper-btn-sm self-start" onClick={() => setPrepared(null)}>Discard and prepare again</button>
+              </div>
+            )}
 
             {!canPick && (
               <p role="status" className="text-xs text-base-content/60">

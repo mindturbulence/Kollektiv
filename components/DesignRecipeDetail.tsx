@@ -4,6 +4,7 @@ import type { DesignCollection, DesignRecipe, RecipePageType } from '../types';
 import {
   addRecipeRefs,
   loadDesignLibrary,
+  loadRecipeFile,
   loadRecipeSpec,
   removeRecipeRef,
   reorderRecipeRefs,
@@ -11,9 +12,10 @@ import {
 } from '../utils/designLibraryStorage';
 import { parseTags, RECIPE_PAGE_TYPES } from '../utils/designLibraryFilter';
 import { normalizeRef } from '../utils/designImage';
-import { DESIGN_HEADINGS, type DesignSpec } from '../utils/designSpec';
+import type { DesignSpec } from '../utils/designSpec';
 import {
   compactSections,
+  expectedHeadings,
   findEmptyTokens,
   findEstimated,
   missingFrontMatter,
@@ -27,6 +29,7 @@ import {
 } from '../utils/designSpecForm';
 import { audioService } from '../services/audioService';
 import { extractDesignSpec, MAX_EXTRACT_REFS } from '../services/designSpecService';
+import { siteFromRecipe, writeCloneSpec } from '../services/cloneSiteService';
 import { fileSystemManager } from '../utils/fileUtils';
 import { loadLLMSettings } from '../utils/settingsStorage';
 import EmptyState from './EmptyState';
@@ -35,6 +38,7 @@ import ConfirmationModal from './ConfirmationModal';
 import RecipeThumb from './RecipeThumb';
 import UseRecipeModal from './UseRecipeModal';
 import { MAX_RECIPE_REFS } from './DesignRecipeAddModal';
+import { cloneOneShotPrompt, slugify } from '../utils/cloneExport';
 
 interface Props {
   recipeId: string;
@@ -74,7 +78,7 @@ const toDraft = (recipe: DesignRecipe, collections: DesignCollection[], spec: De
     sourceUrl: recipe.sourceUrl ?? '',
     colors,
     yaml: otherToYaml(other),
-    sections: sectionDrafts(spec.sections),
+    sections: sectionDrafts(spec.sections, !!recipe.clone),
   };
 };
 
@@ -221,7 +225,7 @@ const Editor: React.FC<EditorProps> = ({ recipe, collections, spec, truncated: l
   const missingTokens = frontMatter ? missingFrontMatter(frontMatter) : [];
   const emptyTokens = frontMatter ? findEmptyTokens(frontMatter) : [];
 
-  const emptyCount = DESIGN_HEADINGS.filter((h) => !draft.sections[h].trim()).length;
+  const emptyCount = expectedHeadings(!!recipe.clone).filter((h) => !draft.sections[h]?.trim()).length;
 
   const handleSave = () => {
     if (!canSave || !frontMatter) return;
@@ -261,11 +265,31 @@ const Editor: React.FC<EditorProps> = ({ recipe, collections, spec, truncated: l
           if (!blob) throw new Error(`Reference image is missing on disk: ${path}`);
           return blob;
         }));
-        const result = await extractDesignSpec(blobs, loadLLMSettings(), (step) => { if (mountedRef.current) setExtracting(step); });
+        const onStep = (step: string) => { if (mountedRef.current) setExtracting(step); };
+        // A cloned recipe is rewritten from its saved measurements (no new capture), keeping the measured sections.
+        let result: { spec: DesignSpec; truncated: boolean; missing: string[]; stripped: string[] };
+        let meta: { pageType: RecipePageType; tags: string[] } | null = null;
+        if (recipe.clone) {
+          const measurementsJson = await loadRecipeFile(recipe.id, 'measurements.json');
+          if (!measurementsJson) throw new Error('measurements.json is missing; clone the site again.');
+          const site = siteFromRecipe({ title: draft.title, sourceUrl: recipe.sourceUrl, capturedAt: recipe.clone.capturedAt, measurementsJson, shots: blobs });
+          const cloned = await writeCloneSpec(site, loadLLMSettings(), onStep);
+          result = cloned;
+          meta = { pageType: cloned.pageType, tags: cloned.tags };
+        } else {
+          result = await extractDesignSpec(blobs, loadLLMSettings(), onStep);
+        }
         if (!mountedRef.current) return;
         const split = splitFrontMatter(result.spec.frontMatter);
         // The form is disabled while busy, so `draft` cannot have changed since this run started.
-        const next: Draft = { ...draft, colors: split.colors, yaml: otherToYaml(split.other), sections: sectionDrafts(result.spec.sections) };
+        const next: Draft = {
+          ...draft,
+          ...(meta && meta.pageType !== 'other' ? { pageType: meta.pageType } : {}),
+          ...(meta && meta.tags.length && !draft.tagsText.trim() ? { tagsText: meta.tags.join(', ') } : {}),
+          colors: split.colors,
+          yaml: otherToYaml(split.other),
+          sections: sectionDrafts(result.spec.sections, !!recipe.clone),
+        };
         appliedRef.current = JSON.stringify(next);
         setDraft(next);
         setColorsAt(split.colorsAt);
@@ -401,7 +425,7 @@ const Editor: React.FC<EditorProps> = ({ recipe, collections, spec, truncated: l
                       disabled={!safeToSave || refs.length === 0}
                       onClick={requestExtract}
                     >
-                      Extract from screens
+                      {recipe.clone ? 'Rewrite with AI' : 'Extract from screens'}
                     </button>
                     {extracting && (
                       <span role="status" className="flex items-center gap-2 text-xs text-base-content/60">
@@ -411,8 +435,10 @@ const Editor: React.FC<EditorProps> = ({ recipe, collections, spec, truncated: l
                     )}
                   </div>
                   <p className="text-xs text-base-content/60">
-                    Drafts tokens and body from the screenshots with the AI engine set in Settings. Review, then Save.
-                    {refs.length > MAX_EXTRACT_REFS && ` Reads the first ${MAX_EXTRACT_REFS} references.`}
+                    {recipe.clone
+                      ? 'Rewrites the spec from the measurements taken when the site was cloned and its two screenshots, with the AI engine set in Settings. No new capture. Review, then Save.'
+                      : 'Drafts tokens and body from the screenshots with the AI engine set in Settings. Review, then Save.'}
+                    {!recipe.clone && refs.length > MAX_EXTRACT_REFS && ` Reads the first ${MAX_EXTRACT_REFS} references.`}
                   </p>
                   {extractError && <p role="alert" className="paper-notice border border-error/30 bg-error/10 text-error break-words">Extraction failed: {extractError}</p>}
                   {extractBlocksSave && extracted && (
@@ -430,6 +456,14 @@ const Editor: React.FC<EditorProps> = ({ recipe, collections, spec, truncated: l
                     </div>
                   )}
                 </section>
+
+                {recipe.clone && (
+                  <section aria-label="Clone prompt preview" className="flex flex-col gap-2">
+                    <h2 className={labelClass}>Clone prompt</h2>
+                    <p className="text-xs text-base-content/60">The one-shot prompt copied when you download the starter project. Open it in Claude Code or paste it into any coding agent.</p>
+                    <pre className="paper-input w-full font-sf-mono text-xs whitespace-pre-wrap select-all">{cloneOneShotPrompt(slugify(draft.title || recipe.title))}</pre>
+                  </section>
+                )}
 
                 <section aria-labelledby="tokens-heading" className="flex flex-col gap-4">
                   <h2 id="tokens-heading" className={labelClass}>Tokens</h2>
@@ -505,7 +539,7 @@ const Editor: React.FC<EditorProps> = ({ recipe, collections, spec, truncated: l
       </div>
 
       {useOpen && (
-        <UseRecipeModal recipeId={recipe.id} recipeTitle={saved.title} onClose={() => setUseOpen(false)} showGlobalFeedback={showGlobalFeedback} />
+        <UseRecipeModal recipeId={recipe.id} recipeTitle={saved.title} isClone={!!recipe.clone} onClose={() => setUseOpen(false)} showGlobalFeedback={showGlobalFeedback} />
       )}
       {confirmBack && (
         <ConfirmationModal
@@ -554,7 +588,7 @@ const DesignRecipeDetail: React.FC<Props> = (props) => {
   useEffect(() => {
     let active = true;
     setState({ status: 'loading' });
-    (async () => {
+    void (async () => {
       try {
         const { recipes, collections, safeToSave } = await loadDesignLibrary();
         const recipe = recipes.find((r) => r.id === recipeId);

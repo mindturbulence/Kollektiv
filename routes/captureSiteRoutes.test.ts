@@ -4,7 +4,8 @@ import express from 'express';
 import type { Server } from 'http';
 import type { AddressInfo } from 'net';
 import { createCaptureSiteRouter, type CaptureSiteDeps } from './captureSiteRoutes';
-import { CAPTURE_MAX_BYTES, CaptureError, type CaptureBackend, type CaptureResult } from '../services/siteCapture';
+import { CAPTURE_MAX_BYTES, CaptureError, type CaptureBackend, type CaptureResult, type CloneBackend, type CloneResult } from '../services/siteCapture';
+import { sanitizeMeasurements } from '../services/siteMeasure';
 import type { LookupAll } from '../utils/captureUrlValidation';
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]);
@@ -25,15 +26,17 @@ async function start(deps: Partial<CaptureSiteDeps> & { capture: CaptureBackend 
   app.use(createCaptureSiteRouter({ lookup: publicLookup, ...deps }));
   await new Promise<void>((r) => { server = app.listen(0, '127.0.0.1', () => r()); });
   const base = `http://127.0.0.1:${(server!.address() as AddressInfo).port}`;
-  const post = async (body: unknown, headers: Record<string, string> = {}) => {
-    const res = await fetch(`${base}/api/capture-site`, {
+  const postTo = async (path: string, body: unknown, headers: Record<string, string> = {}) => {
+    const res = await fetch(`${base}${path}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...headers },
       body: typeof body === 'string' ? body : JSON.stringify(body),
     });
     return { status: res.status, body: await res.json() };
   };
-  return { base, post };
+  const post = (body: unknown, headers: Record<string, string> = {}) => postTo('/api/capture-site', body, headers);
+  const clonePost = (body: unknown, headers: Record<string, string> = {}) => postTo('/api/clone-site', body, headers);
+  return { base, post, clonePost };
 }
 
 /** A backend whose promise the test settles by hand; it also settles (rejects) when aborted. */
@@ -196,5 +199,82 @@ describe('POST /api/capture-site', () => {
     for (let i = 0; i < 6; i++) expect((await post({ url: 'https://example.com' })).status).toBe(200);
     expect(await post({ url: 'https://example.com' })).toMatchObject({ status: 429, body: { ok: false, code: 'rate_limited' } });
     expect(capture).toHaveBeenCalledTimes(6);
+  });
+});
+
+describe('POST /api/clone-site', () => {
+  const JPEG = Buffer.from([0xff, 0xd8, 0xff, 1, 2]);
+  const measurements = sanitizeMeasurements({ lang: 'en', tech: { next: true } });
+  const cloned = (over: Partial<CloneResult> = {}): CloneResult => ({
+    finalUrl: 'https://www.example.com/',
+    title: 'Example',
+    desktop: { width: 1440, height: 3000, jpeg: JPEG },
+    mobile: { width: 390, height: 5000, jpeg: JPEG },
+    measurements: { desktop: measurements, mobile: measurements },
+    ...over,
+  });
+
+  it('returns both screenshots as JPEG base64 plus the measurements', async () => {
+    const clone = vi.fn<CloneBackend>(async () => cloned());
+    const { clonePost } = await start({ capture: vi.fn<CaptureBackend>(async () => shot()), clone });
+    const r = await clonePost({ url: 'https://example.com' });
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({
+      ok: true,
+      finalUrl: 'https://www.example.com/',
+      title: 'Example',
+      desktop: { width: 1440, height: 3000, mime: 'image/jpeg', imageBase64: JPEG.toString('base64') },
+      mobile: { width: 390, height: 5000, mime: 'image/jpeg', imageBase64: JPEG.toString('base64') },
+      measurements: { desktop: measurements, mobile: measurements },
+    });
+    expect(clone.mock.calls[0][0].href).toBe('https://example.com/');
+  });
+
+  it('keeps the desktop result when the mobile pass failed', async () => {
+    const { clonePost } = await start({ capture: vi.fn<CaptureBackend>(), clone: async () => cloned({ mobile: null, measurements: { desktop: measurements, mobile: null } }) });
+    const r = await clonePost({ url: 'https://example.com' });
+    expect(r.body).toMatchObject({ ok: true, mobile: null, measurements: { mobile: null } });
+  });
+
+  it('answers capture_unavailable when the server has no clone backend', async () => {
+    const { clonePost } = await start({ capture: vi.fn<CaptureBackend>() });
+    expect(await clonePost({ url: 'https://example.com' })).toMatchObject({ status: 503, body: { ok: false, code: 'capture_unavailable' } });
+  });
+
+  it('applies the same guard and URL rules as capture-site', async () => {
+    const clone = vi.fn<CloneBackend>(async () => cloned());
+    const { clonePost } = await start({ capture: vi.fn<CaptureBackend>(), clone });
+    expect(await clonePost({ url: 'https://example.com' }, { origin: 'https://evil.example' })).toMatchObject({ status: 403, body: { code: 'forbidden_origin' } });
+    expect(await clonePost({ url: 'http://169.254.169.254/' })).toMatchObject({ status: 403, body: { code: 'blocked_host' } });
+    expect(clone).not.toHaveBeenCalled();
+  });
+
+  it('shares one browser slot with capture-site', async () => {
+    const backend = controllable();
+    const clone = vi.fn<CloneBackend>(async () => cloned());
+    const { post, clonePost } = await start({ capture: backend.capture, clone });
+    const first = post({ url: 'https://example.com' });
+    await vi.waitFor(() => expect(backend.capture).toHaveBeenCalledTimes(1));
+    expect(await clonePost({ url: 'https://example.org' })).toMatchObject({ status: 429, body: { code: 'busy' } });
+    expect(clone).not.toHaveBeenCalled();
+    backend.finish();
+    expect((await first).status).toBe(200);
+    expect((await clonePost({ url: 'https://example.org' })).status).toBe(200);
+  });
+
+  it('uses its own, longer deadline', async () => {
+    const signals: AbortSignal[] = [];
+    const clone: CloneBackend = (_url, signal) => { signals.push(signal); return new Promise<CloneResult>(() => undefined); };
+    const { clonePost } = await start({ capture: vi.fn<CaptureBackend>(), clone, deadlineMs: 10, cloneDeadlineMs: 80 });
+    const t0 = Date.now();
+    expect(await clonePost({ url: 'https://example.com' })).toMatchObject({ status: 504, body: { code: 'timeout' } });
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(70);
+    expect(signals[0].aborted).toBe(true);
+  });
+
+  it('enforces the 8 MB cap on either screenshot', async () => {
+    const big = { width: 390, height: 5000, jpeg: Buffer.alloc(CAPTURE_MAX_BYTES + 1) };
+    const { clonePost } = await start({ capture: vi.fn<CaptureBackend>(), clone: async () => cloned({ mobile: big }) });
+    expect(await clonePost({ url: 'https://example.com' })).toMatchObject({ status: 413, body: { code: 'too_large' } });
   });
 });

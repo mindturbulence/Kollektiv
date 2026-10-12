@@ -480,8 +480,9 @@ export interface GalleryCategory {
 
 // --- Web Design Library (Vault → Web Design) ---
 export type RecipePageType = 'landing' | 'dashboard' | 'portfolio' | 'ecommerce' | 'docs' | 'app' | 'other';
-/** Adapt = borrow the design system with our brand/content; Reproduce = match the reference closely. */
-export type RecipeMode = 'adapt' | 'reproduce';
+/** Adapt = borrow the design system with our brand/content; Clone = match the reference closely (for a cloned recipe:
+ *  a starter project). Was 'reproduce' before 2026-10-07; saved drafts are migrated on load. */
+export type RecipeMode = 'adapt' | 'clone';
 
 /** Index entry in kollektiv_design_library_manifest.json; the spec itself lives in design-library/<id>/DESIGN.md. */
 export interface DesignRecipe {
@@ -501,6 +502,8 @@ export interface DesignRecipe {
   palette?: string[];
   /** Up to 2 chips such as "Inter / 56px" from DESIGN.md front matter. Same undefined/[] meaning as `palette`. */
   fonts?: string[];
+  /** Set on recipes made by "Clone a website": the measured data files exist and the clone sections are expected. */
+  clone?: { capturedAt: number; tech: string[] };
 }
 
 export interface DesignCollection {

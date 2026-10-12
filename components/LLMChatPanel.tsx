@@ -622,7 +622,7 @@ ${systemResponse}` };
                                                         {attachments.map((att, idx) => (
                                                             <div key={idx} className="relative group bg-base-300 text-xs px-2 py-1 rounded flex items-center gap-1 border border-white/10">
                                                                 <span className="truncate max-w-[120px]">{att.fileName}</span>
-                                                                <button type="button" onClick={() => removeAttachment(idx)} className="text-white/40 hover:text-red-400">
+                                                                <button type="button" onClick={() => removeAttachment(idx)} className="text-base-content/40 hover:text-red-400">
                                                                     <CloseIcon className="w-3 h-3" />
                                                                 </button>
                                                             </div>
@@ -668,7 +668,7 @@ ${systemResponse}` };
                                                             title="Attach File"
                                                             onClick={() => fileInputRef.current?.click()}
                                                             disabled={isProcessing || attachments.length >= 5}
-                                                            className="text-white/50 hover:text-white p-2 rounded-lg transition-colors disabled:opacity-50"
+                                                            className="text-base-content/50 hover:text-base-content p-2 rounded-lg transition-colors disabled:opacity-50"
                                                         >
                                                             <PaperclipIcon className="w-4 h-4" />
                                                         </button>

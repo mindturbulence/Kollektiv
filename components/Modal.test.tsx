@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import Modal from './Modal';
-import { PaperScope, PAPER_THEME } from './PaperScope';
+import { PaperScope, PAPER_SCOPE_CLASS } from './PaperScope';
 
 afterEach(cleanup);
 
@@ -45,14 +45,16 @@ describe('Modal', () => {
 });
 
 describe('Modal paper scope', () => {
-  it('has no theme attribute by default, so other pages render unchanged', () => {
+  it('adds no scope class by default, so other pages render unchanged', () => {
     render(<Modal isOpen onClose={() => {}} title="Plain"><button>x</button></Modal>);
-    expect(screen.getByRole('dialog').parentElement!.hasAttribute('data-theme')).toBe(false);
+    expect(screen.getByRole('dialog').parentElement!.classList.contains(PAPER_SCOPE_CLASS)).toBe(false);
   });
 
-  it('re-applies the paper theme to its portal when opened under a PaperScope', () => {
+  it('re-applies the scope class (never a theme) to its portal when opened under a PaperScope', () => {
     render(<PaperScope><Modal isOpen onClose={() => {}} title="Scoped"><button>x</button></Modal></PaperScope>);
-    expect(screen.getByRole('dialog').parentElement!.getAttribute('data-theme')).toBe(PAPER_THEME);
+    const backdrop = screen.getByRole('dialog').parentElement!;
+    expect(backdrop.classList.contains(PAPER_SCOPE_CLASS)).toBe(true);
+    expect(backdrop.hasAttribute('data-theme')).toBe(false);
   });
 });
 

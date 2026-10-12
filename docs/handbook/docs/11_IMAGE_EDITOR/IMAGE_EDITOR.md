@@ -1,6 +1,6 @@
 # Image Editor
 
-The `image_editor` tab is a browser-only layered image editor for touching up and preparing images from the vault and from generation (inpaint masks, outpaint padding, crops, grades). Source: `image-editor/`. The next feature plan (Looks / Quick-Edit / RAW) is `docs/plans/2026-09-28-image-editor-looks.md`; remaining small tasks are in `docs/plans/TASKS.md`.
+The `image_editor` tab is a browser-only layered image editor for touching up and preparing images from the vault and from generation (inpaint masks, outpaint padding, crops, grades). Source: `image-editor/`. Looks / Quick-Edit / RAW (v1, shipped 2026-09-29) is described below; its original plan is in git history at commit `1bff4895` (`docs/plans/2026-09-28-image-editor-looks.md`), and remaining tasks are in `docs/plans/TASKS.md`.
 
 Where it came from: planned 2026-09-22 (engineering + frontend plans), built as milestones M1–M4, then a whole-app review (2026-09-24) found the core loop untrustworthy and the M5 "make editing real" pass fixed it (2026-09-25). A UI reachability pass and a selection/brush mechanics pass followed on 2026-09-28. The original plans were deleted once implemented; read them in git history at commit `3bc6f65` (`docs/plans/image-editor-engineering-plan.md`, `image-editor-frontend-plan.md`, `review-2026-09-24/image-editor.md`).
 
@@ -71,6 +71,6 @@ Gallery → EDIT resolves the vault path to a Blob in `ui/GalleryBridge.loadGall
 
 ## Known open items
 
-The remaining editor work is the Looks plan (`docs/plans/2026-09-28-image-editor-looks.md`). PSD export is not built (`ag-psd` can write PSDs if it's wanted).
+Remaining editor work (tiled look export, Looks v2) is in `docs/plans/TASKS.md` § 1. PSD export is not built (`ag-psd` can write PSDs if it's wanted).
 
 Notes: Select → Invert Selection is menu-only (Ctrl+Shift+I is the browser's DevTools shortcut). Floating adjustment panels open inside the canvas area (`[data-editor-viewport]`) so they never cover the toolbar menus. E2E that drags right after opening a file must wait for the Open-or-Create dialog to finish animating out (`waitForFit` in the spec).

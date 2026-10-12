@@ -343,7 +343,7 @@ const Header: React.FC<HeaderProps> = ({
           >
             …
           </button>
-          <div className={`${iconsOpen ? 'flex' : 'hidden'} xl:flex gap-1 items-center absolute xl:static top-full right-0 mt-2 xl:mt-0 p-1 xl:p-0 bg-base-200 xl:bg-transparent border border-base-content/10 xl:border-0 shadow-xl xl:shadow-none`}>
+          <div className={`${iconsOpen ? 'flex' : 'hidden'} xl:flex gap-1 items-center absolute xl:static top-full right-0 mt-2 xl:mt-0 p-1 xl:p-0`}>
             {onOpenCommandPalette && (
               <>
                 <HUDNavItem

@@ -104,7 +104,7 @@ describe('UseRecipeModal', () => {
     renderModal();
     expect((screen.getByLabelText(/^project/i) as HTMLInputElement).value).toBe('Old');
     expect((screen.getByLabelText(/^stack/i) as HTMLTextAreaElement).value).toBe('Astro');
-    expect((screen.getByLabelText(/reproduce/i) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByLabelText(/^clone/i) as HTMLInputElement).checked).toBe(true);
     type(/^project/i, 'New');
     fireEvent.click(screen.getByLabelText(/adapt/i));
     expect(JSON.parse(localStorage.getItem(DRAFT_KEY)!)).toMatchObject({ project: 'New', pages: 'About', mode: 'adapt' });
@@ -124,14 +124,14 @@ describe('UseRecipeModal', () => {
     expect(clipboard.writeText).toHaveBeenCalledOnce();
   });
 
-  it('adapt and reproduce reach the copied prompt', async () => {
+  it('adapt and clone reach the copied prompt', async () => {
     renderModal();
     fillRequired();
     click(/copy prompt only/i);
     await waitFor(() => expect(clipboard.writeText).toHaveBeenCalledTimes(1));
     expect(clipboard.writeText.mock.calls[0][0]).toContain('Use OUR brand, copy and imagery');
     expect(clipboard.writeText.mock.calls[0][0]).toContain('Build home + pricing for Acme');
-    fireEvent.click(screen.getByLabelText(/reproduce/i));
+    fireEvent.click(screen.getByLabelText(/^clone/i));
     click(/copy prompt only/i);
     await waitFor(() => expect(clipboard.writeText).toHaveBeenCalledTimes(2));
     expect(clipboard.writeText.mock.calls[1][0]).toContain('Reproduce the screenshots as closely as possible');
@@ -355,7 +355,7 @@ describe('UseRecipeModal', () => {
       type(/^pages/i, 'home + pricing');
       expect(preview().value).toContain('Build home + pricing for Acme');
       expect(preview().value).toContain('Use OUR brand, copy and imagery');
-      fireEvent.click(screen.getByLabelText(/reproduce/i));
+      fireEvent.click(screen.getByLabelText(/^clone/i));
       expect(preview().value).toContain('Reproduce the screenshots as closely as possible');
       type(/^pages/i, 'about');
       expect(preview().value).toContain('Build about for Acme');

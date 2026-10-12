@@ -57,12 +57,13 @@ test.describe('Navigation', () => {
     test('boots and navigates to the Settings page from the header', async ({ page }) => {
         await bootToSettings(page);
         await expect(page.getByText('SYSTEM HUB')).toBeVisible();
-        // All 5 main tabs should be present in the sidebar
+        // All 6 main tabs should be present in the sidebar
         await expect(sidebarNav(page, 'APPLICATION')).toBeVisible();
         await expect(sidebarNav(page, 'APPEARANCE')).toBeVisible();
         await expect(sidebarNav(page, 'INTEGRATIONS')).toBeVisible();
         await expect(sidebarNav(page, 'PROMPTS')).toBeVisible();
         await expect(sidebarNav(page, 'GALLERY')).toBeVisible();
+        await expect(sidebarNav(page, 'WEB DESIGN')).toBeVisible();
     });
 
     test('shows APPLICATION sub-tabs by default', async ({ page }) => {

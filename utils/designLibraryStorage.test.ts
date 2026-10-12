@@ -15,6 +15,8 @@ import {
   deleteCollection,
   findOrphanRecipes,
   rebuildIndexFromDisk,
+  loadRecipeFile,
+  type CloneFile,
 } from './designLibraryStorage';
 import { serializeDesignSpec, type DesignSpec } from './designSpec';
 
@@ -186,6 +188,38 @@ describe('designLibraryStorage', () => {
     ]);
     expect(manifestOf().recipes).toEqual([]);
     expect([...fs.files.keys()]).toEqual([MANIFEST]);
+  });
+
+  describe('cloned recipes', () => {
+    const files = { 'assets.json': '{"assets":[]}', 'content.json': '{"sections":[]}', 'measurements.json': '{"desktop":{}}' };
+    const cloneInput = { ...input, clone: { capturedAt: 123, tech: ['Next.js'], files } };
+
+    it('writes the data files before the manifest and keeps the marker', async () => {
+      const r = await createRecipe(cloneInput);
+      expect(r.clone).toEqual({ capturedAt: 123, tech: ['Next.js'] });
+      expect(fs.log.indexOf(`save:${MANIFEST}`)).toBe(fs.log.length - 1);
+      expect(await loadRecipeFile(r.id, 'content.json')).toBe('{"sections":[]}');
+      expect((await loadDesignLibrary()).recipes[0].clone).toEqual({ capturedAt: 123, tech: ['Next.js'] });
+    });
+
+    it('refuses file names outside the fixed list', async () => {
+      await expect(loadRecipeFile('dr_1', '../kollektiv_design_library_manifest.json' as CloneFile)).rejects.toThrow(/Not a recipe data file/);
+    });
+
+    it('delete also removes the data files', async () => {
+      const r = await createRecipe(cloneInput);
+      await deleteRecipe(r.id);
+      expect([...fs.files.keys()]).toEqual([MANIFEST]);
+    });
+
+    it('drops a malformed clone marker on load', async () => {
+      const r = await createRecipe(cloneInput);
+      const m = manifestOf();
+      m.recipes[0].clone = { capturedAt: 'yesterday' };
+      fs.files.set(MANIFEST, JSON.stringify(m));
+      const loaded = (await loadDesignLibrary()).recipes.find((x) => x.id === r.id)!;
+      expect(loaded.clone).toBeUndefined();
+    });
   });
 
   it('delete throws and keeps the manifest entry when a file is still present', async () => {
