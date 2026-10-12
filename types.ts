@@ -480,8 +480,9 @@ export interface GalleryCategory {
 
 // --- Web Design Library (Vault → Web Design) ---
 export type RecipePageType = 'landing' | 'dashboard' | 'portfolio' | 'ecommerce' | 'docs' | 'app' | 'other';
-/** Adapt = borrow the design system with our brand/content; Reproduce = match the reference closely. */
-export type RecipeMode = 'adapt' | 'reproduce';
+/** Adapt = borrow the design system with our brand/content; Clone = match the reference closely (for a cloned recipe:
+ *  a starter project). Was 'reproduce' before 2026-10-07; saved drafts are migrated on load. */
+export type RecipeMode = 'adapt' | 'clone';
 
 /** Index entry in kollektiv_design_library_manifest.json; the spec itself lives in design-library/<id>/DESIGN.md. */
 export interface DesignRecipe {

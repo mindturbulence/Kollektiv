@@ -153,7 +153,8 @@ export function loadBriefDraft(): BriefDraft {
       const v = src[key];
       if (typeof v === 'string') brief[key] = v;
     }
-    return { brief, mode: src.mode === 'reproduce' ? 'reproduce' : 'adapt' };
+    // 'reproduce' is the pre-2026-10-07 name of 'clone'.
+    return { brief, mode: src.mode === 'clone' || src.mode === 'reproduce' ? 'clone' : 'adapt' };
   } catch {
     return EMPTY_DRAFT;
   }

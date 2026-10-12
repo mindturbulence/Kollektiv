@@ -499,7 +499,7 @@ const DesignLibraryView: React.FC<DesignLibraryProps> = ({ showGlobalFeedback, o
         </Modal>
       )}
       {toUse && (
-        <UseRecipeModal recipeId={toUse.id} recipeTitle={toUse.title} onClose={() => setToUse(null)} showGlobalFeedback={showGlobalFeedback} />
+        <UseRecipeModal recipeId={toUse.id} recipeTitle={toUse.title} isClone={!!toUse.clone} onClose={() => setToUse(null)} showGlobalFeedback={showGlobalFeedback} />
       )}
       {toDelete && (
         <ConfirmationModal

@@ -93,8 +93,8 @@ describe('buildExportBundle', () => {
     expect(rest.join('\n')).toBe(plain);
   });
 
-  it('reproduce mode reaches the prompt', () => {
-    expect(buildExportBundle({ ...input, mode: 'reproduce' }).prompt).toContain('Reproduce the screenshots');
+  it('clone mode reaches the prompt', () => {
+    expect(buildExportBundle({ ...input, mode: 'clone' }).prompt).toContain('Reproduce the screenshots');
   });
 
   it('rejects an unsupported image type naming the recipe ref', () => {
@@ -171,8 +171,13 @@ describe('brief draft storage', () => {
   afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
 
   it('round-trips and keeps only valid fields', () => {
-    saveBriefDraft({ brief: { project: 'P', pages: 'Q', job: 'J' }, mode: 'reproduce' });
-    expect(loadBriefDraft()).toEqual({ brief: { project: 'P', pages: 'Q', job: 'J' }, mode: 'reproduce' });
+    saveBriefDraft({ brief: { project: 'P', pages: 'Q', job: 'J' }, mode: 'clone' });
+    expect(loadBriefDraft()).toEqual({ brief: { project: 'P', pages: 'Q', job: 'J' }, mode: 'clone' });
+  });
+
+  it("migrates the old 'reproduce' mode to 'clone'", () => {
+    localStorage.setItem('kollektiv.designBriefDraft', JSON.stringify({ project: 'P', pages: 'Q', mode: 'reproduce' }));
+    expect(loadBriefDraft().mode).toBe('clone');
     localStorage.setItem('kollektiv.designBriefDraft', JSON.stringify({ project: 5, pages: 'ok', mode: 'weird' }));
     expect(loadBriefDraft()).toEqual({ brief: { project: '', pages: 'ok' }, mode: 'adapt' });
   });

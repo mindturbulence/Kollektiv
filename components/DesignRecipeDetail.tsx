@@ -530,7 +530,7 @@ const Editor: React.FC<EditorProps> = ({ recipe, collections, spec, truncated: l
       </div>
 
       {useOpen && (
-        <UseRecipeModal recipeId={recipe.id} recipeTitle={saved.title} onClose={() => setUseOpen(false)} showGlobalFeedback={showGlobalFeedback} />
+        <UseRecipeModal recipeId={recipe.id} recipeTitle={saved.title} isClone={!!recipe.clone} onClose={() => setUseOpen(false)} showGlobalFeedback={showGlobalFeedback} />
       )}
       {confirmBack && (
         <ConfirmationModal
