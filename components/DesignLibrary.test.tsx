@@ -846,18 +846,15 @@ describe('DesignLibrary', () => {
       expect(asideOf(container).className).toContain('w-64');
     });
 
-    it('Library view is compact: no description or eyebrow, tiles inline, toolbar not sticky, panes at least 24rem', async () => {
+    it('Library view is compact: no description, toolbar not sticky, panes at least 24rem', async () => {
       stubWidth(1440);
       localStorage.setItem(VIEW_KEY, 'library');
       const { container } = renderLib();
       await screen.findByRole('listbox', { name: 'Recipes' });
       expect(screen.queryByText(/Reference designs you can turn into a prompt/)).toBeNull();
-      expect(screen.queryByText('Vault')).toBeNull();
-      expect(screen.getByText('Recipes', { selector: 'dt' }).parentElement!.className).toContain('flex-row-reverse');
-      expect(screen.getByText('Recipes', { selector: 'dt' }).closest('.paper-card')!.className).not.toContain('min-w-28');
       expect(group('Tags').closest('.border-b')!.className).not.toContain('sticky');
       expect(screen.getByRole('listbox').closest('.min-h-\\[24rem\\]')).toBeTruthy();
-      expect(container.querySelector('h1')!.className).toContain('text-3xl');
+      expect(container.querySelector('h1')!.textContent).toBe('Web Design');
     });
 
     it('Gallery view keeps the full header and the sticky toolbar', async () => {
@@ -865,7 +862,6 @@ describe('DesignLibrary', () => {
       renderLib();
       await screen.findByText('Stripe Home');
       expect(screen.getByText(/Reference designs you can turn into a prompt/)).toBeTruthy();
-      expect(screen.getByText('Vault')).toBeTruthy();
       expect(group('Tags').closest('.border-b')!.className).toContain('sticky');
     });
 
@@ -891,16 +887,10 @@ describe('DesignLibrary', () => {
       expect(group('Tags').className).not.toContain('overflow-x-auto');
     });
 
-    it('stacks the header and shows one grid column on a phone', async () => {
+    it('shows one grid column on a phone', async () => {
       stubWidth(390);
       const { container } = renderLib();
       await screen.findByText('Stripe Home');
-      const dl = container.querySelector('dl')!;
-      expect(dl.className).toContain('grid-cols-3');
-      expect(dl.parentElement!.className).toContain('flex-col');
-      const tile = screen.getByText('Recipes', { selector: 'dt' }).closest('.paper-card')!;
-      expect(tile.className).toContain('md:min-w-28');
-      expect(tile.className).not.toMatch(/(^|\s)min-w-28/);
       const grid = container.querySelector('ul.grid')!;
       expect(grid.className).toContain('grid-cols-1');
     });

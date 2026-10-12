@@ -2808,9 +2808,9 @@ footer.footer {
 }
 
 /* ==========================================================================
-   Web Design Library components (.paper-* classes). Layout and shape only: every
-   colour and radius comes from the active app theme's DaisyUI variables, so the page
-   follows the theme the user picked. Scoped to .paper-scope (components/PaperScope.tsx,
+   Web Design Library / Batch Runner components (.paper-* classes). Styled to match the
+   rest of the app (Refiner): square corners, uppercase tracked buttons, translucent
+   panels, primary accent on hover. Colours come from the active theme's DaisyUI variables. Scoped to .paper-scope (components/PaperScope.tsx,
    and Modal re-adds it on its portal). :not(#paper) lifts specificity over the app
    themes' !important input rules.
    ========================================================================== */
@@ -2828,16 +2828,17 @@ footer.footer {
 }
 
 .paper-scope .paper-card {
-  border: 1px solid var(--paper-hairline);
-  border-radius: var(--rounded-box, 0.75rem);
-  background-color: oklch(var(--b1) / 0.6);
+  border: 1px solid oklch(var(--bc) / 0.1);
+  border-radius: 0;
+  background-color: oklch(var(--b1) / 0.4);
+  backdrop-filter: blur(24px);
   overflow: hidden;
   transition: border-color var(--duration-fast, 150ms) ease;
 }
-.paper-scope .paper-card:hover { border-color: var(--paper-hairline-strong); }
+.paper-scope .paper-card:hover { border-color: oklch(var(--p) / 0.3); }
 
 .paper-scope .paper-notice {
-  border-radius: var(--rounded-btn, 0.5rem);
+  border-radius: 0;
   padding: 0.5rem 0.75rem;
   font-size: 12px;
   line-height: 1.5;
@@ -2851,26 +2852,29 @@ footer.footer {
   gap: 0.375rem;
   height: 2.25rem;
   padding: 0 0.875rem;
-  border: 1px solid var(--paper-hairline);
-  border-radius: var(--rounded-btn, 0.5rem);
-  background-color: oklch(var(--b1));
-  color: oklch(var(--bc));
-  font-size: 13px;
-  font-weight: 500;
+  border: 1px solid oklch(var(--bc) / 0.05);
+  border-radius: 0;
+  background-color: transparent;
+  color: oklch(var(--bc) / 0.6);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
   transition: background-color var(--duration-quick, 150ms) ease, border-color var(--duration-quick, 150ms) ease, color var(--duration-quick, 150ms) ease, opacity var(--duration-quick, 150ms) ease;
 }
-.paper-scope .paper-btn:hover:not(:disabled) { background-color: oklch(var(--b2)); border-color: var(--paper-hairline-strong); }
+.paper-scope .paper-btn:hover:not(:disabled) { background-color: oklch(var(--p) / 0.1); border-color: oklch(var(--p) / 0.4); color: oklch(var(--p)); }
 /* Disabled fades colours, not opacity: cards reveal their buttons with an opacity utility that this rule would otherwise override. */
 .paper-scope .paper-btn:disabled { color: oklch(var(--bc) / 0.4); cursor: not-allowed; border-style: solid; }
-.paper-scope .paper-btn-primary:disabled { background-color: oklch(var(--p) / 0.35); border-color: transparent; color: oklch(var(--pc)); }
-.paper-scope .paper-btn-primary { background-color: oklch(var(--p)); border-color: oklch(var(--p)); color: oklch(var(--pc)); }
-.paper-scope .paper-btn-primary:hover:not(:disabled) { background-color: oklch(var(--p) / 0.85); border-color: oklch(var(--p) / 0.85); }
-.paper-scope .paper-btn-ghost { background-color: transparent; border-color: transparent; color: oklch(var(--bc) / 0.7); }
-.paper-scope .paper-btn-ghost:hover:not(:disabled) { background-color: oklch(var(--b2)); border-color: transparent; color: oklch(var(--bc)); }
-.paper-scope .paper-btn-danger { color: oklch(var(--er)); }
+.paper-scope .paper-btn-primary:disabled { background-color: transparent; border-color: oklch(var(--bc) / 0.05); color: oklch(var(--p) / 0.3); }
+.paper-scope .paper-btn-primary { background-color: oklch(var(--p) / 0.1); border-color: oklch(var(--p) / 0.4); color: oklch(var(--p)); }
+.paper-scope .paper-btn-primary:hover:not(:disabled) { background-color: oklch(var(--p) / 0.2); border-color: oklch(var(--p)); color: oklch(var(--p)); }
+.paper-scope .paper-btn-ghost { background-color: transparent; border-color: transparent; color: oklch(var(--bc) / 0.6); }
+.paper-scope .paper-btn-ghost:hover:not(:disabled) { background-color: oklch(var(--p) / 0.1); border-color: transparent; color: oklch(var(--p)); }
+.paper-scope .paper-btn-danger { color: oklch(var(--er) / 0.6); }
+.paper-scope .paper-btn-danger:hover:not(:disabled) { background-color: oklch(var(--er) / 0.1); border-color: oklch(var(--er) / 0.4); color: oklch(var(--er)); }
 .paper-scope .paper-btn-sm { height: 1.75rem; padding: 0 0.625rem; font-size: 12px; }
 .paper-scope .paper-btn-icon { width: 1.75rem; height: 1.75rem; padding: 0; }
 .paper-scope .paper-btn-lg { width: 100%; height: 2.75rem; font-size: 14px; }
@@ -2881,27 +2885,31 @@ footer.footer {
   align-items: center;
   height: 1.875rem;
   padding: 0 0.875rem;
-  border: 1px solid var(--paper-hairline);
-  border-radius: var(--rounded-badge, 9999px);
-  background-color: oklch(var(--b1));
-  color: oklch(var(--bc) / 0.7);
-  font-size: 13px;
-  font-weight: 500;
+  border: 1px solid oklch(var(--bc) / 0.1);
+  border-radius: 0;
+  background-color: transparent;
+  color: oklch(var(--bc) / 0.6);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   cursor: pointer;
   transition: background-color var(--duration-quick, 150ms) ease, border-color var(--duration-quick, 150ms) ease, color var(--duration-quick, 150ms) ease;
 }
-.paper-scope .paper-chip:hover { border-color: var(--paper-hairline-strong); color: oklch(var(--bc)); }
-.paper-scope .paper-chip[aria-pressed="true"] { background-color: oklch(var(--p)); border-color: oklch(var(--p)); color: oklch(var(--pc)); }
+.paper-scope .paper-chip:hover { border-color: oklch(var(--p) / 0.4); color: oklch(var(--p)); }
+.paper-scope .paper-chip[aria-pressed="true"] { background-color: oklch(var(--p) / 0.1); border-color: oklch(var(--p) / 0.4); color: oklch(var(--p)); }
 /* Static label pill (page type, tags). */
 .paper-scope .paper-tag {
   display: inline-flex;
   align-items: center;
-  padding: 0.125rem 0.625rem;
-  border-radius: var(--rounded-badge, 9999px);
-  background-color: oklch(var(--b2));
-  color: oklch(var(--bc) / 0.7);
-  font-size: 11px;
-  font-weight: 500;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0;
+  background-color: oklch(var(--bc) / 0.05);
+  color: oklch(var(--bc) / 0.6);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   line-height: 1.4;
 }
 
@@ -2920,14 +2928,16 @@ footer.footer {
   flex-shrink: 0;
   padding: 0.5rem 0;
   border-bottom: 2px solid transparent;
-  color: oklch(var(--bc) / 0.55);
-  font-size: 13px;
-  font-weight: 500;
+  color: oklch(var(--bc) / 0.6);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   white-space: nowrap;
   cursor: pointer;
   transition: color var(--duration-quick, 150ms) ease, border-color var(--duration-quick, 150ms) ease;
 }
-.paper-scope .paper-tab:hover { color: oklch(var(--bc)); }
+.paper-scope .paper-tab:hover { color: oklch(var(--p)); }
 .paper-scope .paper-tab[aria-pressed="true"] { color: oklch(var(--p)); border-bottom-color: oklch(var(--p)); }
 
 /* Split button halves (main action + chevron). */
