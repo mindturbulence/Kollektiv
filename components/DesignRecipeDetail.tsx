@@ -38,6 +38,7 @@ import ConfirmationModal from './ConfirmationModal';
 import RecipeThumb from './RecipeThumb';
 import UseRecipeModal from './UseRecipeModal';
 import { MAX_RECIPE_REFS } from './DesignRecipeAddModal';
+import { cloneOneShotPrompt, slugify } from '../utils/cloneExport';
 
 interface Props {
   recipeId: string;
@@ -455,6 +456,14 @@ const Editor: React.FC<EditorProps> = ({ recipe, collections, spec, truncated: l
                     </div>
                   )}
                 </section>
+
+                {recipe.clone && (
+                  <section aria-label="Clone prompt preview" className="flex flex-col gap-2">
+                    <h2 className={labelClass}>Clone prompt</h2>
+                    <p className="text-xs text-base-content/60">The one-shot prompt copied when you download the starter project. Open it in Claude Code or paste it into any coding agent.</p>
+                    <pre className="paper-input w-full font-sf-mono text-xs whitespace-pre-wrap select-all">{cloneOneShotPrompt(slugify(draft.title || recipe.title))}</pre>
+                  </section>
+                )}
 
                 <section aria-labelledby="tokens-heading" className="flex flex-col gap-4">
                   <h2 id="tokens-heading" className={labelClass}>Tokens</h2>
