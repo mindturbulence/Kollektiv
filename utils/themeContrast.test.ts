@@ -33,7 +33,7 @@ function contrastRatio(a: string, b: string): number {
 
 // Ratchet: these currently fail primary vs base-100. Fixing one makes its
 // "still fails" assertion break, forcing removal from this list.
-const KNOWN_PRIMARY_FAILURES = new Set(['business', 'dark', 'Heron', 'MindTurbulence']);
+const KNOWN_PRIMARY_FAILURES = new Set(['business', 'dark', 'MindTurbulence']);
 
 const CHECKS = [
   { fg: 'primary', min: 4.5 },

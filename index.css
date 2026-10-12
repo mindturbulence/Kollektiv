@@ -919,12 +919,12 @@ button:disabled,
   backdrop-filter: none !important;
 }
 
-/* --- HERON THEME (WARM STONE / ARCHITECTURAL / EDITORIAL) --- */
+/* --- HERON THEME (WARM DARK / ARCHITECTURAL / EDITORIAL) --- */
 [data-theme="Heron"] body {
-  background-color: #f2efe9;
-  color: #282828;
+  background-color: #1c1a17;
+  color: #f2efe9;
   font-family: "Space Grotesk", "Nunito", sans-serif;
-  background-image: radial-gradient(circle, rgba(40,40,40,0.06) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(242,239,233,0.05) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -938,52 +938,36 @@ button:disabled,
 }
 
 [data-theme="Heron"] .btn-primary {
-  box-shadow: 0 10px 20px -5px rgba(250, 54, 0, 0.3);
+  box-shadow: 0 10px 20px -5px rgba(250, 54, 0, 0.4);
 }
 
 [data-theme="Heron"] .btn-primary:hover {
-  box-shadow: 0 15px 25px -5px rgba(250, 54, 0, 0.4);
+  box-shadow: 0 15px 25px -5px rgba(250, 54, 0, 0.55);
 }
 
 /* Not .main-app-frame: a blurred translucent layer on the app-wide frame veils every page. */
 [data-theme="Heron"] .card,
 [data-theme="Heron"] .bg-base-100,
 [data-theme="Heron"] .corner-frame {
-  background: rgba(255, 255, 255, 0.55) !important;
-  border: 1px solid #b3b3af !important;
+  background: rgba(28, 26, 23, 0.85) !important;
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(179, 179, 175, 0.15) !important;
 }
 
 [data-theme="Heron"] .border-base-300,
 [data-theme="Heron"] .border-base-content,
 [data-theme="Heron"] .main-app-frame,
 [data-theme="Heron"] .corner-frame {
-  border-color: #b3b3af !important;
-}
-
-/* The global [data-theme] neon glow (later in this file) smears text on a light base. */
-[data-theme="Heron"] .text-primary,
-[data-theme="Heron"] .text-secondary {
-  text-shadow: none !important;
-  filter: none !important;
+  border-color: rgba(179, 179, 175, 0.12) !important;
 }
 
 [data-theme="Heron"] .bg-base-200 {
-  background-color: rgba(232, 228, 221, 0.8) !important;
+  background-color: rgba(37, 35, 32, 0.8) !important;
 }
 
 [data-theme="Heron"] .bg-base-300 {
-  background-color: rgba(217, 212, 204, 0.8) !important;
+  background-color: rgba(46, 44, 40, 0.8) !important;
 }
-
-/* border-white/* and bg-white/* are dark-theme chrome; flip to dark ink on light base.
-   Keep bg-black/* scrims and text-white in media containers as-is — those sit on dark canvases. */
-[data-theme="Heron"] .border-white\/5  { border-color: rgba(0,0,0,0.05) !important; }
-[data-theme="Heron"] .border-white\/10 { border-color: rgba(0,0,0,0.08) !important; }
-[data-theme="Heron"] .border-white\/20 { border-color: rgba(0,0,0,0.12) !important; }
-[data-theme="Heron"] .border-white\/40 { border-color: rgba(0,0,0,0.18) !important; }
-[data-theme="Heron"] .bg-white\/\[0\.02\] { background-color: rgba(0,0,0,0.02) !important; }
-[data-theme="Heron"] .bg-white\/5 { background-color: rgba(0,0,0,0.03) !important; }
-[data-theme="Heron"] .bg-white\/10 { background-color: rgba(0,0,0,0.05) !important; }
 /* --- VANGUARD (PIP-BOY X MINDTURBULENCE BLEND) --- */
 [data-theme="Vanguard"] {
   --amber-glow: 0 0 8px rgba(255, 204, 0, 0.4);
