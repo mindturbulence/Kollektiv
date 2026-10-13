@@ -137,6 +137,12 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
                     <SettingRow label="Preferred Language" desc="Always reply in this language regardless of what language you write or speak in. Leave blank to match you automatically.">
                         <input type="text" value={settings.assistantLanguage || ''} onChange={(e) => handleSettingsChange('assistantLanguage', e.target.value)} className="form-input w-full md:w-[620px]" placeholder="e.g. English, Japanese, Tagalog" />
                     </SettingRow>
+                    <SettingRow label="Push-to-Talk" desc="Keep the microphone closed until you hold Ctrl+Space. Ctrl+Space still starts a voice session; stop it from the header mic button. Off: Ctrl+Space toggles the session and the mic stays open while it runs.">
+                        <div className="tab-group">
+                            <ProviderTab label="Off" isActive={!settings.pushToTalk} onClick={() => handleSettingsChange('pushToTalk', false)} />
+                            <ProviderTab label="On" isActive={!!settings.pushToTalk} onClick={() => handleSettingsChange('pushToTalk', true)} />
+                        </div>
+                    </SettingRow>
                     <SettingRow label="Voice Silence Timeout" desc="How long the assistant waits after you stop talking before it starts responding, in live voice mode. Lower feels quicker but risks cutting off natural pauses mid-sentence.">
                         <div className="flex items-center gap-4 w-full md:w-[400px]">
                             <input

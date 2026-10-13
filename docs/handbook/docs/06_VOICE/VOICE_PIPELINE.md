@@ -91,6 +91,13 @@ Wired into all three voice backends:
 - After `connect()` resolves, re-checks staleness and disconnects if a newer call happened
 - Fixed pre-existing missing `voiceProvider` dependency on `start`'s `useCallback`
 
+## Activation: Ctrl+Space and push-to-talk
+
+- **Default:** Ctrl+Space toggles the live session from anywhere (needs the active provider's key); the mic stays open while it runs. The header mic button and the floating avatar toggle it too.
+- **Push-to-talk** (`LLMSettings.pushToTalk`, Settings → Assistant, default off): Ctrl+Space still starts a session, but the mic stays closed until the key is held; release (keyup of Space or Ctrl, or window blur) closes it again. The session is stopped from the header/avatar. Implemented as `setMicEnabled()` on all three backends: it sets `track.enabled` (Gemini Live, OpenAI Realtime) or `setMicMuted` (ElevenLabs), remembers the wanted state so it applies when the stream is created during `connect()`, and relies on the server's turn detection to end the turn on the resulting silence.
+- **Not built:** an always-on wake word (parked in `docs/NOTES.md`).
+- **Spoken confirmation:** destructive tools ask the user aloud and read the spoken answer — see [AI_ENGINE.md § Spoken confirmation](../01_AI_ENGINE/AI_ENGINE.md#spoken-confirmation-for-destructive-tools).
+
 ## Captions
 
 `LiveCaptionOverlay` renders real-time voice captions as an overlay on non-assistant pages. Hidden during `activeTab === 'assistant'` (the full-screen Assistant page has its own caption UI).

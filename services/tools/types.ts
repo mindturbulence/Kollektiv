@@ -17,6 +17,9 @@ export interface AssistantTool {
     required?: string[];
   };
   execute: (args: Record<string, any>, ctx: ToolContext) => Promise<string> | string;
+  /** Destructive tool: the first call is parked and the assistant must ask the user aloud
+   *  (see services/confirmationGate.ts). */
+  requiresConfirmation?: boolean;
 }
 
 /** Per-tool-call context. Mirrors the running conversation and AI settings. */

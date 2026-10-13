@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { gsap } from 'gsap';
+import { setActivePage } from '../utils/assistantContext';
 import { MotionConfig } from 'motion/react';
 import { prefersReducedMotion } from './transitions/routeFx';
 import { useSettings } from '../contexts/SettingsContext';
@@ -154,6 +155,7 @@ const AppContent: React.FC = () => {
     // independent copy under the same localStorage key with no cross-sync, which
     // nothing ever read; that copy was removed rather than kept "in sync".
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
+    useEffect(() => setActivePage(activeTab), [activeTab]); // so the assistant knows where the user is
     const [editorOpenPayload, setEditorOpenPayload] = useState<EditorOpenPayload | undefined>(undefined);
     const [videoEditorOpenPayload, setVideoEditorOpenPayload] = useState<VideoEditorOpenPayload | undefined>(() => takePendingVideoEditorPayload());
     const [converterOpenFiles, setConverterOpenFiles] = useState<File[] | undefined>(undefined);

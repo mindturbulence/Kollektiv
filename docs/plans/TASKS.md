@@ -70,3 +70,15 @@ Every item passed lint + unit tests only; nothing below could be tested without 
 - [ ] **Decide:** hook for automatic tier routing (`.claude/hooks/tier-router.mjs` exists but is not registered; the global Jev router is ON and would suppress it); delete `scripts/design-spike/` and the empty `/tmp/s` a spike builder left in Git Bash's temp dir. Also **rotate the beatapi.io key** that was pasted into the chat, and add OpenRouter credits (the Jev route returns HTTP 402) or store the beatapi key from your own terminal so `tier-decide` can use it.
 - [ ] **Security residual — decide:** `authRateLimiter` skips loopback, which is what keeps local chat usable (10 requests / 15 min otherwise); it only matters if the server sits behind a reverse proxy on a non-loopback HOST. Also: plain `fetch` re-resolves DNS after the SSRF check in `scrapeUrl` (a rebinding host can race it); `isDisallowedAddress` does no DNS lookup for names (RSS, `/proxy-remote`); 100.64/10 (Tailscale) is now refused by `/proxy-remote` and RSS.
 - Known small gaps: empty `design-library/<id>/` folders remain after delete (no directory-removal API); export clears `design/refs/*` before writing (failure mid-write leaves a partial export); thumbnails all load on mount (add IntersectionObserver past a few hundred recipes); collection-delete dialog counts are a snapshot from when Manage opened; Import-from-site first capture after boot may time out once.
+
+## 9. AI Assistant improvements
+
+Built 2026-10-13 (push-to-talk, spoken confirmation gate, tool-result strip, reminders, page context; see
+[VOICE_PIPELINE.md](../handbook/docs/06_VOICE/VOICE_PIPELINE.md) and [AI_ENGINE.md](../handbook/docs/01_AI_ENGINE/AI_ENGINE.md)).
+Verified by lint + unit tests only; nothing voice-related has been run live. Ideas deliberately not built
+(always-on wake word, more top-level tools) are parked in [NOTES.md](../NOTES.md).
+
+- [ ] **Live voice walk** (needs you + a voice key): push-to-talk on each of Gemini Live / OpenAI Realtime / ElevenLabs (hold = talks, release ends the turn, alt-tab mid-hold closes the mic); then the spoken confirmation — "delete that gallery item" → the assistant asks → "yes" executes, "no" does not. **Echo test first**: without headphones the assistant's own question may be transcribed as your answer. Also confirm OpenAI Realtime really emits `conversation.item.created` with `role: 'user'` (the gate relies on it) and that ElevenLabs `onMessage` delivers both roles.
+- [ ] **Selected-item context** — the assistant now knows the *page* (`get_current_page`), not the selected prompt/image. Needs each page to publish its selection to `utils/assistantContext.ts`; build only if "refine this" proves awkward in practice. **M**
+- [ ] **Undo for tool results** — the Activity footer shows what ran (`assistantToolResult`) but offers no undo. **M**
+- [ ] **Reminders only fire while the app is open** (in-app toast; missed ones show on next boot). True background delivery needs a service worker / Notification permission. **M** — only if wanted.

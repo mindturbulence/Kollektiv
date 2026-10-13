@@ -217,6 +217,8 @@ export interface LLMSettings {
 
   /** Voice backend provider. Default: 'gemini_live' */
   voiceProvider?: 'gemini_live' | 'openai_realtime' | 'elevenlabs';
+  /** Push-to-talk: the mic stays closed until Ctrl+Space is held. Default: false (Ctrl+Space toggles the session). */
+  pushToTalk?: boolean;
 
   // AI Assistant Persona (chat + Gemini Live voice mode)
   assistantName?: string;

@@ -114,7 +114,7 @@ The engine builds model-specific system instructions via factory functions:
 
 ## Assistant Tool Catalog
 
-The assistant has 97 built-in tools (45 defined inline in `services/assistantTools.ts` plus 52 spread in from the category modules below), organized into category-specific modules under `services/tools/`:
+The assistant has 101 built-in tools (49 defined inline in `services/assistantTools.ts` plus 52 spread in from the category modules below), organized into category-specific modules under `services/tools/`:
 
 ### Core tools (in assistantTools.ts)
 
@@ -181,6 +181,16 @@ Both tools call server-side endpoints (`/api/scrape-url` and `/api/scrape-url-pl
 Tools receive a `ToolContext` carrying `settings` and `attachments`. The assistant loop runs up to `MAX_TOOL_ROUNDS = 8` iterative turns per user request (constant lives in `services/assistantService.ts`, not `assistantTools.ts`). Browser tools require explicit permission via the cursor icon in the header.
 
 `services/relationshipGraph.ts` (entity graph, 52 tests) is now reachable via the `find_related_knowledge` tool below — it was found built-but-disconnected in a 2026-07-25 audit and wired in 2026-07-26. See [ARCHITECTURE_CONSTITUTION.md § Built But Not Wired](../00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md#built-but-not-wired) for the history.
+
+#### Spoken confirmation for destructive tools
+
+Tools flagged `requiresConfirmation` (`delete_gallery_item`, `update_settings`, `toggle_mcp_server`) do not run on the first call. `executeAssistantTool` parks the call (`services/confirmationGate.ts`) and returns `CONFIRMATION_REQUIRED`, which tells the model to ask the user (aloud in voice, in text in chat) and to retry with identical arguments if they agree. The retry only executes when a **user utterance arrived after the assistant spoke**, the arguments match (canonical JSON), and it is within 60 s; the pending call is single-use. The yes/no reading stays with the model, the gate only proves a user turn happened, so the model can't confirm itself by retrying. Signals: `noteUserUtterance()` / `noteAssistantOutput()` come from the voice captions (`LiveAssistantContext`; Gemini Live + ElevenLabs), the OpenAI Realtime `conversation.item.created` events, and the start/end of each text chat turn (`runAssistantTurn`). Gmail tools (ISSUE-22) and the planner's `user_confirmation` step stay ungated (ISSUE-47).
+
+#### Reminders and page awareness
+
+- `set_reminder` / `list_reminders` / `cancel_reminder` store reminders in IndexedDB keyval (`utils/remindersStorage.ts`). `services/reminderService.ts` checks every 30 s while the app is open and on boot (started in `hooks/useAppEventBus.ts`) and shows an `assistantFeedback` toast; reminders that came due while closed are labelled "Missed reminder". They never fire while the app is closed.
+- The system prompt carries the current local time and timezone (so "at 5pm" resolves) and the page the user is on (`utils/assistantContext.ts`, published from `App.tsx`). Live voice fixes its instruction at connect and always opens on the assistant page, so it can call `get_current_page` for the live value.
+- Every finished tool call emits `assistantToolResult` (tool, ok, first line of the result); the Activity panel footer shows it as "✓ tool — result".
 
 ### Tool declarations by provider
 

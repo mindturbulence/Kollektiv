@@ -438,6 +438,9 @@ export class LiveAssistant {
     private session: any = null;
     private micCtx: AudioContext | null = null;
     private micStream: MediaStream | null = null;
+    /** Push-to-talk gate. startMic() runs inside connect(), so the wanted state is
+     *  remembered here and applied when the stream is created. */
+    private micWanted = true;
     private micNode: AudioWorkletNode | null = null;
     private noiseCancellation: NoiseCancellation | null = null;
     private outCtx: AudioContext | null = null;
@@ -608,10 +611,19 @@ export class LiveAssistant {
         }
     }
 
+    /** A disabled track still streams silence, so server-side turn detection ends the turn on release. */
+    setMicEnabled(enabled: boolean): boolean {
+        this.micWanted = enabled;
+        if (!this.micStream) return false;
+        for (const track of this.micStream.getAudioTracks()) track.enabled = enabled;
+        return true;
+    }
+
     private async startMic(): Promise<void> {
         this.micStream = await navigator.mediaDevices.getUserMedia({
             audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
         });
+        this.setMicEnabled(this.micWanted);
         this.micCtx = new AudioContext({ sampleRate: MIC_RATE });
         await this.micCtx.resume();
         const workletUrl = URL.createObjectURL(new Blob([WORKLET_SRC], { type: 'application/javascript' }));
