@@ -27,6 +27,7 @@ import { nodeTypes } from './nodes';
 import { applyRunState, createRunners } from './runners';
 import { completeWithSystem } from '../../services/llmService';
 import { refineBeat } from '../../utils/refineBeat';
+import { buildStoryboardPrompt, parseBriefs, storyboardToAction } from '../core/storyboard';
 
 const WORKING_ID = 'working';
 const WORKING_NAME = 'Working canvas';
@@ -328,6 +329,18 @@ function CanvasBody() {
           running={running}
           onUpdate={(patch: NodeDataPatch) => dispatch({ type: 'updateNodeData', nodeId: selectedNode.id, patch })}
           onRun={() => void run([selectedNode.id])}
+          onStoryboard={selectedNode.kind === 'concept' ? async count => {
+            const { system, user } = buildStoryboardPrompt(selectedNode.data.text, count);
+            const briefs = parseBriefs(await completeWithSystem(system, user, settings), count);
+            const g = getSnapshot();
+            const sibling = g.nodes.find(n => n.kind === 'shot' && g.edges.some(e => e.source === selectedNode.id && e.target === n.id));
+            const action = storyboardToAction(g, selectedNode.id, briefs, {
+              model: sibling?.kind === 'shot' ? sibling.data.model : '',
+              durationSec: sibling?.kind === 'shot' ? sibling.data.durationSec : 5,
+            });
+            if (!action) throw new Error('The model returned no shots. Try again.');
+            dispatch(action);
+          } : undefined}
           onRefineBeat={selectedNode.kind === 'shot' ? async (index, instruction) => {
             const text = await refineBeat(selectedNode.data.text, index, instruction, (sys, user) => completeWithSystem(sys, user, settings));
             dispatch({ type: 'updateNodeData', nodeId: selectedNode.id, patch: { text, edited: true } });

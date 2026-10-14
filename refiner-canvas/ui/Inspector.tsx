@@ -88,9 +88,11 @@ export interface InspectorProps {
   onRun: () => void;
   /** Rewrites one beat of the selected shot; rejects with a readable message on failure. */
   onRefineBeat?: (index: number, instruction: string) => Promise<void>;
+  /** Splits the selected concept into `count` linked Concept -> Shot pairs. */
+  onStoryboard?: (count: number) => Promise<void>;
 }
 
-export function Inspector({ node, run, running, onUpdate, onRun, onRefineBeat }: InspectorProps) {
+export function Inspector({ node, run, running, onUpdate, onRun, onRefineBeat, onStoryboard }: InspectorProps) {
   const runnable = node.kind === 'shot' || node.kind === 'audio' || node.kind === 'concept' || node.kind === 'preset';
   return (
     <aside className="flex h-full w-80 shrink-0 flex-col gap-3 overflow-y-auto border-l border-base-content/20 bg-base-100 p-3 text-xs" aria-label="Node inspector">
@@ -101,9 +103,12 @@ export function Inspector({ node, run, running, onUpdate, onRun, onRefineBeat }:
       {run.error && <p className="border border-error/40 p-2 text-error">{run.error}</p>}
 
       {node.kind === 'concept' && (
-        <Field label="Concept">
-          <DebouncedField label="Concept text" rows={8} value={node.data.text} onCommit={text => onUpdate({ text })} />
-        </Field>
+        <>
+          <Field label="Concept">
+            <DebouncedField label="Concept text" rows={8} value={node.data.text} onCommit={text => onUpdate({ text })} />
+          </Field>
+          {onStoryboard && <StoryboardFields disabled={running || !node.data.text.trim()} onSplit={onStoryboard} />}
+        </>
       )}
 
       {node.kind === 'preset' && (
@@ -262,6 +267,39 @@ function AssembleFields({ clips }: { clips: ClipRef[] }) {
         Open in Video Editor
       </button>
       {message && <p className="text-base-content/70">{message}</p>}
+    </div>
+  );
+}
+
+function StoryboardFields({ disabled, onSplit }: { disabled: boolean; onSplit: (count: number) => Promise<void> }) {
+  const [count, setCount] = useState(4);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const split = () => {
+    setBusy(true);
+    setMessage('');
+    onSplit(count)
+      .catch((e: unknown) => setMessage(e instanceof Error ? e.message : String(e)))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <div className="space-y-2 border-t border-base-content/15 pt-2">
+      <span className="text-[10px] uppercase tracking-wider text-base-content/60">Storyboard</span>
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min={2}
+          max={8}
+          value={count}
+          aria-label="Number of shots"
+          className={`${FIELD} !w-16`}
+          onChange={e => setCount(Math.min(8, Math.max(2, Math.round(Number(e.target.value) || 2))))}
+        />
+        <button type="button" className="btn btn-xs btn-ghost rounded-none" disabled={disabled || busy} onClick={split}>
+          {busy ? 'Splitting...' : 'Split into shots'}
+        </button>
+      </div>
+      {message && <p className="border border-error/40 p-2 text-error">{message}</p>}
     </div>
   );
 }
