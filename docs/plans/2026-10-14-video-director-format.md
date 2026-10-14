@@ -100,3 +100,29 @@ allowed (only the dialect's), which preserves the original fix.
 
 Workable with changes, high confidence on the format and the dialect approach, medium on per-vendor details (see table).
 The sharpest tradeoff is using one template for all models: cheaper, but demonstrably wrong for at least three families.
+
+## 7. Council review (2026-10-14)
+
+Four reviewers (prompt-engineer, architect-reviewer, ux-researcher, qa-expert) read this plan and the code; tier-decide
+ran the next-step decision (OpenRouter 402 → Claude fallback, so confidence is self-reported).
+
+| Voice | Verdict | Confidence |
+|---|---|---|
+| prompt-engineer | workable-with-changes | ~0.7 |
+| architect-reviewer | workable-with-changes | ~0.75 |
+| ux-researcher | workable-with-changes | ~0.8 on placement |
+| qa-expert | workable-with-changes | ~0.75 |
+| tier-decide | "code now, ship dialects only for verified models" 0.63; single template acceptable: 0.15 | — |
+
+Where they agreed and what changed in the plan:
+1. **Timestamps are a dialect, not the default** (prompt-engineer). Section 2's template stays the *maximal* form; prose-with-beats is the default; a 4 s clip is one or two beats, so header/style are overhead there.
+2. **I2V lock must not be invented** (prompt-engineer, architect). Existing rule `llmService.ts:95` strips static detail to avoid contradicting the pixels. Lock comes only from user text or a Gemini caption; otherwise "same subject as the reference image". Feasibility check moved early (V4).
+3. **Code renders the skeleton, LLM fills beat text** (prompt-engineer, qa). Seven sections + conditional rules is too heavy for 7–8B local models and would reproduce the label leak the old rule fixed. Add a label-stripping post-check.
+4. **Schema is over-built** (architect). Flat optional fields on `ModelProfile`, reuse `supportsNegativePrompt`, `maxBeats` lives in the V1 helper, only verified rows filled. A separate lookup table would add a second matcher beside `lookupModelProfile`.
+5. **Hidden consumer sites** (architect): chip map, default-skip and tab filter in `RefinerPage.tsx`, three spots in `PromptAnalyzer.tsx`, unconditional audio injection at `llmService.ts:261-270`. Saved presets are backward-safe (optional fields).
+6. **UI** (ux): audio lives in the Motion tab because the Audio tab is hidden for video (`RefinerPage.tsx:153-154`) and is mostly music-model controls; snap buttons for discrete durations; Sora shows the API value with a copy button; Native / Silent / Unknown badge; default 6 s, not 10; AUTO injects nothing.
+7. **Verification** (qa): V7-equivalent can only be tested structurally; ship with a validator, recorded fixtures and a byte-for-byte legacy fallback. The "no Keyframe labels" fix has no regression test today, so this PR adds one.
+8. **Ordering** (all): code first for the four verified rows, research in parallel, smoke clip before building audio.
+
+Unresolved disagreement: ux wants a separate audio block, prompt-engineer wants dialogue next to the beat that speaks.
+Resolution in V9: dialogue attached to its beat, ambience/music as one trailing line.
