@@ -108,18 +108,6 @@ const AudioNode = React.memo(function AudioNode(props: NodeProps<CanvasFlowNode>
   );
 });
 
-// Generate / Result / Assemble get real behaviour in later tickets (N8, N9); until then they only need to
-// render so a loaded graph never crashes.
-function placeholder(kind: 'generate' | 'result' | 'assemble', hasOutput: boolean) {
-  return React.memo(function PlaceholderNode(props: NodeProps<CanvasFlowNode>) {
-    return (
-      <NodeShell props={props} title={KIND_LABEL[kind]} hasInput hasOutput={hasOutput}>
-        <p className="text-base-content/50">Not available yet</p>
-      </NodeShell>
-    );
-  });
-}
-
 const GenerateNode = React.memo(function GenerateNode(props: NodeProps<CanvasFlowNode>) {
   const g = props.data.graphNode;
   if (g.kind !== 'generate') return null;
@@ -148,6 +136,15 @@ const ResultNode = React.memo(function ResultNode(props: NodeProps<CanvasFlowNod
   );
 });
 
+const AssembleNode = React.memo(function AssembleNode(props: NodeProps<CanvasFlowNode>) {
+  const clips = props.data.output?.clips ?? [];
+  return (
+    <NodeShell props={props} title="Assemble" hasInput>
+      <p className="text-base-content/70">{clips.length ? `${clips.length} clip(s) ready` : 'Connect Result or Generate nodes, then run.'}</p>
+    </NodeShell>
+  );
+});
+
 export const nodeTypes = {
   concept: ConceptNode,
   preset: PresetNode,
@@ -155,5 +152,5 @@ export const nodeTypes = {
   audio: AudioNode,
   generate: GenerateNode,
   result: ResultNode,
-  assemble: placeholder('assemble', true),
+  assemble: AssembleNode,
 } satisfies Record<NodeKind, React.ComponentType<NodeProps<CanvasFlowNode>>>;

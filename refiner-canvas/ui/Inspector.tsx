@@ -7,6 +7,8 @@ import { TARGET_VIDEO_AI_MODELS } from '../../constants/models';
 import { parseShotScript, replaceBeat, serializeShotScript } from '../../utils/shotScript';
 import type { AudioMode, GraphNode, NodeDataPatch, NodeRunState, PresetKind } from '../core/types';
 import { KIND_LABEL, StatusBadge } from './nodes';
+import { openClipsInVideoEditor } from './openClips';
+import type { ClipRef } from '../core/types';
 
 const IDLE_MS = 400;
 const FIELD = 'nodrag nopan nowheel w-full rounded-none border border-base-content/25 bg-base-100 px-2 py-1 text-xs text-base-content focus:border-primary focus:outline-none';
@@ -153,7 +155,9 @@ export function Inspector({ node, run, running, onUpdate, onRun, onRefineBeat }:
         </Field>
       )}
 
-      {(node.kind === 'result' || node.kind === 'assemble') && (
+      {node.kind === 'assemble' && <AssembleFields clips={run.output?.clips ?? []} />}
+
+      {node.kind === 'result' && (
         <p className="text-base-content/50">This node has no settings.</p>
       )}
 
@@ -237,5 +241,27 @@ function ShotFields({ data, onUpdate, commitBeat, onRegenerate, running, onRefin
         ))}
       </div>
     </>
+  );
+}
+
+function AssembleFields({ clips }: { clips: ClipRef[] }) {
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const open = () => {
+    setBusy(true);
+    setMessage('');
+    openClipsInVideoEditor(clips)
+      .then(n => setMessage(`Opened ${n} clip(s) in the Video Editor.`))
+      .catch((e: unknown) => setMessage(e instanceof Error ? e.message : String(e)))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <div className="space-y-2">
+      <p className="text-base-content/70">{clips.length} clip(s), ordered left to right by node position.</p>
+      <button type="button" className="btn btn-xs btn-primary rounded-none" disabled={busy || clips.length === 0} onClick={open}>
+        Open in Video Editor
+      </button>
+      {message && <p className="text-base-content/70">{message}</p>}
+    </div>
   );
 }
