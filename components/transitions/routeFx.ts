@@ -44,6 +44,7 @@ export const ROUTE_LABELS: Record<ActiveTab, { name: string; sub: string; glyph:
     batch_runner: { name: 'BATCH RUNNER', sub: 'QUEUING OPERATIONS', glyph: '⏩' },
     image_editor: { name: 'IMAGE EDITOR', sub: 'LOADING PIXEL CANVAS', glyph: '◱' },
     video_editor: { name: 'VIDEO EDITOR', sub: 'LOADING TIMELINE', glyph: '▶' },
+    refiner_canvas: { name: 'REFINER CANVAS', sub: 'MOUNTING NODE GRAPH', glyph: '◬' },
     comfy_studio: { name: 'COMFYUI STUDIO', sub: 'INITIALIZING PIPELINE', glyph: '◈' },
     a1111_studio: { name: 'FORGE STUDIO', sub: 'CALIBRATING NEURAL CORE', glyph: '◈' },
 };

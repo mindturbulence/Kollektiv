@@ -3,12 +3,12 @@
 
 import { SCHEMA_VERSION, type Graph, type GraphEdge, type GraphNode, type GraphNodeOf, type NodeDataMap, type NodeKind, type XY } from './types';
 
-type FieldSpec = 'string' | 'number' | readonly string[];
+type FieldSpec = 'string' | 'number' | 'boolean' | readonly string[];
 
 const DATA_SPEC: { [K in NodeKind]: Record<keyof NodeDataMap[K], FieldSpec> } = {
   concept: { text: 'string' },
   preset: { presetKind: ['character', 'world', 'style'], text: 'string' },
-  shot: { model: 'string', durationSec: 'number', text: 'string' },
+  shot: { model: 'string', durationSec: 'number', text: 'string', edited: 'boolean' },
   audio: { mode: ['off', 'auto', 'direct'], dialogue: 'string', sfx: 'string' },
   generate: { model: 'string' },
   result: {},
@@ -18,7 +18,7 @@ const DATA_SPEC: { [K in NodeKind]: Record<keyof NodeDataMap[K], FieldSpec> } = 
 const DEFAULT_DATA: { [K in NodeKind]: NodeDataMap[K] } = {
   concept: { text: '' },
   preset: { presetKind: 'character', text: '' },
-  shot: { model: '', durationSec: 5, text: '' },
+  shot: { model: '', durationSec: 5, text: '', edited: false },
   audio: { mode: 'auto', dialogue: '', sfx: '' },
   generate: { model: '' },
   result: {},
@@ -36,6 +36,7 @@ function isKind(v: unknown): v is NodeKind {
 function fieldOk(spec: FieldSpec, value: unknown): boolean {
   if (spec === 'string') return typeof value === 'string';
   if (spec === 'number') return typeof value === 'number' && Number.isFinite(value);
+  if (spec === 'boolean') return typeof value === 'boolean';
   return typeof value === 'string' && spec.includes(value);
 }
 

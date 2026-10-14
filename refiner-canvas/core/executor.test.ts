@@ -11,7 +11,7 @@ function concept(id: string, text: string, x = 0): GraphNode {
   return { ...createNode('concept', { x, y: 0 }, id), data: { text } };
 }
 function shot(id: string, x = 100): GraphNode {
-  return { ...createNode('shot', { x, y: 0 }, id), data: { model: 'veo', durationSec: 8, text: id } };
+  return { ...createNode('shot', { x, y: 0 }, id), data: { model: 'veo', durationSec: 8, text: id, edited: false } };
 }
 
 /** Shot runner that echoes prefix + its own text, recording each call. */

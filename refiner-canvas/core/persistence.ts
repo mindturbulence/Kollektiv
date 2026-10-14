@@ -65,9 +65,16 @@ export function migrateGraph(raw: unknown): Graph {
   const version = raw.schemaVersion;
   if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) throw new GraphFormatError('bad schemaVersion');
   if (version > SCHEMA_VERSION) throw new GraphVersionError(version);
-  // ponytail: v1 is the only version; when v2 lands, add `if (version === 1) raw = v1ToV2(raw)` steps here.
-
-  const { nodes, edges, viewport } = raw;
+  // v1 -> v2: shot nodes gained `edited` (hand-edited scripts are kept on run). Add the next step here.
+  const { edges, viewport } = raw;
+  let nodes = raw.nodes;
+  if (version === 1 && Array.isArray(nodes)) {
+    nodes = nodes.map((n: unknown) => (
+      isRecord(n) && n.kind === 'shot' && isRecord(n.data) && !('edited' in n.data)
+        ? { ...n, data: { ...n.data, edited: false } }
+        : n
+    ));
+  }
   if (!Array.isArray(nodes) || !nodes.every(isGraphNode)) throw new GraphFormatError('bad node');
   const ids = new Set(nodes.map(n => n.id));
   if (ids.size !== nodes.length) throw new GraphFormatError('duplicate node id');

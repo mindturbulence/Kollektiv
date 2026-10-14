@@ -22,6 +22,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'discovery', label: 'Discovery' },
       { id: 'crafter', label: 'Crafter' },
       { id: 'refiner', label: 'Refiner' },
+      { id: 'refiner_canvas', label: 'Canvas' },
       { id: 'prompt_analyzer', label: 'Analyzer' },
       { id: 'media_analyzer', label: 'Abstractor' },
     ],

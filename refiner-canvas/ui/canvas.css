@@ -1,0 +1,30 @@
+/* Maps @xyflow/react's theme variables onto the app's daisyUI tokens, so the active app theme wins. */
+.rf-canvas.react-flow {
+  --xy-background-color: oklch(var(--b1));
+  --xy-node-color: oklch(var(--bc));
+  --xy-node-background-color: oklch(var(--b1));
+  --xy-node-border-radius: 0;
+  --xy-edge-stroke: oklch(var(--bc) / 0.45);
+  --xy-edge-stroke-selected: oklch(var(--p));
+  --xy-connectionline-stroke: oklch(var(--p));
+  --xy-handle-background-color: oklch(var(--p));
+  --xy-handle-border-color: oklch(var(--b1));
+  --xy-selection-background-color: oklch(var(--p) / 0.08);
+  --xy-selection-border: 1px dotted oklch(var(--p));
+  --xy-minimap-background-color: oklch(var(--b2));
+  --xy-minimap-mask-background-color: oklch(var(--b1) / 0.6);
+  --xy-minimap-node-background-color: oklch(var(--bc) / 0.35);
+  --xy-controls-button-background-color: oklch(var(--b1));
+  --xy-controls-button-background-color-hover: oklch(var(--b2));
+  --xy-controls-button-color: oklch(var(--bc));
+  --xy-controls-button-border-color: oklch(var(--bc) / 0.2);
+  --xy-controls-box-shadow: none;
+}
+
+/* Our node shells draw their own border and background. */
+.rf-canvas .react-flow__node {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}

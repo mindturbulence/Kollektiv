@@ -3,7 +3,7 @@
 // Same split as video-editor/core: pure data here, pure edits in apply.ts,
 // a module-scoped store in store.ts, IDB persistence in persistence.ts.
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export type NodeKind = 'concept' | 'preset' | 'shot' | 'audio' | 'generate' | 'result' | 'assemble';
 export type PresetKind = 'character' | 'world' | 'style';
@@ -12,7 +12,7 @@ export type AudioMode = 'off' | 'auto' | 'direct';
 export interface NodeDataMap {
   concept: { text: string };
   preset: { presetKind: PresetKind; text: string };
-  shot: { model: string; durationSec: number; text: string };
+  shot: { model: string; durationSec: number; text: string; edited: boolean };
   audio: { mode: AudioMode; dialogue: string; sfx: string };
   generate: { model: string };
   result: Record<string, never>;

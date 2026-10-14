@@ -50,7 +50,7 @@ describe('applyEdit round trips', () => {
 
   it('updateNodeData shallow-merges', () => {
     const next = roundTrip(sample(), { type: 'updateNodeData', nodeId: 's1', patch: { text: 'a man walks', durationSec: 8 } });
-    expect(next.nodes.find(n => n.id === 's1')?.data).toEqual({ model: '', durationSec: 8, text: 'a man walks' });
+    expect(next.nodes.find(n => n.id === 's1')?.data).toEqual({ model: '', durationSec: 8, text: 'a man walks', edited: false });
   });
 
   it('connect (end and at index) and disconnect', () => {

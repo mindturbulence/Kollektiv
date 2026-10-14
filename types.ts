@@ -65,6 +65,7 @@ export type ActiveTab =
   | 'prompts'
   | 'crafter'
   | 'refiner'
+  | 'refiner_canvas'
   | 'prompt_analyzer'
   | 'media_analyzer'
   | 'prompt'

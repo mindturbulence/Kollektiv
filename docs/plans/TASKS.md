@@ -98,12 +98,8 @@ Built 2026-10-14: V1–V5, V7–V11 (every video model now gets the Director's S
 
 Plan, research and council debate: [2026-10-14-video-canvas.md](2026-10-14-video-canvas.md) (§ 10 records the node-first decision).
 Owner decision 2026-10-14: build the node canvas directly, not a board first. Small → large; each ticket ships alone.
-Built 2026-10-14: N1–N3 (`utils/shotScript.ts`, `refiner-canvas/core/`: graph store, undo, persistence, executor; unit-tested, no UI; IndexedDB code itself untested, only the in-memory adapter). Real-clip validation (§ 10 V6 / V12) runs in parallel instead of blocking; the council advised blocking, the owner chose otherwise.
+Built 2026-10-14: N4-N7 canvas page, nodes, inspector, per-beat re-refine, edited-script policy (N7 Send to canvas NOT built, restored below); N1–N3 (`utils/shotScript.ts`, `refiner-canvas/core/`: graph store, undo, persistence, executor; unit-tested, no UI; IndexedDB code itself untested, only the in-memory adapter). Real-clip validation (§ 10 V6 / V12) runs in parallel instead of blocking; the council advised blocking, the owner chose otherwise.
 
-- [ ] **N4 · Canvas shell**: add `@xyflow/react` (MIT, lazy-loaded), "Canvas" mode in the Refiner, controlled mode over the N2 store, `nodrag nopan nowheel` on inputs, daisyUI tokens override base css (app theme, not Weave's), pan/zoom/minimap. **M**
-- [ ] **N5 · Node components + inspector**: Concept, Preset (character / world, from `RefinerPreset`), Shot (model, length, collapsed summary), Audio; edit text and beats in a side inspector, not inside the node. **M**
-- [ ] **N6 · Re-refine one beat**: rewrite a single beat with neighbours as context, validate with `validateTimeline`, per-node undo of the last re-run. **M**
-- [ ] **N7 · "Send to canvas"**: one click turns the current Refiner result into Concept → Preset → Shot nodes with the model and length already set. **S**
 - [ ] **N8 · Generate + Result nodes**: Generate runs `generateWithVeo` where it works, output through the existing asset path (no second store); every other model shows "Copy prompt". **M**
 - [ ] **N9 · Assemble node → Video Editor**: collect Result nodes in order and call `openInVideoEditor`. **M**
 - [ ] **N10 · Reusable workflows**: save a graph as a template, load onto new inputs (Weave's "reuse on different inputs"); simplified run-only view later. **M**

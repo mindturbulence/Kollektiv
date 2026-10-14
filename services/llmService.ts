@@ -413,16 +413,11 @@ export async function* enhancePromptStream(
     yield* withDirector(stripReasoningTags(stream), director);
 }
 
-export const refineSinglePrompt = async (promptText: string, targetAIModel: string, settings: LLMSettings, modifiers: PromptModifiers = {}): Promise<string> => {
-    const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
-    const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
-    const hasManualCamera = !!modifiers.cameraMovement;
-    const director = isVideo ? buildVideoDirector(targetAIModel, modifiers) : null;
-    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt, director?.rules ?? (isAudio ? buildSpeechRules(targetAIModel, modifiers.audioType, getAudioMode(targetAIModel)) : undefined));
-    
+/** One system + user completion on the active provider, with the shared provider fallback. */
+export const completeWithSystem = async (sys: string, promptText: string, settings: LLMSettings): Promise<string> => {
     const supported: LLMProvider[] = ['gemini', 'ollama', 'llamacpp', 'anthropic'];
     requireProvider('Prompt refinement', settings, supported);
-    const raw = await withProviderFallback('Prompt refinement', settings, supported, async (provider) => {
+    return withProviderFallback('Prompt refinement', settings, supported, async (provider) => {
         if (provider === 'anthropic') {
             const { streamChatAnthropic } = await import('./anthropicService');
             let text = '';
@@ -439,6 +434,16 @@ export const refineSinglePrompt = async (promptText: string, targetAIModel: stri
     }, (from, to, err) => {
         appEventBus.emit('assistantFeedback', { message: `${from} failed (${err.message}). Retrying on ${to}.`, isError: false });
     });
+};
+
+export const refineSinglePrompt = async (promptText: string, targetAIModel: string, settings: LLMSettings, modifiers: PromptModifiers = {}): Promise<string> => {
+    const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
+    const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
+    const hasManualCamera = !!modifiers.cameraMovement;
+    const director = isVideo ? buildVideoDirector(targetAIModel, modifiers) : null;
+    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt, director?.rules ?? (isAudio ? buildSpeechRules(targetAIModel, modifiers.audioType, getAudioMode(targetAIModel)) : undefined));
+    
+    const raw = await completeWithSystem(sys, promptText, settings);
     const cleaned = cleanLLMResponse(raw);
     if (!director) return cleaned;
     const body = cleaned.split('\n').map(l => sanitizeVideoLine(l, director.timeline)).join('\n');

@@ -45,10 +45,20 @@ describe('persistence', () => {
     expect(migrateGraph(structuredClone(sample()))).toEqual(sample());
   });
 
+  it('migrateGraph upgrades a v1 graph: shots gain edited=false, other nodes untouched', () => {
+    const v1 = structuredClone(sample()) as unknown as { schemaVersion: number; nodes: { kind: string; data: Record<string, unknown> }[] };
+    v1.schemaVersion = 1;
+    for (const n of v1.nodes) if (n.kind === 'shot') delete n.data.edited;
+    const out = migrateGraph(v1);
+    expect(out.schemaVersion).toBe(2);
+    expect(out.nodes.find(n => n.kind === 'shot')?.data).toMatchObject({ edited: false });
+    expect(out.nodes.find(n => n.kind === 'concept')?.data).toEqual({ text: '' });
+  });
+
   it('migrateGraph throws a typed error for a newer schema version', () => {
-    const raw = { ...sample(), schemaVersion: 2 };
+    const raw = { ...sample(), schemaVersion: 3 };
     expect(() => migrateGraph(raw)).toThrow(GraphVersionError);
-    try { migrateGraph(raw); } catch (e) { expect(e instanceof GraphVersionError && e.version).toBe(2); }
+    try { migrateGraph(raw); } catch (e) { expect(e instanceof GraphVersionError && e.version).toBe(3); }
   });
 
   it('migrateGraph rejects corrupt graphs', () => {
