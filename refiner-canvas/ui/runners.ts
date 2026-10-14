@@ -1,10 +1,18 @@
 // Wires the framework-free executor to the app: the Shot runner refines through llmService, everything
 // else uses the executor's defaults. Kept out of the page so it can be unit-tested with a mocked service.
 
-import { refineSinglePrompt } from '../../services/llmService';
+import { generateWithVeo, refineSinglePrompt } from '../../services/llmService';
+import { addItemToGallery } from '../../utils/galleryStorage';
+import { setPreview } from './media';
 import type { LLMSettings } from '../../types';
 import { buildPrefix, type Runners } from '../core/executor';
 import type { EditAction, Graph, NodeRunState } from '../core/types';
+
+/** Only Veo-class models can be generated from here (Gemini key); the rest are copy-and-paste. */
+export const canGenerate = (model: string): boolean => /veo/i.test(model);
+
+/** Veo takes 16:9 or 9:16; the refiner's header line carries the ratio. */
+export const aspectOf = (script: string): '16:9' | '9:16' => (/^\s*9:16/.test(script) ? '9:16' : '16:9');
 
 export function createRunners(settings: LLMSettings): Runners {
   return {
@@ -24,6 +32,17 @@ export function createRunners(settings: LLMSettings): Runners {
         videoInputType: 't2v',
       });
       return { text };
+    },
+    // Only Veo-class models run here; every other model passes the prompt through for the Result node to copy.
+    generate: async (node, inputs) => {
+      if (node.kind !== 'generate') throw new Error(`Node ${node.id} is not a generate node`);
+      const text = inputs.map(i => i.output.text).find((t): t is string => !!t?.trim());
+      if (!text) throw new Error('Connect a Shot that has a script.');
+      if (!canGenerate(node.data.model)) return { text };
+      const url = await generateWithVeo(text, undefined, aspectOf(text), settings);
+      const item = await addItemToGallery('video', [url], ['Canvas'], { prompt: text, defaultTitle: 'Canvas clip' });
+      setPreview(item.id, url);
+      return { text, clip: { assetKey: item.id } };
     },
     // ponytail: audio direction is not applied to the shot prompt yet; the node passes through so wiring it is harmless.
     audio: () => Promise.resolve({}),

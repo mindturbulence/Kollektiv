@@ -144,8 +144,17 @@ export function Inspector({ node, run, running, onUpdate, onRun, onRefineBeat }:
         </>
       )}
 
-      {(node.kind === 'generate' || node.kind === 'result' || node.kind === 'assemble') && (
-        <p className="text-base-content/50">This node has no settings yet.</p>
+      {node.kind === 'generate' && (
+        <Field label="Model">
+          <select className={FIELD} value={node.data.model} onChange={e => onUpdate({ model: e.target.value })}>
+            <option value="">Choose a model</option>
+            {TARGET_VIDEO_AI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </Field>
+      )}
+
+      {(node.kind === 'result' || node.kind === 'assemble') && (
+        <p className="text-base-content/50">This node has no settings.</p>
       )}
 
       {runnable && (

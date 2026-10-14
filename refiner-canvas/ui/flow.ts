@@ -5,11 +5,13 @@ import type { Connection, Edge, EdgeChange, Node, NodeChange } from '@xyflow/rea
 import { createEdge } from '../core/graph';
 import type { EditAction, Graph, GraphNode, NodeKind, NodeRunState, NodeRunStatus, XY } from '../core/types';
 import { parseShotScript } from '../../utils/shotScript';
+import type { NodeOutput } from '../core/types';
 
 export interface CanvasNodeData extends Record<string, unknown> {
   graphNode: GraphNode;
   status: NodeRunStatus;
   error?: string;
+  output?: NodeOutput;
 }
 export type CanvasFlowNode = Node<CanvasNodeData, NodeKind>;
 
@@ -28,7 +30,7 @@ export interface FlowOverlay {
 const dataCache = new WeakMap<GraphNode, Map<string, CanvasNodeData>>();
 
 function nodeData(graphNode: GraphNode, run: NodeRunState): CanvasNodeData {
-  const key = `${run.status}|${run.error ?? ''}`;
+  const key = `${run.status}|${run.error ?? ''}|${run.output?.text?.length ?? 0}|${run.output?.clip?.assetKey ?? ''}`;
   let byKey = dataCache.get(graphNode);
   if (!byKey) {
     byKey = new Map();
@@ -36,7 +38,7 @@ function nodeData(graphNode: GraphNode, run: NodeRunState): CanvasNodeData {
   }
   let data = byKey.get(key);
   if (!data) {
-    data = { graphNode, status: run.status, error: run.error };
+    data = { graphNode, status: run.status, error: run.error, output: run.output };
     byKey.set(key, data);
   }
   return data;

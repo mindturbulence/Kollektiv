@@ -50,6 +50,8 @@ const ADDABLE: { label: string; make: (position: XY) => GraphNode }[] = [
   { label: 'Preset', make: p => createNode('preset', p) },
   { label: 'Shot', make: p => createNode('shot', p) },
   { label: 'Audio', make: p => createNode('audio', p) },
+  { label: 'Generate', make: p => createNode('generate', p) },
+  { label: 'Result', make: p => createNode('result', p) },
 ];
 
 const EMPTY_SET: ReadonlySet<string> = new Set();

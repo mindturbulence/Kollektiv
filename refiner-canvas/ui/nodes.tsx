@@ -5,6 +5,8 @@ import React from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { NodeKind, NodeRunStatus } from '../core/types';
 import { shotSummary, type CanvasFlowNode } from './flow';
+import { getPreview } from './media';
+import { canGenerate } from './runners';
 
 export const STATUS_BADGE: Record<NodeRunStatus, string> = {
   idle: 'badge-ghost',
@@ -118,12 +120,40 @@ function placeholder(kind: 'generate' | 'result' | 'assemble', hasOutput: boolea
   });
 }
 
+const GenerateNode = React.memo(function GenerateNode(props: NodeProps<CanvasFlowNode>) {
+  const g = props.data.graphNode;
+  if (g.kind !== 'generate') return null;
+  return (
+    <NodeShell props={props} title="Generate" hasInput>
+      <p className={clamp}>{g.data.model || 'Choose a model in the inspector'}</p>
+      {g.data.model && !canGenerate(g.data.model) && <p className="text-base-content/50">Prompt only: copy it from Result.</p>}
+    </NodeShell>
+  );
+});
+
+const ResultNode = React.memo(function ResultNode(props: NodeProps<CanvasFlowNode>) {
+  const out = props.data.output;
+  const preview = out?.clip ? getPreview(out.clip.assetKey) : undefined;
+  return (
+    <NodeShell props={props} title="Result" hasInput hasOutput={false}>
+      {preview && <video className="nodrag w-full" src={preview} controls muted />}
+      {out?.clip && !preview && <p className="text-base-content/70">Saved to Gallery.</p>}
+      {out?.text && !out.clip && <p className={clamp}>{out.text}</p>}
+      {!out && <p className="text-base-content/50">Run the graph to see the result.</p>}
+      {out?.text && (
+        <button type="button" className="nodrag btn btn-xs btn-ghost rounded-none"
+          onClick={() => { void navigator.clipboard?.writeText(out.text ?? ''); }}>Copy prompt</button>
+      )}
+    </NodeShell>
+  );
+});
+
 export const nodeTypes = {
   concept: ConceptNode,
   preset: PresetNode,
   shot: ShotNode,
   audio: AudioNode,
-  generate: placeholder('generate', true),
-  result: placeholder('result', false),
+  generate: GenerateNode,
+  result: ResultNode,
   assemble: placeholder('assemble', true),
 } satisfies Record<NodeKind, React.ComponentType<NodeProps<CanvasFlowNode>>>;
