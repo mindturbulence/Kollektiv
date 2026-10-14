@@ -98,7 +98,7 @@ Built 2026-10-14: V1–V5, V7–V11 (every video model now gets the Director's S
 
 Plan, research and council debate: [2026-10-14-video-canvas.md](2026-10-14-video-canvas.md) (§ 10 records the node-first decision).
 Owner decision 2026-10-14: build the node canvas directly, not a board first. Small → large; each ticket ships alone.
-Built 2026-10-14: N4-N7 canvas page, nodes, inspector, per-beat re-refine, edited-script policy (N7 Send to canvas NOT built, restored below); N1–N3 (`utils/shotScript.ts`, `refiner-canvas/core/`: graph store, undo, persistence, executor; unit-tested, no UI; IndexedDB code itself untested, only the in-memory adapter). Real-clip validation (§ 10 V6 / V12) runs in parallel instead of blocking; the council advised blocking, the owner chose otherwise.
+Built 2026-10-14: N4–N7 (canvas page, Send to canvas button; canvas page, nodes, inspector, per-beat re-refine, edited-script policy); N1–N3 (`utils/shotScript.ts`, `refiner-canvas/core/`: graph store, undo, persistence, executor; unit-tested, no UI; IndexedDB code itself untested, only the in-memory adapter). Real-clip validation (§ 10 V6 / V12) runs in parallel instead of blocking; the council advised blocking, the owner chose otherwise.
 
 - [ ] **N8 · Generate + Result nodes**: Generate runs `generateWithVeo` where it works, output through the existing asset path (no second store); every other model shows "Copy prompt". **M**
 - [ ] **N9 · Assemble node → Video Editor**: collect Result nodes in order and call `openInVideoEditor`. **M**

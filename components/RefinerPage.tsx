@@ -15,6 +15,10 @@ import { refinerPresetService, type RefinerPreset } from '../services/refinerPre
 import { recordExternalCopy } from '../services/externalCopyRecorder';
 import { modifierOptionsService } from '../services/modifierOptionsService';
 import PromptText from './PromptText';
+import { queueIntake } from '../refiner-canvas/core/intake';
+import { resolveVideoDuration } from '../utils/videoDirector';
+import { lookupModelProfile } from '../constants/modelProfiles';
+import { appEventBus } from '../utils/eventBus';
 import { enhancePromptStream, cleanLLMResponse, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
 import { computeWordDiff, calculateSemanticMetrics } from '../utils/diffUtils';
 import { loadArtStyles } from '../utils/artstyleStorage';
@@ -771,6 +775,21 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                 <button onClick={() => { audioService.playClick(); onClipSuggestion(resultsRefine.suggestions[0]); }} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake">
                                     <span /><span /><span /><span />CLIP
                                 </button>
+                                {mediaMode === 'video' && (
+                                    <button onClick={() => {
+                                        audioService.playClick();
+                                        const isVideoModel = TARGET_VIDEO_AI_MODELS.includes(targetAIModel);
+                                        queueIntake({
+                                            concept: refineText,
+                                            model: isVideoModel ? targetAIModel : '',
+                                            durationSec: resolveVideoDuration(lookupModelProfile(targetAIModel, true), modifiers.videoDuration),
+                                            script: resultsRefine.suggestions[0],
+                                        });
+                                        appEventBus.emit('navigate', 'refiner_canvas');
+                                    }} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake">
+                                        <span /><span /><span /><span />CANVAS
+                                    </button>
+                                )}
                                 <button onClick={() => { audioService.playClick(); handleCopySuggestionText(resultsRefine.suggestions[0]); }} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake">
                                     <span /><span /><span /><span />COPY
                                 </button>

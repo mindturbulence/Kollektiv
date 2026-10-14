@@ -14,6 +14,7 @@ import {
 import { useSettings } from '../../contexts/SettingsContext';
 import { createEdge, createNode } from '../core/graph';
 import { runGraph } from '../core/executor';
+import { intakeToAction, takeIntakes } from '../core/intake';
 import { loadGraph, saveGraph } from '../core/persistence';
 import {
   canRedo, canUndo, dispatch, getRunStates, getSnapshot, load, redo, setRunState, subscribe, undo,
@@ -94,6 +95,13 @@ function CanvasBody() {
       });
     return () => { cancelled = true; };
   }, [say]);
+
+  // Results sent from the Refiner while this page was closed (or not yet loaded) arrive here once, after hydration.
+  useEffect(() => {
+    if (!ready) return;
+    const action = intakeToAction(getSnapshot(), takeIntakes());
+    if (action) dispatch(action);
+  }, [ready]);
 
   // Debounced autosave on every graph change (not on run-state changes); flushed on unmount.
   useEffect(() => {
