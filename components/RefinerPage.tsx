@@ -14,6 +14,7 @@ import { audioService } from '../services/audioService';
 import { refinerPresetService, type RefinerPreset } from '../services/refinerPresetService';
 import { recordExternalCopy } from '../services/externalCopyRecorder';
 import { modifierOptionsService } from '../services/modifierOptionsService';
+import PromptText from './PromptText';
 import { enhancePromptStream, cleanLLMResponse, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
 import { computeWordDiff, calculateSemanticMetrics } from '../utils/diffUtils';
 import { loadArtStyles } from '../utils/artstyleStorage';
@@ -684,7 +685,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                         </div>
                                         {outputTab === 'prose' ? (
                                             <div className="flex flex-col">
-                                                <p className="text-base font-medium leading-relaxed text-base-content italic selection:bg-primary/20">"{resultsRefine.suggestions[0]}"</p>
+                                                <PromptText text={resultsRefine.suggestions[0]} />
                                             </div>
                                         ) : (
                                             <div className="flex-grow flex flex-col space-y-5 animate-fade-in h-full">
