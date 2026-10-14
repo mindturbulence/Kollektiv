@@ -46,6 +46,11 @@ describe('cleanLLMResponse', () => {
         expect(cleanLLMResponse(raw)).toBe('Scene text\nActions:\n- she turns\n- he nods\n- third\nMood: calm\nstray');
     });
 
+    it('keeps one blank line between paragraphs when asked, never leading or doubled', () => {
+        const raw = '\n\npara one\n\n\n\npara two line a\npara two line b\n\n';
+        expect(cleanLLMResponse(raw, true)).toBe('para one\n\npara two line a\npara two line b');
+    });
+
     it('drops empty lines', () => {
         const raw = 'line one\n\n\nline two';
         expect(cleanLLMResponse(raw)).toBe('line one\nline two');

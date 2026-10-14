@@ -117,7 +117,10 @@ export interface VideoDirector {
  * Per-model "Director's Script" plan, or null when the target is not a video
  * model with a verified dialect (callers then keep the legacy motion rules).
  */
-export const buildVideoDirector = (model: string, modifiers: PromptModifiers): VideoDirector | null => {
+export const buildVideoDirector = (model: string, modifiers: PromptModifiers, length?: string): VideoDirector | null => {
+  const long = length?.toLowerCase() === 'long';
+  // Medium and Long prose results are split into paragraphs; Short stays one block.
+  const multi = long || length?.toLowerCase() === 'medium';
   const profile = lookupModelProfile(model, true);
   if (profile.mediaType !== 'video') return null;
   // Every video model gets the Director's Script; only verified dialects differ from the timestamp format.
@@ -150,15 +153,17 @@ Format: one prose scene paragraph; then a line "Cinematography:" followed by "Ca
 ${audio}`;
   } else if (timeline === 'paragraph') {
     rules = `
-[DIRECTOR'S SCRIPT — SINGLE PARAGRAPH]: Clip length about ${duration} seconds (not stated in the text).
+[DIRECTOR'S SCRIPT — ${multi ? 'PARAGRAPHS' : 'SINGLE PARAGRAPH'}]: Clip length about ${duration} seconds (not stated in the text).
 ${lock}
-Write ONE flowing present-tense paragraph, no line breaks, in this order: the shot, the scene, the action, the character, the camera movement. Put any spoken line in double quotes. No timestamps, labels or headers.
+${multi
+    ? `Write ${long ? '4 to 5' : '3 to 4'} short present-tense paragraphs separated by one blank line, in this order: (1) the shot and the scene, (2) the character and the action, (3) the camera movement and lighting${audio.startsWith('AUDIO: none') ? '' : ', (4) the sound'}. Each paragraph is 2 to 4 sentences. No labels or headers inside a paragraph.`
+    : 'Write ONE flowing present-tense paragraph, no line breaks, in this order: the shot, the scene, the action, the character, the camera movement.'} Put any spoken line in double quotes. No timestamps, labels or headers.
 ${audio}`;
   } else {
     rules = `
 [DIRECTOR'S SCRIPT — PROSE BEATS]: The clip is ${duration} seconds (set by the API duration parameter, so do not mention seconds).
 ${lock}
-Write ONE continuous chronological arc in prose of at most ${beats.length} beats: opening framing and initial state, the primary action to its peak, then the resolve or camera settle. Connect beats with natural flow words ("as", "then", "while"). STRICTLY FORBIDDEN: timestamps, "Keyframe" markers, section headers, shot lists.
+Write ONE continuous chronological arc in prose of at most ${beats.length} beats: opening framing and initial state, the primary action to its peak, then the resolve or camera settle. Connect beats with natural flow words ("as", "then", "while").${multi ? ` Split the arc into ${long ? '3 to 5' : '2 to 3'} paragraphs separated by one blank line (opening, action, resolve), 2 to 4 sentences each.` : ''} STRICTLY FORBIDDEN: timestamps, "Keyframe" markers, section headers, shot lists.
 ${audio}`;
   }
   return { timeline, duration, rules, header };

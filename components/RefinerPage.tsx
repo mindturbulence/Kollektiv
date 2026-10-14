@@ -340,7 +340,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                 refinedPrompt = parts[0].trim();
                 try { breakdown = JSON.parse(parts[1].trim().replace(/```json\n?|\n?```/g, '').trim()); } catch {}
             }
-            const cleanedText = cleanLLMResponse(refinedPrompt);
+            const cleanedText = cleanLLMResponse(refinedPrompt, promptLength !== 'Short');
             const mjParams = isMidjourney ? buildMidjourneyParams(modifiers) : '';
             const prompt = isMidjourney ? `${cleanedText} ${mjParams}`.trim() : cleanedText;
             setResultsRefine({ suggestions: [prompt], breakdown });

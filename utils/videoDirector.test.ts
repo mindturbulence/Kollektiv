@@ -86,6 +86,22 @@ describe('buildVideoDirector', () => {
   });
 });
 
+describe('paragraph splitting by length', () => {
+  it('paragraph dialect: Short is one paragraph, Medium 3–4, Long 4–5', () => {
+    expect(buildVideoDirector('LTX-2', {}, 'Short')!.rules).toContain('SINGLE PARAGRAPH');
+    expect(buildVideoDirector('LTX-2', {})!.rules).toContain('SINGLE PARAGRAPH');
+    const med = buildVideoDirector('LTX-2', {}, 'Medium')!.rules;
+    expect(med).toContain('3 to 4 short present-tense paragraphs');
+    expect(med).not.toContain('ONE flowing');
+    expect(buildVideoDirector('LTX-2', {}, 'Long')!.rules).toContain('4 to 5 short');
+  });
+  it('prose dialect splits the arc into paragraphs for Medium and Long only', () => {
+    expect(buildVideoDirector('Google Veo 3.1', {}, 'Medium')!.rules).toContain('2 to 3 paragraphs');
+    expect(buildVideoDirector('Google Veo 3.1', {}, 'Long')!.rules).toContain('3 to 5 paragraphs');
+    expect(buildVideoDirector('Google Veo 3.1', {}, 'Short')!.rules).not.toContain('paragraphs separated');
+  });
+});
+
 describe('audio direction', () => {
   it('auto writes audio rules for native-audio models, scaled to the clip', () => {
     const r = buildVideoDirector('Google Veo 3.1', { videoDuration: '8' })!.rules;

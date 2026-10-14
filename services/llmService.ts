@@ -120,7 +120,7 @@ const buildSpeechRules = (model: string, audioType: string | undefined, mode: 's
 const AI_ROLES = {
     ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, modifierCatalog?: string, masterRole?: string, rulesOverride?: string) => {
         const syntax = getModelSyntax(model, isVideo, isAudio);
-        const l = isVideo && rulesOverride ? `Set by the Director's Script structure: ${length === 'Short' ? 'one short sentence' : length === 'Long' ? 'two or three detailed sentences' : 'one to two sentences'} per beat (CRITICAL: no extra paragraphs beyond that structure)` : length === 'Short' ? 'Strictly under 40 words' : length === 'Long' ? 'EXTREMELY DETAILED, at least 4-5 long paragraphs (minimum 600 words)' : 'Around 150-200 words';
+        const l = isVideo && rulesOverride ? `Set by the Director's Script structure: ${length === 'Short' ? 'one short sentence' : length === 'Long' ? 'two or three detailed sentences' : 'one to two sentences'} per beat (CRITICAL: follow that structure and its paragraph count exactly)` : length === 'Short' ? 'Strictly under 40 words' : length === 'Long' ? 'EXTREMELY DETAILED, at least 4-5 long paragraphs (minimum 600 words)' : 'Around 150-200 words';
         const isI2V = isVideo && inputType === 'i2v';
 
         let persona = masterRole ? `Master Role: ${masterRole}\n\nTask Specific Role: World-Class Visual Strategist and Prompt Architect.` : "Role: World-Class Visual Strategist and Prompt Architect.";
@@ -228,7 +228,8 @@ Rules:
     }
 };
 
-export const cleanLLMResponse = (text: string): string => {
+/** `keepParagraphs` keeps one blank line between paragraphs (Medium / Long results); default squashes them. */
+export const cleanLLMResponse = (text: string, keepParagraphs: boolean = false): string => {
     let cleaned = text.replace(/<(think|thought)>[\s\S]*?(<\/\1>|$)/gi, '').trim();
     cleaned = cleaned.replace(/```[a-z]*\n([\s\S]*?)\n```/gi, '$1').replace(/`/g, '');
     const stopWords = [/^here/i, /^sure/i, /^certainly/i, /^okay/i, /^1\.\s/i];
@@ -239,6 +240,7 @@ export const cleanLLMResponse = (text: string): string => {
         const t = raw.trim();
         const bullet: boolean = underLabel && /^-\s+/.test(t);
         const line: string = bullet ? t : t.replace(/^(\d+[\.\)]|\*|-|\+)\s+/, '');
+        if (!line && keepParagraphs && out.length && out[out.length - 1] !== '') out.push('');
         if (!line || stopWords.some(r => r.test(line))) continue;
         out.push(line);
         underLabel = bullet || line.endsWith(':');
@@ -388,7 +390,7 @@ export async function* enhancePromptStream(
     const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
-    const director = isVideo ? buildVideoDirector(targetAIModel, modifiers) : null;
+    const director = isVideo ? buildVideoDirector(targetAIModel, modifiers, promptLength) : null;
     const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, modifierCatalog, settings.masterRolePrompt, director?.rules ?? (isAudio ? buildSpeechRules(targetAIModel, modifiers.audioType, getAudioMode(targetAIModel)) : undefined));
     const context = buildContextForEnhancer(modifiers, isAudio, modifierWeights, targetAIModel);
     const input = `${context}\n\n[Primary Concept]\n${originalPrompt}`;
