@@ -4,6 +4,7 @@ import {
   sanitizeVideoLine, sanitizeVideoStream, maxBeats, beatLabel, videoCaps,
 } from './videoDirector';
 import { lookupModelProfile } from '../constants/modelProfiles';
+import { TARGET_VIDEO_AI_MODELS, TARGET_IMAGE_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 
 const labels = (d: number) => buildTimelineSkeleton(d).map(beatLabel);
 
@@ -62,7 +63,8 @@ describe('buildVideoDirector', () => {
   it('returns null for non-video targets and uses the timestamp dialect for every other video model', () => {
     expect(buildVideoDirector('Stable Diffusion XL', {})).toBeNull();
     expect(buildVideoDirector('Default (General Video)', {})!.timeline).toBe('timestamps');
-    expect(buildVideoDirector('Runway Gen-4.5', {})!.timeline).toBe('timestamps');
+    expect(buildVideoDirector('Pika Art v3.0', {})!.timeline).toBe('timestamps');
+    expect(buildVideoDirector('Runway Gen-4.5', {})!.timeline).toBe('paragraph');
   });
   it('timestamps dialect lists the computed labels and a header', () => {
     const d = buildVideoDirector('Kling 3.0 Pro / Turbo / Omni', { videoDuration: '10', aspectRatio: '9:16', videoInputType: 'i2v' })!;
@@ -109,6 +111,34 @@ describe('videoCaps', () => {
     expect(videoCaps('Google Veo 3.1').durations).toEqual([4, 6, 8]);
     expect(videoCaps('Kling 3.0 Pro / Turbo / Omni')).toMatchObject({ min: 3, max: 15, durations: null });
     expect(videoCaps('Default (General Video)')).toMatchObject({ min: 3, max: 15, timeline: 'timestamps', audio: undefined });
+  });
+});
+
+describe('Wan profile resolution', () => {
+  const all = [...TARGET_VIDEO_AI_MODELS, ...TARGET_IMAGE_AI_MODELS, ...TARGET_AUDIO_AI_MODELS];
+  it('Wan 2.x profile matches exactly WAN 2.5 and 2.7 across every target list', () => {
+    expect(all.filter(m => lookupModelProfile(m).name === 'Wan 2.x').sort()).toEqual(['WAN 2.5', 'WAN 2.7 (Open Weights)']);
+  });
+  it('legacy Wan / HunYuan profile keeps WAN Video v2 and HunYuan, with no dialect fields', () => {
+    expect(all.filter(m => lookupModelProfile(m).name === 'Wan / Hunyuan Video').sort()).toEqual(['HunYuan Video v2', 'WAN Video v2 (T2V)']);
+    expect(lookupModelProfile('HunYuan Video v2', true).videoTimeline).toBeUndefined();
+  });
+  it('Wan 2.x gets timestamps, 2–15 s and native audio', () => {
+    expect(videoCaps('WAN 2.7 (Open Weights)')).toMatchObject({ timeline: 'timestamps', min: 2, max: 15, audio: true });
+  });
+  it('Luma is a silent 5 / 10 s paragraph model', () => {
+    expect(videoCaps('Luma Ray (v3)')).toMatchObject({ timeline: 'paragraph', durations: [5, 10], audio: false });
+  });
+});
+
+describe('per-model video audio', () => {
+  it('Veo 2 is silent, Veo 3 / 3.1 / 3.1 Lite are native', () => {
+    expect(videoCaps('Google Veo 2').audio).toBe(false);
+    for (const m of ['Google Veo 3', 'Google Veo 3.1', 'Google Veo 3.1 Lite']) expect(videoCaps(m).audio).toBe(true);
+  });
+  it('buildVideoDirector writes no audio direction for Veo 2 even with audio on', () => {
+    expect(buildVideoDirector('Google Veo 2', { videoAudio: 'auto' })!.rules).toContain('AUDIO: none');
+    expect(buildVideoDirector('Google Veo 3', { videoAudio: 'auto' })!.rules).not.toContain('AUDIO: none');
   });
 });
 

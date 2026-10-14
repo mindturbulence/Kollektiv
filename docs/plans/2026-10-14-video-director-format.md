@@ -137,3 +137,16 @@ because the owner's requested format is timestamped and no verified dialect prod
 its profile patterns (`wan video`) do not match the model names in `constants/models.ts` (`WAN 2.7`, `WAN 2.5`).
 Known gaps: `cleanLLMResponse` strips leading `- ` bullets, so Sora's `Actions:` bullets arrive as plain lines.
 Pre-existing: `llmService.ts:261-270` injects voice/tone/acoustics/mood for video when stale audio-mode values exist.
+
+## 9. Research pass and dialect decisions (2026-10-14, later)
+
+Four tier-sonnet agents (two researchers on video vendors, one on audio formats, one implementer for small gaps) ran in parallel.
+tier-decide (OpenRouter 402 → Claude fallback) ruled on three contested calls:
+Kling 3.0 keeps `timestamps` (0.60; vendor documents numbered "shot N," and 3–15 s, native audio, not timestamps);
+Wan 2.7 gets `timestamps` (0.80; vendor documents `Shot 1 [0–3 seconds]`, 2–15 s); Runway/Luma/Pika dialect confidence was 0.45,
+below the 0.6 threshold, so the call was made here: Luma `paragraph` (vendor: ~100 words, positive only, 5/10 s, no audio), Runway `paragraph`
+(snippet only, flagged), Pika/Vidu/PixVerse unchanged.
+Fixed on the way: bullets under `Actions:` survive `cleanLLMResponse`; Wan 2.x resolves to its own profile; Veo 2 is silent;
+stale voice/tone/acoustics/mood no longer leak into non-audio prompts; **`udio` matched MMAudio, AudioLDM and AudioBox, so those
+sound-effects models were classified as music — now a word-boundary match**.
+Audio-only: Dialogue / Narration audio types now produce per-family script rules (tagged speech, speaker-id, one-voice-per-request).

@@ -55,6 +55,12 @@ const SHARED_LOCK = (isI2V: boolean) => isI2V
   ? `SUBJECT LOCK (image-to-video): open with one sentence beginning "Keep the exact subject, outfit and setting of the reference image". Add an attribute only if the user's concept states it — never invent faces, clothing or colours you cannot see. Then direct movement only.`
   : `WORLD: open with one compact paragraph fixing the subject (appearance, wardrobe), the setting and the light, so the clip stays consistent.`;
 
+/** Native audio for this exact model: the profile's flag unless the model is listed as silent. */
+const modelHasAudio = (profile: ModelProfile, model: string): boolean | undefined => {
+  const lower = model.toLowerCase();
+  return profile.videoSilentModels?.some(s => lower.includes(s)) ? false : profile.videoAudio;
+};
+
 export interface VideoCaps {
   timeline: NonNullable<ModelProfile['videoTimeline']>;
   /** Discrete lengths, else null (use min/max). */
@@ -70,7 +76,7 @@ export const videoCaps = (model: string): VideoCaps => {
   const p = lookupModelProfile(model, true);
   const list = p.videoDurations?.length ? p.videoDurations : null;
   const [min, max] = list ? [Math.min(...list), Math.max(...list)] : (p.videoDurationRange ?? [3, 15]);
-  return { timeline: p.videoTimeline ?? 'timestamps', durations: list, min, max, audio: p.videoAudio };
+  return { timeline: p.videoTimeline ?? 'timestamps', durations: list, min, max, audio: modelHasAudio(p, model) };
 };
 
 /** Short spoken lines that plausibly fit a clip: about one per 3 s. */
@@ -120,7 +126,7 @@ export const buildVideoDirector = (model: string, modifiers: PromptModifiers): V
   const isI2V = modifiers.videoInputType === 'i2v';
   const beats = buildTimelineSkeleton(duration);
   const lock = SHARED_LOCK(isI2V);
-  const audio = audioRules(timeline, modifiers, profile.videoAudio, duration);
+  const audio = audioRules(timeline, modifiers, modelHasAudio(profile, model), duration);
   const audioLine = audio.startsWith('AUDIO: none') ? '' : `, one line "Audio: ..." (ambience and music; speech and effects stay in the beats)`;
   let rules: string;
   let header = '';

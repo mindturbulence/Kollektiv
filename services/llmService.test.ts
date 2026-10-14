@@ -41,6 +41,11 @@ describe('cleanLLMResponse', () => {
         expect(cleanLLMResponse(raw)).toBe('first idea\nsecond idea\nthird idea');
     });
 
+    it('keeps "- " bullets that follow a "Label:" line (Sora Actions)', () => {
+        const raw = 'Scene text\nActions:\n- she turns\n- he nods\n- third\nMood: calm\n- stray';
+        expect(cleanLLMResponse(raw)).toBe('Scene text\nActions:\n- she turns\n- he nods\n- third\nMood: calm\nstray');
+    });
+
     it('drops empty lines', () => {
         const raw = 'line one\n\n\nline two';
         expect(cleanLLMResponse(raw)).toBe('line one\nline two');
@@ -86,6 +91,14 @@ describe('buildContextForEnhancer', () => {
         const mods: PromptModifiers = { musicGenre: 'Synthwave' };
         expect(buildContextForEnhancer(mods, false)).toBe('');
         expect(buildContextForEnhancer(mods, true)).toContain('Music Genre: Synthwave');
+    });
+
+    it('only includes voice/acoustics/mood fields when isAudio is true', () => {
+        const mods: PromptModifiers = { voiceGender: 'Female', voiceTone: 'Warm', audioEnvironment: 'Studio', audioMood: 'Calm' };
+        expect(buildContextForEnhancer(mods, false)).toBe('');
+        const out = buildContextForEnhancer(mods, true);
+        expect(out).toContain('Voice: Female');
+        expect(out).toContain('Mood: Calm');
     });
 
     it('applies a modifier weight to the value on a weighting-capable target model', () => {
@@ -206,6 +219,37 @@ describe("enhancePromptStream — video Director's Script", () => {
     it('non-video targets never get a director', async () => {
         const { sys } = await run('Stable Diffusion XL', { videoDuration: '10' }, ['x']);
         expect(sys).not.toContain("DIRECTOR'S SCRIPT");
+    });
+});
+
+describe('enhancePromptStream — speech dialogue and narration rules', () => {
+    const settings = { activeLLM: 'gemini' } as LLMSettings;
+    const sysFor = async (model: string, audioType?: string) => {
+        let sys = '';
+        vi.mocked(enhancePromptGeminiStream).mockImplementation(async function* (_p: string, _c: string, _s: unknown, system: string) {
+            sys = system;
+            yield 'x';
+        });
+        await collect(enhancePromptStream('two friends argue', '', 'Medium', model, { audioType }, settings));
+        return sys;
+    };
+
+    it('ElevenLabs dialogue uses named speakers with bracket tags', async () => {
+        const sys = await sysFor('ElevenLabs v3 (TTS)', 'Dialogue / Speech');
+        expect(sys).toContain('[DIALOGUE SCENE RULES]');
+        expect(sys).toContain("'Name: [delivery tag] spoken words'");
+    });
+    it('Vibe Voice uses speaker ids, Kokoro-style plain models one block per speaker', async () => {
+        expect(await sysFor('Vibe Voice', 'Dialogue / Speech')).toContain('Speaker 1:');
+        expect(await sysFor('OpenAI Voice Engine', 'Dialogue / Speech')).toContain('one voice per request');
+    });
+    it('narration type gets the narration rule', async () => {
+        expect(await sysFor('ElevenLabs v3 (TTS)', 'Narration / Voiceover')).toContain('[NARRATION RULES]');
+    });
+    it('no audio type, music and sfx models keep the generic rules', async () => {
+        expect(await sysFor('ElevenLabs v3 (TTS)')).toContain('[SPEECH SCRIPT RULES]');
+        expect(await sysFor('Suno v5 (Music)', 'Dialogue / Speech')).toContain('[MUSIC STRUCTURE RULES]');
+        expect(await sysFor('MMAudio v2 (Sound FX)', 'Dialogue / Speech')).toContain('[SOUND DESIGN RULES]');
     });
 });
 

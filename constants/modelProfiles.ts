@@ -54,6 +54,8 @@ export interface ModelProfile {
   videoDurationRange?: [number, number];
   /** Generates audio natively. Absent = unknown, false = silent. */
   videoAudio?: boolean;
+  /** Lowercase name substrings of models in this profile that are silent despite videoAudio. */
+  videoSilentModels?: string[];
 }
 
 export interface ModelProfileSchema {
@@ -95,6 +97,7 @@ export const MODEL_PROFILES: ModelProfileSchema = {
       videoTimeline: 'prose',
       videoDurations: [4, 6, 8],
       videoAudio: true,
+      videoSilentModels: ['veo 2'],
       mediaType: 'video',
       format: 'Cinematic Flow.',
       rules:
@@ -103,7 +106,8 @@ export const MODEL_PROFILES: ModelProfileSchema = {
     {
       name: 'Kling',
       matchPatterns: ['kling'],
-      // Community-sourced (fal, imagine.art): not vendor-verified, see docs/plans TASKS § 10 V10
+      // Official (kling.ai Kling 3.0 user guide): 3–15 s, native audio, numbered "shot N," multi-shot.
+      // Timestamped beats are the owner's format and community practice, not vendor syntax (tier-decide kept them, 0.60).
       videoTimeline: 'timestamps',
       videoDurationRange: [3, 15],
       videoAudio: true,
@@ -115,6 +119,8 @@ export const MODEL_PROFILES: ModelProfileSchema = {
     {
       name: 'Runway Gen',
       matchPatterns: ['runway'],
+      // Vendor help centre was unreachable (403); "short and direct, full sentences" is a search snippet only.
+      videoTimeline: 'paragraph',
       mediaType: 'video',
       format: 'High-Impact Prose.',
       rules:
@@ -123,6 +129,10 @@ export const MODEL_PROFILES: ModelProfileSchema = {
     {
       name: 'Luma Dream Machine',
       matchPatterns: ['luma'],
+      // Official: docs.agents.lumalabs.ai + Luma learning hub — ~100 words, positive only, 5 s / 10 s, no native audio
+      videoTimeline: 'paragraph',
+      videoDurations: [5, 10],
+      videoAudio: false,
       mediaType: 'video',
       format: 'Dynamic Keyframes.',
       rules:
@@ -139,6 +149,20 @@ export const MODEL_PROFILES: ModelProfileSchema = {
       format: 'Hyper-Realistic Narrative.',
       rules:
         'Extremely detailed descriptions of complex scenes with multiple characters, specific types of motion, and precise background details. Focus on physical realism.',
+    },
+    {
+      name: 'Wan 2.x',
+      // 'wan 2' covers WAN 2.5 / 2.7; 'WAN Image (T2I)' stays unmatched
+      matchPatterns: ['wan 2'],
+      // Official: alibabacloud.com Model Studio text-to-video reference. wan2.7 documents
+      // "Shot 1 [0–3 seconds] ..." and 2–15 s; wan2.5 is 5 or 10 s only (snapped by the range here).
+      videoTimeline: 'timestamps',
+      videoDurationRange: [2, 15],
+      videoAudio: true,
+      mediaType: 'video',
+      format: 'Dense Visual Script.',
+      rules:
+        'Describe the scene with a focus on spatial relationships, character expressions, and environmental changes over time. High emphasis on consistent character features. Keep the main subject wording identical across shots.',
     },
     {
       name: 'Wan / Hunyuan Video',
@@ -201,8 +225,10 @@ export const MODEL_PROFILES: ModelProfileSchema = {
     {
       name: 'Seedance',
       matchPatterns: ['seedance'],
-      // Community-sourced: not vendor-verified, see docs/plans TASKS § 10 V10
+      // Seedance 2.0: vendor launch post confirms 15 s multi-shot with audio; prompt syntax unverified
+      // (Seedance 2.5 doc shows "0–X seconds:"), so timestamps stay as the owner's format.
       videoTimeline: 'timestamps',
+      videoDurationRange: [2, 15],
       videoAudio: true,
       mediaType: 'video',
       format: 'Dynamic Cinematic Shot.',

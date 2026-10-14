@@ -21,7 +21,7 @@ const requireProvider = (feature: string, settings: LLMSettings, supported: LLMP
 const getAudioMode = (model: string): 'speech' | 'music' | 'sfx' => {
     const lower = model.toLowerCase();
     // Music models must be checked before generic speech matches
-    if (/(elevenlabs.*music|music v2|suno|udio|stable audio|ace-step|lyria|mureka|minimax.*music)/.test(lower)) return 'music';
+    if (/(elevenlabs.*music|music v2|suno|\budio\b|stable audio|ace-step|lyria|mureka|minimax.*music)/.test(lower)) return 'music';
     if (/(elevenlabs|voice|tts|bark|speech|kokoro|fish audio|minimax.*speech)/.test(lower)) return 'speech';
     if (/(mmaudio|sound fx|sfx|audioldm|audiobox|foley)/.test(lower)) return 'sfx';
     return 'music';
@@ -79,10 +79,48 @@ const AUDIO_MODE_PROTOCOLS: Record<'speech' | 'music' | 'sfx', string> = {
     sfx: "Sound design focus. Prioritize physical accuracy of sources, materials, and acoustic space. Foley-level precision.",
 };
 
+// Speech dialect per model family, from vendor docs (ElevenLabs v3 audio tags, Fish S2 bracket cues, Bark tags,
+// MiniMax interjections; VibeVoice/Dia speaker ids; Kokoro/OpenAI/Qwen3 are one voice per request).
+const getSpeechFamily = (model: string): 'tagged' | 'speaker-id' | 'plain' => {
+    const lower = model.toLowerCase();
+    if (/(elevenlabs|fish|bark|minimax)/.test(lower)) return 'tagged';
+    if (/(vibe ?voice|\bdia\b)/.test(lower)) return 'speaker-id';
+    return 'plain';
+};
+
+const SPEECH_SCENE_RULES: Record<'tagged' | 'speaker-id' | 'plain', Record<'dialogue' | 'narration', string>> = {
+    tagged: {
+        dialogue: `
+[DIALOGUE SCENE RULES]: Write each turn as 'Name: [delivery tag] spoken words'. Use only inline bracket tags for delivery and non-speech sound ([whispers], [sighs], [laughs]; effects such as [door slams] only where the model supports them). 2-4 named speakers, alternating turns, no stage directions outside tags, no narration unless asked. Keep the whole script short (about 2,000 characters for ElevenLabs dialogue). NO music headers, BPM or [Verse]/[Chorus] tags.`,
+        narration: `
+[NARRATION RULES]: One voice, no speaker labels. Flowing prose with a few bracket tags at emotional shifts; punctuation and short sentences for pacing; CAPS only for rare emphasis; no scene or sound-effect description outside tags. NO music headers, BPM or [Verse]/[Chorus] tags.`,
+    },
+    'speaker-id': {
+        dialogue: `
+[DIALOGUE SCENE RULES]: One line per turn, prefixed with the speaker label the model expects ('Speaker 1:' style, or [S1]/[S2] strictly alternating from [S1] for Dia). Up to 4 speakers (2 for Dia). Verbatim spoken text only: no sound effects, music or overlapping speech; nonverbal sounds only in the model's documented tags. English or Chinese only for VibeVoice.`,
+        narration: `
+[NARRATION RULES]: A single speaker label, continuous paragraphs of verbatim text, no sound-effect or music cues.`,
+    },
+    plain: {
+        dialogue: `
+[DIALOGUE SCENE RULES]: This model speaks one voice per request. Output one block per speaker, each starting with 'NAME:' on its own line followed by verbatim spoken text only, then one separate sentence of delivery direction (tone, pace, accent) for that block. No inline tags or brackets.`,
+        narration: `
+[NARRATION RULES]: Verbatim text only, punctuation for pacing, one voice. Give tone, pace and accent as one separate delivery line. No brackets or inline tags.`,
+    },
+};
+
+/** Dialogue / narration script rules for speech models, or undefined to keep the generic speech rule. */
+const buildSpeechRules = (model: string, audioType: string | undefined, mode: 'speech' | 'music' | 'sfx'): string | undefined => {
+    if (mode !== 'speech' || !audioType) return undefined;
+    const t = audioType.toLowerCase();
+    const kind = /narration|voiceover/.test(t) ? 'narration' : /dialogue|speech/.test(t) ? 'dialogue' : null;
+    return kind ? SPEECH_SCENE_RULES[getSpeechFamily(model)][kind] : undefined;
+};
+
 const AI_ROLES = {
-    ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, modifierCatalog?: string, masterRole?: string, videoRules?: string) => {
+    ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, modifierCatalog?: string, masterRole?: string, rulesOverride?: string) => {
         const syntax = getModelSyntax(model, isVideo, isAudio);
-        const l = videoRules ? `Set by the Director's Script structure: ${length === 'Short' ? 'one short sentence' : length === 'Long' ? 'two or three detailed sentences' : 'one to two sentences'} per beat (CRITICAL: no extra paragraphs beyond that structure)` : length === 'Short' ? 'Strictly under 40 words' : length === 'Long' ? 'EXTREMELY DETAILED, at least 4-5 long paragraphs (minimum 600 words)' : 'Around 150-200 words';
+        const l = isVideo && rulesOverride ? `Set by the Director's Script structure: ${length === 'Short' ? 'one short sentence' : length === 'Long' ? 'two or three detailed sentences' : 'one to two sentences'} per beat (CRITICAL: no extra paragraphs beyond that structure)` : length === 'Short' ? 'Strictly under 40 words' : length === 'Long' ? 'EXTREMELY DETAILED, at least 4-5 long paragraphs (minimum 600 words)' : 'Around 150-200 words';
         const isI2V = isVideo && inputType === 'i2v';
 
         let persona = masterRole ? `Master Role: ${masterRole}\n\nTask Specific Role: World-Class Visual Strategist and Prompt Architect.` : "Role: World-Class Visual Strategist and Prompt Architect.";
@@ -90,7 +128,7 @@ const AI_ROLES = {
 
         let temporalInstruct = "";
         if (isVideo) {
-            temporalInstruct = videoRules ?? VIDEO_MOTION_RULES;
+            temporalInstruct = rulesOverride ?? VIDEO_MOTION_RULES;
             persona = masterRole ? `Master Role: ${masterRole}\n\nTask Specific Role: Visionary Cinematic Director.` : "Role: Visionary Cinematic Director.";
             if (isI2V) {
                 modeProtocol = `I2V PROTOCOL (DIRECTING AN IMAGE): The user is providing a reference image. Assume the subject, colors, and static details are already set. DO NOT describe colors or objects in the image. Focus EXCLUSIVELY on directing movement, camera paths, and temporal shifts. Strip all static adjectives. Output must be purely kinetic, efficient, and physically plausible.`;
@@ -99,7 +137,7 @@ const AI_ROLES = {
             }
         } else if (isAudio) {
             const audioMode = getAudioMode(model);
-            temporalInstruct = AUDIO_STRUCTURE_RULES[audioMode];
+            temporalInstruct = rulesOverride ?? AUDIO_STRUCTURE_RULES[audioMode];
             persona = masterRole ? `Master Role: ${masterRole}\n\nTask Specific Role: Master Audio Producer and Sound Architect.` : "Role: Master Audio Producer and Sound Architect.";
             modeProtocol = AUDIO_MODE_PROTOCOLS[audioMode];
         } else {
@@ -140,7 +178,7 @@ Output: The refined prompt text first, then the separator, then the JSON breakdo
 NO INTROS, NO EXPLANATIONS.`;
     },
 
-    REFINER: (model: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, masterRole?: string, videoRules?: string) => {
+    REFINER: (model: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, masterRole?: string, rulesOverride?: string) => {
         const syntax = getModelSyntax(model, isVideo, isAudio);
         const isI2V = isVideo && inputType === 'i2v';
 
@@ -149,7 +187,7 @@ NO INTROS, NO EXPLANATIONS.`;
         let temporalInstruct = "";
 
         if (isVideo) {
-            temporalInstruct = videoRules ?? VIDEO_MOTION_RULES;
+            temporalInstruct = rulesOverride ?? VIDEO_MOTION_RULES;
             role = masterRole ? `Master Role: ${masterRole}\nTask Role: Visionary Cinematic Director.` : "Visionary Cinematic Director.";
             if (isI2V) {
                 protocol = "I2V PROTOCOL: You are animating a fixed image. Strip all static descriptions of the subject. Focus ONLY on the physics of motion, camera pathing, and scene evolution.";
@@ -158,7 +196,7 @@ NO INTROS, NO EXPLANATIONS.`;
             }
         } else if (isAudio) {
             const audioMode = getAudioMode(model);
-            temporalInstruct = AUDIO_STRUCTURE_RULES[audioMode];
+            temporalInstruct = rulesOverride ?? AUDIO_STRUCTURE_RULES[audioMode];
             role = masterRole ? `Master Role: ${masterRole}\nTask Role: Master Sound Engineer.` : "Master Sound Engineer.";
             protocol = AUDIO_MODE_PROTOCOLS[audioMode];
         } else {
@@ -194,10 +232,18 @@ export const cleanLLMResponse = (text: string): string => {
     let cleaned = text.replace(/<(think|thought)>[\s\S]*?(<\/\1>|$)/gi, '').trim();
     cleaned = cleaned.replace(/```[a-z]*\n([\s\S]*?)\n```/gi, '$1').replace(/`/g, '');
     const stopWords = [/^here/i, /^sure/i, /^certainly/i, /^okay/i, /^1\.\s/i];
-    return cleaned.split('\n')
-        .map(l => l.trim().replace(/^(\d+[\.\)]|\*|-|\+)\s+/, ''))
-        .filter(l => l && !stopWords.some(r => r.test(l)))
-        .join('\n').trim();
+    // A "- " bullet directly under a "Label:" line is structure (Sora's Actions:), not list noise.
+    const out: string[] = [];
+    let underLabel: boolean = false;
+    for (const raw of cleaned.split('\n')) {
+        const t = raw.trim();
+        const bullet: boolean = underLabel && /^-\s+/.test(t);
+        const line: string = bullet ? t : t.replace(/^(\d+[\.\)]|\*|-|\+)\s+/, '');
+        if (!line || stopWords.some(r => r.test(line))) continue;
+        out.push(line);
+        underLabel = bullet || line.endsWith(':');
+    }
+    return out.join('\n').trim();
 };
 
 export const buildContextForEnhancer = (
@@ -260,10 +306,10 @@ export const buildContextForEnhancer = (
     if (modifiers.videoEffect) ctx.push(`Video Effect / Post-Processing: ${w('videoEffect', modifiers.videoEffect)}`);
 
     if (modifiers.audioType) ctx.push(`Type: ${modifiers.audioType}`);
-    if (modifiers.voiceGender) ctx.push(`Voice: ${modifiers.voiceGender}`);
-    if (modifiers.voiceTone) ctx.push(`Tone: ${modifiers.voiceTone}`);
-    if (modifiers.audioEnvironment) ctx.push(`Acoustics: ${modifiers.audioEnvironment}`);
-    if (modifiers.audioMood) ctx.push(`Mood: ${modifiers.audioMood}`);
+    if (isAudio && modifiers.voiceGender) ctx.push(`Voice: ${modifiers.voiceGender}`);
+    if (isAudio && modifiers.voiceTone) ctx.push(`Tone: ${modifiers.voiceTone}`);
+    if (isAudio && modifiers.audioEnvironment) ctx.push(`Acoustics: ${modifiers.audioEnvironment}`);
+    if (isAudio && modifiers.audioMood) ctx.push(`Mood: ${modifiers.audioMood}`);
     if (isAudio && modifiers.musicGenre) ctx.push(`Music Genre: ${modifiers.musicGenre}`);
     if (isAudio && modifiers.instrumentation) ctx.push(`Instrumentation: ${modifiers.instrumentation}`);
     if (isAudio && modifiers.vocalStyle) ctx.push(`Vocal Style: ${modifiers.vocalStyle}`);
@@ -343,7 +389,7 @@ export async function* enhancePromptStream(
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
     const director = isVideo ? buildVideoDirector(targetAIModel, modifiers) : null;
-    const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, modifierCatalog, settings.masterRolePrompt, director?.rules);
+    const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, modifierCatalog, settings.masterRolePrompt, director?.rules ?? (isAudio ? buildSpeechRules(targetAIModel, modifiers.audioType, getAudioMode(targetAIModel)) : undefined));
     const context = buildContextForEnhancer(modifiers, isAudio, modifierWeights, targetAIModel);
     const input = `${context}\n\n[Primary Concept]\n${originalPrompt}`;
 
@@ -370,7 +416,7 @@ export const refineSinglePrompt = async (promptText: string, targetAIModel: stri
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
     const director = isVideo ? buildVideoDirector(targetAIModel, modifiers) : null;
-    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt, director?.rules);
+    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt, director?.rules ?? (isAudio ? buildSpeechRules(targetAIModel, modifiers.audioType, getAudioMode(targetAIModel)) : undefined));
     
     const supported: LLMProvider[] = ['gemini', 'ollama', 'llamacpp', 'anthropic'];
     requireProvider('Prompt refinement', settings, supported);
@@ -407,7 +453,7 @@ export async function* refineSinglePromptStream(
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
     const director = isVideo ? buildVideoDirector(targetAIModel, modifiers) : null;
-    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt, director?.rules);
+    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt, director?.rules ?? (isAudio ? buildSpeechRules(targetAIModel, modifiers.audioType, getAudioMode(targetAIModel)) : undefined));
     
     const provider = requireProvider('Prompt refinement stream', settings, ['gemini', 'ollama', 'llamacpp', 'anthropic']);
     const temperature = modifiers.creativity !== undefined ? modifiers.creativity / 100 : 0.7;
