@@ -15,7 +15,8 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { createEdge, createNode } from '../core/graph';
 import { runGraph } from '../core/executor';
 import { intakeToAction, takeIntakes } from '../core/intake';
-import { loadGraph, saveGraph } from '../core/persistence';
+import { listGraphs, loadGraph, saveGraph, type GraphSummary } from '../core/persistence';
+import { isTemplateId, makeTemplate, TEMPLATE_PREFIX, templateToAction } from '../core/templates';
 import {
   canRedo, canUndo, dispatch, getRunStates, getSnapshot, load, redo, setRunState, subscribe, undo,
 } from '../core/store';
@@ -68,6 +69,8 @@ function CanvasBody() {
   const [dragPositions, setDragPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [measured, setMeasured] = useState<Record<string, Size>>({});
   const [running, setRunning] = useState(false);
+  const [templates, setTemplates] = useState<GraphSummary[]>([]);
+  const [templateName, setTemplateName] = useState('');
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -130,6 +133,29 @@ function CanvasBody() {
       }
     };
   }, [ready, say]);
+
+  const refreshTemplates = useCallback(() => {
+    listGraphs().then(all => setTemplates(all.filter(g => isTemplateId(g.id)))).catch(() => setTemplates([]));
+  }, []);
+  useEffect(() => { if (ready) refreshTemplates(); }, [ready, refreshTemplates]);
+
+  const saveTemplate = useCallback(() => {
+    const name = templateName.trim();
+    if (!name) { say('Name the template first.', true); return; }
+    saveGraph(`${TEMPLATE_PREFIX}${crypto.randomUUID()}`, name, makeTemplate(getSnapshot()))
+      .then(() => { setTemplateName(''); refreshTemplates(); say(`Saved template "${name}".`); })
+      .catch((err: unknown) => say(`Could not save template: ${message(err)}`, true));
+  }, [templateName, say, refreshTemplates]);
+
+  const addTemplate = useCallback((id: string) => {
+    if (!id) return;
+    loadGraph(id)
+      .then(record => {
+        if (record) dispatch(templateToAction(getSnapshot(), record.graph));
+        else say('Template not found.', true);
+      })
+      .catch((err: unknown) => say(`Could not load template: ${message(err)}`, true));
+  }, [say]);
 
   const flow = useMemo(
     () => toFlow(graph, runStates, { selected, positions: dragPositions, measured }),
@@ -247,6 +273,25 @@ function CanvasBody() {
           <button type="button" className={`${btn} btn-primary`} disabled={running || graph.nodes.length === 0} onClick={() => void run()}>Run</button>
           <button type="button" className={`${btn} btn-ghost`} disabled={!running} onClick={stop}>Stop</button>
           <button type="button" className={`${btn} btn-ghost`} disabled={graph.nodes.length === 0} onClick={clear}>Clear</button>
+          <span className="mx-1 h-4 w-px bg-base-content/20" />
+          <input
+            type="text"
+            aria-label="Template name"
+            placeholder="Template name"
+            value={templateName}
+            onChange={e => setTemplateName(e.target.value)}
+            className="nodrag h-6 w-28 rounded-none border border-base-content/25 bg-base-100 px-1 text-xs"
+          />
+          <button type="button" className={`${btn} btn-ghost`} disabled={graph.nodes.length === 0} onClick={saveTemplate}>Save template</button>
+          <select
+            aria-label="Add template"
+            className="h-6 rounded-none border border-base-content/25 bg-base-100 px-1 text-xs"
+            value=""
+            onChange={e => addTemplate(e.target.value)}
+          >
+            <option value="">Add template…</option>
+            {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
         </div>
         {notice && (
           <div role="status" className={`absolute bottom-3 left-1/2 z-10 max-w-md -translate-x-1/2 border bg-base-100 px-3 py-1.5 text-xs ${notice.error ? 'border-error text-error' : 'border-primary text-base-content'}`}>
