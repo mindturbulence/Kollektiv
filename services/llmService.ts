@@ -7,6 +7,7 @@ import { TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/mod
 import { lookupModelProfile, serializeModifierToken } from '../constants/modelProfiles';
 import { withProviderFallback, getActiveProvider, ProviderUnsupportedError, type LLMProvider } from './providerFallback';
 import { appEventBus } from '../utils/eventBus';
+import { buildVideoDirector, sanitizeVideoLine, sanitizeVideoStream, type VideoDirector } from '../utils/videoDirector';
 
 export { getActiveProvider, ProviderUnsupportedError, type LLMProvider };
 
@@ -79,9 +80,9 @@ const AUDIO_MODE_PROTOCOLS: Record<'speech' | 'music' | 'sfx', string> = {
 };
 
 const AI_ROLES = {
-    ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, modifierCatalog?: string, masterRole?: string) => {
+    ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, modifierCatalog?: string, masterRole?: string, videoRules?: string) => {
         const syntax = getModelSyntax(model, isVideo, isAudio);
-        const l = length === 'Short' ? 'Strictly under 40 words' : length === 'Long' ? 'EXTREMELY DETAILED, at least 4-5 long paragraphs (minimum 600 words)' : 'Around 150-200 words';
+        const l = videoRules ? `Set by the Director's Script structure: ${length === 'Short' ? 'one short sentence' : length === 'Long' ? 'two or three detailed sentences' : 'one to two sentences'} per beat (CRITICAL: no extra paragraphs beyond that structure)` : length === 'Short' ? 'Strictly under 40 words' : length === 'Long' ? 'EXTREMELY DETAILED, at least 4-5 long paragraphs (minimum 600 words)' : 'Around 150-200 words';
         const isI2V = isVideo && inputType === 'i2v';
 
         let persona = masterRole ? `Master Role: ${masterRole}\n\nTask Specific Role: World-Class Visual Strategist and Prompt Architect.` : "Role: World-Class Visual Strategist and Prompt Architect.";
@@ -89,7 +90,7 @@ const AI_ROLES = {
 
         let temporalInstruct = "";
         if (isVideo) {
-            temporalInstruct = VIDEO_MOTION_RULES;
+            temporalInstruct = videoRules ?? VIDEO_MOTION_RULES;
             persona = masterRole ? `Master Role: ${masterRole}\n\nTask Specific Role: Visionary Cinematic Director.` : "Role: Visionary Cinematic Director.";
             if (isI2V) {
                 modeProtocol = `I2V PROTOCOL (DIRECTING AN IMAGE): The user is providing a reference image. Assume the subject, colors, and static details are already set. DO NOT describe colors or objects in the image. Focus EXCLUSIVELY on directing movement, camera paths, and temporal shifts. Strip all static adjectives. Output must be purely kinetic, efficient, and physically plausible.`;
@@ -139,7 +140,7 @@ Output: The refined prompt text first, then the separator, then the JSON breakdo
 NO INTROS, NO EXPLANATIONS.`;
     },
 
-    REFINER: (model: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, masterRole?: string) => {
+    REFINER: (model: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, masterRole?: string, videoRules?: string) => {
         const syntax = getModelSyntax(model, isVideo, isAudio);
         const isI2V = isVideo && inputType === 'i2v';
 
@@ -148,7 +149,7 @@ NO INTROS, NO EXPLANATIONS.`;
         let temporalInstruct = "";
 
         if (isVideo) {
-            temporalInstruct = VIDEO_MOTION_RULES;
+            temporalInstruct = videoRules ?? VIDEO_MOTION_RULES;
             role = masterRole ? `Master Role: ${masterRole}\nTask Role: Visionary Cinematic Director.` : "Visionary Cinematic Director.";
             if (isI2V) {
                 protocol = "I2V PROTOCOL: You are animating a fixed image. Strip all static descriptions of the subject. Focus ONLY on the physics of motion, camera pathing, and scene evolution.";
@@ -318,6 +319,14 @@ export async function* stripReasoningTags(stream: AsyncGenerator<string>): Async
     }
 }
 
+/** Prepends the code-rendered header and strips labels the dialect does not allow. */
+async function* withDirector(stream: AsyncGenerator<string>, director: VideoDirector | null): AsyncGenerator<string> {
+    if (!director) { yield* stream; return; }
+    if (director.header) yield `${director.header}
+`;
+    yield* sanitizeVideoStream(stream, director.timeline);
+}
+
 export async function* enhancePromptStream(
     originalPrompt: string,
     constantModifier: string,
@@ -333,7 +342,8 @@ export async function* enhancePromptStream(
     const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
-    const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, modifierCatalog, settings.masterRolePrompt);
+    const director = isVideo ? buildVideoDirector(targetAIModel, modifiers) : null;
+    const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, modifierCatalog, settings.masterRolePrompt, director?.rules);
     const context = buildContextForEnhancer(modifiers, isAudio, modifierWeights, targetAIModel);
     const input = `${context}\n\n[Primary Concept]\n${originalPrompt}`;
 
@@ -352,14 +362,15 @@ export async function* enhancePromptStream(
                 ? enhancePromptOllamaStream(input, constantModifier, settings, systemInstruction, tokenBudget)
                 : enhancePromptGeminiStream(input, constantModifier, settings, systemInstruction, promptLength, referenceImages, temperature);
 
-    yield* stripReasoningTags(stream);
+    yield* withDirector(stripReasoningTags(stream), director);
 }
 
 export const refineSinglePrompt = async (promptText: string, targetAIModel: string, settings: LLMSettings, modifiers: PromptModifiers = {}): Promise<string> => {
     const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
-    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt);
+    const director = isVideo ? buildVideoDirector(targetAIModel, modifiers) : null;
+    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt, director?.rules);
     
     const supported: LLMProvider[] = ['gemini', 'ollama', 'llamacpp', 'anthropic'];
     requireProvider('Prompt refinement', settings, supported);
@@ -381,7 +392,9 @@ export const refineSinglePrompt = async (promptText: string, targetAIModel: stri
         appEventBus.emit('assistantFeedback', { message: `${from} failed (${err.message}). Retrying on ${to}.`, isError: false });
     });
     const cleaned = cleanLLMResponse(raw);
-    return cleaned;
+    if (!director) return cleaned;
+    const body = cleaned.split('\n').map(l => sanitizeVideoLine(l, director.timeline)).join('\n');
+    return director.header ? `${director.header}\n${body}` : body;
 };
 
 export async function* refineSinglePromptStream(
@@ -393,7 +406,8 @@ export async function* refineSinglePromptStream(
     const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
-    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt);
+    const director = isVideo ? buildVideoDirector(targetAIModel, modifiers) : null;
+    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt, director?.rules);
     
     const provider = requireProvider('Prompt refinement stream', settings, ['gemini', 'ollama', 'llamacpp', 'anthropic']);
     const temperature = modifiers.creativity !== undefined ? modifiers.creativity / 100 : 0.7;
@@ -408,7 +422,7 @@ export async function* refineSinglePromptStream(
                 ? refineSinglePromptOllamaStream(promptText, settings, sys, 1024)
                 : refineSinglePromptGeminiStream(promptText, '', settings, sys);
 
-    yield* stripReasoningTags(stream);
+    yield* withDirector(stripReasoningTags(stream), director);
 }
 
 export const generateArtistDescription = async (artistName: string, settings: LLMSettings): Promise<string> => {

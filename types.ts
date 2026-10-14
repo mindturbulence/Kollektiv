@@ -341,6 +341,12 @@ export interface PromptModifiers {
   cameraMovement?: string;
   videoInputType?: 't2v' | 'i2v'; 
   videoEffect?: string;
+  /** Clip length in seconds; snapped to the target model's allowed values. */
+  videoDuration?: string;
+  /** off = silent clip, auto = model's native audio untouched, direct = inject dialogue/SFX. */
+  videoAudio?: 'off' | 'auto' | 'direct';
+  videoDialogue?: string;
+  videoSfx?: string;
   // Audio specific
   audioType?: string;
   voiceGender?: string;

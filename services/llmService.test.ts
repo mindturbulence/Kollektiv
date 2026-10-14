@@ -171,6 +171,43 @@ describe('enhancePromptStream — modifier weight wiring', () => {
     });
 });
 
+describe("enhancePromptStream — video Director's Script", () => {
+    const settings = { activeLLM: 'gemini' } as LLMSettings;
+    const run = async (model: string, modifiers: PromptModifiers, reply: string[]) => {
+        let sys = '';
+        vi.mocked(enhancePromptGeminiStream).mockImplementation(async function* (_p: string, _c: string, _s: unknown, system: string) {
+            sys = system;
+            for (const c of reply) yield c;
+        });
+        const out = await collect(enhancePromptStream('a woman crosses a street', '', 'Medium', model, modifiers, settings));
+        return { sys, out };
+    };
+
+    it('timestamps dialect: header first, labeled beats in the system prompt, output untouched', async () => {
+        const { sys, out } = await run('Kling 3.0 Pro / Turbo / Omni', { videoDuration: '6', aspectRatio: '9:16' }, ['0–3s: walks\n', '3–6s: stops\n']);
+        expect(sys).toContain("DIRECTOR'S SCRIPT — TIMESTAMPED");
+        expect(sys).not.toContain('STRICTLY FORBIDDEN in the output: timestamps');
+        expect(out.startsWith('9:16 cinematic video. Total duration 6 seconds.\n0–3s: walks')).toBe(true);
+    });
+
+    it('prose dialect strips leaked labels from the stream', async () => {
+        const { out } = await run('Google Veo 3.1', {}, ['Keyframe 2s: she turns\n', '0–3s: then smiles']);
+        expect(out).toBe('she turns\nthen smiles');
+    });
+
+    it('unknown video model keeps the legacy rules', async () => {
+        const { sys, out } = await run('Default (General Video)', { videoDuration: '10' }, ['0–3s: x']);
+        expect(sys).toContain('[MOTION TIMELINE RULES]');
+        expect(sys).not.toContain("DIRECTOR'S SCRIPT");
+        expect(out).toBe('0–3s: x');
+    });
+
+    it('non-video targets never get a director', async () => {
+        const { sys } = await run('Stable Diffusion XL', { videoDuration: '10' }, ['x']);
+        expect(sys).not.toContain("DIRECTOR'S SCRIPT");
+    });
+});
+
 describe('getActiveProvider', () => {
     const base = { activeLLM: 'gemini' } as LLMSettings;
     it('collapses ollama_cloud to ollama', () => {

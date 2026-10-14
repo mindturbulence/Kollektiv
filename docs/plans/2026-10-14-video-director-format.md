@@ -126,3 +126,14 @@ Where they agreed and what changed in the plan:
 
 Unresolved disagreement: ux wants a separate audio block, prompt-engineer wants dialogue next to the beat that speaks.
 Resolution in V9: dialogue attached to its beat, ambience/music as one trailing line.
+
+## 8. Build log (2026-10-14)
+
+V1–V5 built. V4 result (read from `enhancePromptStream`, llmService.ts): reference images reach only `enhancePromptGeminiStream`;
+the Ollama, llama.cpp and Anthropic paths get text only. So the I2V lock is written from the user's own wording, with
+"same subject as the reference image" as the fallback, exactly as the council advised.
+Deviation: Kling and Seedance were given the timestamp dialect from community sources (flagged in `modelProfiles.ts`),
+because the owner's requested format is timestamped and no verified dialect produces it. Wan was not given a dialect:
+its profile patterns (`wan video`) do not match the model names in `constants/models.ts` (`WAN 2.7`, `WAN 2.5`).
+Known gaps: `cleanLLMResponse` strips leading `- ` bullets, so Sora's `Actions:` bullets arrive as plain lines.
+Pre-existing: `llmService.ts:261-270` injects voice/tone/acoustics/mood for video when stale audio-mode values exist.

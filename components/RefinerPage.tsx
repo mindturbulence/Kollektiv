@@ -222,6 +222,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
             photographyStyle: { label: 'Photo Style', tab: 'photography' },
             motion: { label: 'Motion', tab: 'motion' },
             cameraMovement: { label: 'Pathing', tab: 'motion' },
+            videoDuration: { label: 'Clip Length', tab: 'motion' },
             audioType: { label: 'Audio Type', tab: 'audio' },
             voiceGender: { label: 'Voice Profile', tab: 'audio' },
             voiceTone: { label: 'Tone', tab: 'audio' },
