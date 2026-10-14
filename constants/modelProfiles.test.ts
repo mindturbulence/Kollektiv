@@ -148,3 +148,35 @@ describe('media separation', () => {
     }
   });
 });
+
+describe('current model versions (Oct 2026 refresh)', () => {
+  it('lists the newer releases alongside the older names saved presets may still hold', () => {
+    const has = (list: string[], names: string[]) => names.forEach(n => expect(list, n).toContain(n));
+    has(TARGET_IMAGE_AI_MODELS, ['Midjourney v8.2', 'GPT Image 2.5 (OpenAI)', 'Ideogram 4.0', 'Recraft V4.1', 'Seedream 5.0 Pro', 'FLUX.2 [max]', 'Midjourney v7', 'GPT Image 2 (OpenAI)']);
+    has(TARGET_VIDEO_AI_MODELS, ['Seedance 2.5 (ByteDance)', 'WAN 3.0 (Alibaba)', 'Luma Ray 3.2', 'MiniMax H3', 'LTX-2.5', 'Gemini Omni Flash (Google)', 'Seedance 2.0 (ByteDance)', 'Google Veo 3.1']);
+    has(TARGET_AUDIO_AI_MODELS, ['Suno v6 (Music)', 'ElevenLabs Music v2.5', 'ElevenLabs v4 (TTS)', 'Lyria 3.5 (Google)', 'Fish Audio S2', 'Suno v5 (Music)']);
+  });
+
+  it('has no duplicate names in any list', () => {
+    for (const list of [TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS]) {
+      expect(new Set(list).size).toBe(list.length);
+    }
+  });
+
+  it('new video models resolve to the right dialect and limits', () => {
+    expect(lookupModelProfile('Seedance 2.5 (ByteDance)', true).videoDurationRange).toEqual([4, 30]);
+    expect(lookupModelProfile('Seedance 2.0 (ByteDance)', true).videoDurationRange).toEqual([2, 15]);
+    expect(lookupModelProfile('WAN 3.0 (Alibaba)', true).videoDurationRange).toEqual([2, 30]);
+    expect(lookupModelProfile('WAN 2.7 (Open Weights)', true).videoDurationRange).toEqual([2, 15]);
+    expect(lookupModelProfile('MiniMax H3 Max', true).videoTimeline).toBe('prose');
+    expect(lookupModelProfile('Luma Ray 3.2', true).videoDurations).toEqual([5, 10]);
+  });
+
+  it('new image and audio names land on image / audio profiles', () => {
+    expect(lookupModelProfile('GPT Image 2.5 (OpenAI)').name).toBe('GPT / DALL-E');
+    expect(lookupModelProfile('Midjourney v8.2').name).toBe('Midjourney');
+    expect(lookupModelProfile('FLUX.2 [max]').name).toBe('Flux');
+    expect(lookupModelProfile('Suno v6 (Music)', false, true).mediaType).toBe('audio');
+    expect(lookupModelProfile('ElevenLabs v4 (TTS)', false, true).mediaType).toBe('audio');
+  });
+});

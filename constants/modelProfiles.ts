@@ -73,7 +73,7 @@ export interface ModelProfileSchema {
  */
 export const MODEL_PROFILES: ModelProfileSchema = {
   version: 1,
-  updatedAt: '2026-07-25T00:00:00.000Z',
+  updatedAt: '2026-10-15T00:00:00.000Z',
   profiles: [
     // ═══════════════════════════════════════════════════════════════════
     //  VIDEO ARCHITECTURES
@@ -149,6 +149,41 @@ export const MODEL_PROFILES: ModelProfileSchema = {
       format: 'Hyper-Realistic Narrative.',
       rules:
         'Extremely detailed descriptions of complex scenes with multiple characters, specific types of motion, and precise background details. Focus on physical realism.',
+    },
+    {
+      name: 'Seedance 2.5',
+      matchPatterns: ['seedance 2.5'],
+      // Official BytePlus guide shows the "0-X seconds:" template; 4-30 s with audio is from roundups (unverified).
+      videoTimeline: 'timestamps',
+      videoDurationRange: [4, 30],
+      videoAudio: true,
+      mediaType: 'video',
+      format: 'Dynamic Cinematic Shot.',
+      rules:
+        'Timestamped beats in whole seconds, each stating scene, subject action and camera movement. Keep subject wording identical across beats. Fluid motion with strong temporal coherence.',
+    },
+    {
+      name: 'Wan 3',
+      matchPatterns: ['wan 3'],
+      // Single roundup source (Oct 2026): up to 30 s clips with audio. Not vendor-verified.
+      videoTimeline: 'timestamps',
+      videoDurationRange: [2, 30],
+      videoAudio: true,
+      mediaType: 'video',
+      format: 'Dense Visual Script.',
+      rules:
+        'Describe the scene with a focus on spatial relationships, character expressions, and environmental changes over time. Keep the main subject wording identical across shots.',
+    },
+    {
+      name: 'MiniMax H3',
+      matchPatterns: ['minimax h3'],
+      // Official: platform.minimax.io (H3 4-15 s, H3 Max 5-15 s; camera commands like [pan] after the description).
+      videoTimeline: 'prose',
+      videoDurationRange: [4, 15],
+      mediaType: 'video',
+      format: 'Cinematic Motion Prose.',
+      rules:
+        'Natural prose with camera motion in brackets (for example [pan], [zoom], [static]) placed directly after the description it applies to. One continuous shot, concrete motion verbs.',
     },
     {
       name: 'Wan 2.x',
