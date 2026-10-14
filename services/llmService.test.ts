@@ -195,11 +195,12 @@ describe("enhancePromptStream — video Director's Script", () => {
         expect(out).toBe('she turns\nthen smiles');
     });
 
-    it('unknown video model keeps the legacy rules', async () => {
-        const { sys, out } = await run('Default (General Video)', { videoDuration: '10' }, ['0–3s: x']);
-        expect(sys).toContain('[MOTION TIMELINE RULES]');
-        expect(sys).not.toContain("DIRECTOR'S SCRIPT");
-        expect(out).toBe('0–3s: x');
+    it('a general video model gets the timestamp dialect, not the legacy ban', async () => {
+        const { sys, out } = await run('Default (General Video)', { videoDuration: '10', videoAudio: 'direct', videoDialogue: 'Maya: "Go."' }, ['0–3s: x']);
+        expect(sys).toContain("DIRECTOR'S SCRIPT — TIMESTAMPED");
+        expect(sys).toContain('Maya: "Go."');
+        expect(sys).not.toContain('[MOTION TIMELINE RULES]');
+        expect(out.startsWith('cinematic video. Total duration 10 seconds.\n0–3s: x')).toBe(true);
     });
 
     it('non-video targets never get a director', async () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildTimelineSkeleton, validateTimeline, resolveVideoDuration, buildVideoDirector,
-  sanitizeVideoLine, sanitizeVideoStream, maxBeats, beatLabel,
+  sanitizeVideoLine, sanitizeVideoStream, maxBeats, beatLabel, videoCaps,
 } from './videoDirector';
 import { lookupModelProfile } from '../constants/modelProfiles';
 
@@ -59,10 +59,10 @@ describe('resolveVideoDuration', () => {
 });
 
 describe('buildVideoDirector', () => {
-  it('returns null for models without a dialect (legacy rules stay)', () => {
-    expect(buildVideoDirector('Default (General Video)', {})).toBeNull();
-    expect(buildVideoDirector('Runway Gen-4.5', {})).toBeNull();
+  it('returns null for non-video targets and uses the timestamp dialect for every other video model', () => {
     expect(buildVideoDirector('Stable Diffusion XL', {})).toBeNull();
+    expect(buildVideoDirector('Default (General Video)', {})!.timeline).toBe('timestamps');
+    expect(buildVideoDirector('Runway Gen-4.5', {})!.timeline).toBe('timestamps');
   });
   it('timestamps dialect lists the computed labels and a header', () => {
     const d = buildVideoDirector('Kling 3.0 Pro / Turbo / Omni', { videoDuration: '10', aspectRatio: '9:16', videoInputType: 'i2v' })!;
@@ -81,6 +81,34 @@ describe('buildVideoDirector', () => {
   it('ltx is one paragraph, veo has no timestamp labels', () => {
     expect(buildVideoDirector('LTX-2', {})!.rules).toContain('ONE flowing present-tense paragraph');
     expect(buildVideoDirector('Google Veo 3.1', {})!.rules).toContain('FORBIDDEN: timestamps');
+  });
+});
+
+describe('audio direction', () => {
+  it('auto writes audio rules for native-audio models, scaled to the clip', () => {
+    const r = buildVideoDirector('Google Veo 3.1', { videoDuration: '8' })!.rules;
+    expect(r).toContain('AUDIO (generated together with the video)');
+    expect(r).toContain('about 3 short line(s) for 8 seconds');
+  });
+  it('off says the clip is silent and drops the Audio line', () => {
+    expect(buildVideoDirector('Google Veo 3.1', { videoAudio: 'off' })!.rules).toContain('AUDIO: none');
+    expect(buildVideoDirector('Kling 3.0 Pro / Turbo / Omni', { videoAudio: 'off' })!.rules).not.toContain('"Audio: ..."');
+  });
+  it('direct injects the user dialogue and sound direction verbatim', () => {
+    const r = buildVideoDirector('Kling 3.0 Pro / Turbo / Omni', { videoAudio: 'direct', videoDialogue: 'Maya: "We go."', videoSfx: 'distant sirens' })!.rules;
+    expect(r).toContain('Maya: "We go."');
+    expect(r).toContain('distant sirens');
+  });
+  it('direct without text injects nothing extra', () => {
+    expect(buildVideoDirector('Sora 2 (OpenAI) — sunset Sep 2026', { videoAudio: 'direct' })!.rules).not.toContain('USER DIALOGUE');
+  });
+});
+
+describe('videoCaps', () => {
+  it('reports lists, ranges and the 3–15 s default', () => {
+    expect(videoCaps('Google Veo 3.1').durations).toEqual([4, 6, 8]);
+    expect(videoCaps('Kling 3.0 Pro / Turbo / Omni')).toMatchObject({ min: 3, max: 15, durations: null });
+    expect(videoCaps('Default (General Video)')).toMatchObject({ min: 3, max: 15, timeline: 'timestamps', audio: undefined });
   });
 });
 

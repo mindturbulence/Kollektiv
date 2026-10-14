@@ -3,6 +3,7 @@ import React from 'react';
 import { audioService } from '../services/audioService';
 import type { PromptModifiers, CheatsheetCategory } from '../types';
 import { lookupModelProfile } from '../constants/modelProfiles';
+import { videoCaps, resolveVideoDuration, dialogueLineBudget } from '../utils/videoDirector';
 import {
     GENERAL_ASPECT_RATIOS, PROMPT_DETAIL_LEVELS, CAMERA_ANGLES, CAMERA_PROXIMITY,
     LIGHTING_OPTIONS, COMPOSITION_OPTIONS, CAMERA_TYPES, CAMERA_MODELS_BY_TYPE,
@@ -393,6 +394,67 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                             options={VIDEO_EFFECTS.map(v => ({ label: v.toUpperCase(), value: v }))} placeholder="Effects..." />
                         {modifiers.videoEffect && <ModifierWeightSlider modifierKey="videoEffect" weight={modifierWeights.videoEffect ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                     </div>
+                    {(() => {
+                        const caps = videoCaps(targetAIModel);
+                        const seconds = resolveVideoDuration(lookupModelProfile(targetAIModel, true), modifiers.videoDuration);
+                        const setSeconds = (n: number) => setModifiers({ ...modifiers, videoDuration: String(n) });
+                        const audioMode = modifiers.videoAudio ?? 'auto';
+                        const silent = caps.audio === false;
+                        return (
+                            <>
+                                <div className="form-control">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <label className="text-2xs font-black uppercase text-base-content/60 tracking-widest">Clip Length</label>
+                                        <span className="text-2xs font-mono font-bold text-primary">{seconds}s</span>
+                                    </div>
+                                    {caps.durations ? (
+                                        <div className="form-tab-group">
+                                            {caps.durations.map(d => (
+                                                <button key={d} onClick={() => { audioService.playClick(); setSeconds(d); }}
+                                                    className={`form-tab-item ${seconds === d ? 'active' : ''}`}>{d}s</button>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <input type="range" min={caps.min} max={caps.max} value={seconds}
+                                            onChange={e => setSeconds(Number(e.target.value))} className="range range-xs range-primary" />
+                                    )}
+                                    {caps.timeline !== 'timestamps' && (
+                                        <p className="text-2xs text-base-content/50 mt-2">This model reads length from its duration setting, not the prompt. Set it to {seconds}s there.</p>
+                                    )}
+                                </div>
+                                <div className="form-control">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <label className="text-2xs font-black uppercase text-base-content/60 tracking-widest">Audio</label>
+                                        <span className="text-2xs font-mono text-base-content/50">
+                                            {caps.audio === true ? 'native audio' : silent ? 'silent model' : 'audio support unknown'}
+                                        </span>
+                                    </div>
+                                    <div className="form-tab-group">
+                                        {(['off', 'auto', 'direct'] as const).map(m => (
+                                            <button key={m} disabled={silent && m !== 'off'}
+                                                onClick={() => { audioService.playClick(); setModifiers({ ...modifiers, videoAudio: m }); }}
+                                                className={`form-tab-item ${(silent ? 'off' : audioMode) === m ? 'active' : ''}`}>{m.toUpperCase()}</button>
+                                        ))}
+                                    </div>
+                                    {!silent && audioMode === 'auto' && (
+                                        <p className="text-2xs text-base-content/50 mt-2">The refiner writes dialogue, effects and ambience that fit each beat.</p>
+                                    )}
+                                    {!silent && audioMode === 'direct' && (
+                                        <div className="mt-3 space-y-3">
+                                            <textarea value={modifiers.videoDialogue || ''} rows={3}
+                                                onChange={e => setModifiers({ ...modifiers, videoDialogue: e.target.value })}
+                                                className="form-textarea w-full resize-none text-xs"
+                                                placeholder={'Dialogue, one line each:\nMaya: "We should go."'} />
+                                            <p className="text-2xs text-base-content/50">About {dialogueLineBudget(seconds)} short line(s) fit in {seconds}s.</p>
+                                            <input type="text" value={modifiers.videoSfx || ''}
+                                                onChange={e => setModifiers({ ...modifiers, videoSfx: e.target.value })}
+                                                className="form-input w-full text-xs" placeholder="Sound effects / ambience (rain, distant sirens...)" />
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        );
+                    })()}
                 </div>
             );
         case 'audio':
