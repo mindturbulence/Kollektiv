@@ -2,8 +2,8 @@
 // side Inspector. All colours come from daisyUI tokens so the app theme wins.
 
 import React from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
-import type { NodeKind, NodeRunStatus } from '../core/types';
+import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/react';
+import { NODE_SIZE, type NodeKind, type NodeRunStatus } from '../core/types';
 import { shotSummary, type CanvasFlowNode } from './flow';
 import { getPreview } from './media';
 import { canGenerate } from './runners';
@@ -45,16 +45,25 @@ function NodeShell({ props, title, hasInput, hasOutput = true, children }: Shell
   const { status, error } = props.data;
   return (
     <div
-      className={`w-52 border bg-base-100 text-base-content text-xs shadow-sm ${props.selected ? 'border-primary' : 'border-base-content/25'}`}
+      className={`flex h-full w-full min-w-0 flex-col border bg-base-100 text-base-content text-xs shadow-sm ${props.selected ? 'border-primary' : 'border-base-content/25'}`}
       data-testid={`canvas-node-${props.data.graphNode.kind}`}
     >
+      <NodeResizer
+        isVisible={props.selected}
+        minWidth={NODE_SIZE.minWidth}
+        maxWidth={NODE_SIZE.maxWidth}
+        minHeight={NODE_SIZE.minHeight}
+        maxHeight={NODE_SIZE.maxHeight}
+        lineClassName="!border-primary"
+        handleClassName="!h-2 !w-2 !rounded-none !border-primary !bg-base-100"
+      />
       {hasInput && <Handle type="target" position={Position.Left} className="!bg-primary" />}
-      <div className="flex items-center justify-between gap-2 border-b border-base-content/15 px-2 py-1">
-        <span className="font-semibold uppercase tracking-wider text-primary">{title}</span>
+      <div className="flex items-center justify-between gap-2 border-b border-base-content/15 px-3 py-2">
+        <span className="min-w-0 truncate font-semibold uppercase tracking-wider text-primary">{title}</span>
         <StatusBadge status={status} />
       </div>
-      <div className="space-y-1 px-2 py-1.5 text-base-content/80">{children}</div>
-      {error && <div className="border-t border-error/40 px-2 py-1 text-error line-clamp-2" title={error}>{error}</div>}
+      <div className="min-h-0 flex-1 space-y-2 overflow-auto break-words px-3 py-2.5 text-base-content/80">{children}</div>
+      {error && <div className="border-t border-error/40 px-3 py-2 text-error line-clamp-2" title={error}>{error}</div>}
       {hasOutput && <Handle type="source" position={Position.Right} className="!bg-primary" />}
     </div>
   );

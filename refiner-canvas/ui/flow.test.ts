@@ -57,7 +57,7 @@ describe('change helpers', () => {
       { type: 'select', id: 'a', selected: true },
       { type: 'remove', id: 'a' },
     ]);
-    expect(r).toEqual({ positions: { a: { x: 1, y: 2 } }, measured: { b: { width: 10, height: 20 } } });
+    expect(r).toEqual({ positions: { a: { x: 1, y: 2 } }, measured: { b: { width: 10, height: 20 } }, resizing: {}, resized: {} });
   });
 
   it('connectAction builds a connect edit and rejects incomplete connections', () => {

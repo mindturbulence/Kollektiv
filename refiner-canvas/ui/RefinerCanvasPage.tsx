@@ -20,7 +20,7 @@ import { isTemplateId, makeTemplate, TEMPLATE_PREFIX, templateToAction } from '.
 import {
   canRedo, canUndo, dispatch, getRunStates, getSnapshot, load, redo, setRunState, subscribe, undo,
 } from '../core/store';
-import { SCHEMA_VERSION, type Graph, type GraphNode, type NodeDataPatch, type XY } from '../core/types';
+import { SCHEMA_VERSION, type EditAction, type Graph, type GraphNode, type NodeDataPatch, type XY } from '../core/types';
 import { applySelection, connectAction, deleteAction, fromNodeChanges, toFlow, type CanvasFlowNode, type Size } from './flow';
 import { Inspector } from './Inspector';
 import { nodeTypes } from './nodes';
@@ -69,6 +69,9 @@ function CanvasBody() {
   const [selected, setSelected] = useState<ReadonlySet<string>>(EMPTY_SET);
   const [dragPositions, setDragPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [measured, setMeasured] = useState<Record<string, Size>>({});
+  const [resizing, setResizing] = useState<Record<string, Size>>({});
+  const dragRef = useRef(dragPositions);
+  dragRef.current = dragPositions;
   const [running, setRunning] = useState(false);
   const [templates, setTemplates] = useState<GraphSummary[]>([]);
   const [templateName, setTemplateName] = useState('');
@@ -159,8 +162,8 @@ function CanvasBody() {
   }, [say]);
 
   const flow = useMemo(
-    () => toFlow(graph, runStates, { selected, positions: dragPositions, measured }),
-    [graph, runStates, selected, dragPositions, measured],
+    () => toFlow(graph, runStates, { selected, positions: dragPositions, measured, resizing }),
+    [graph, runStates, selected, dragPositions, measured, resizing],
   );
 
   const selectedNode = useMemo(() => {
@@ -170,9 +173,29 @@ function CanvasBody() {
 
   const onNodesChange = useCallback((changes: NodeChange<CanvasFlowNode>[]) => {
     setSelected(prev => applySelection(prev, changes));
-    const { positions, measured: sizes } = fromNodeChanges(changes);
+    const { positions, measured: sizes, resizing: live, resized } = fromNodeChanges(changes);
     if (Object.keys(positions).length) setDragPositions(prev => ({ ...prev, ...positions }));
     if (Object.keys(sizes).length) setMeasured(prev => ({ ...prev, ...sizes }));
+    if (Object.keys(live).length) setResizing(prev => ({ ...prev, ...live }));
+    const ended = Object.keys(resized);
+    if (ended.length) {
+      // One undo step per resize: the new size plus the position change a top / left handle causes.
+      const moved: Record<string, { x: number; y: number }> = {};
+      for (const id of ended) {
+        const at = positions[id] ?? dragRef.current[id];
+        if (at) moved[id] = at;
+      }
+      dispatch({
+        type: 'batch',
+        label: 'resize',
+        actions: [
+          ...ended.map((nodeId): EditAction => ({ type: 'resizeNode', nodeId, size: resized[nodeId] })),
+          ...(Object.keys(moved).length ? [{ type: 'moveNodes' as const, positions: moved }] : []),
+        ],
+      });
+      setResizing(prev => Object.fromEntries(Object.entries(prev).filter(([id]) => !resized[id])));
+      setDragPositions(prev => Object.fromEntries(Object.entries(prev).filter(([id]) => !resized[id])));
+    }
   }, []);
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
