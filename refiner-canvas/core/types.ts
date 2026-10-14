@@ -21,7 +21,13 @@ export interface NodeDataMap {
 
 export interface XY { x: number; y: number }
 
-export type GraphNodeOf<K extends NodeKind> = { id: string; kind: K; position: XY; data: NodeDataMap[K] };
+/** Card size in canvas units. Width is always set once resized; height is optional (absent = fit the content). */
+export interface NodeSize { width: number; height?: number }
+
+/** Default, minimum and maximum card sizes. A new node is DEFAULT wide and as tall as its content. */
+export const NODE_SIZE = { defaultWidth: 280, minWidth: 200, maxWidth: 720, minHeight: 96, maxHeight: 900 } as const;
+
+export type GraphNodeOf<K extends NodeKind> = { id: string; kind: K; position: XY; data: NodeDataMap[K]; size?: NodeSize };
 export type GraphNode = { [K in NodeKind]: GraphNodeOf<K> }[NodeKind];
 
 /** Field names are disjoint or share a type across kinds, so one patch type covers all. apply.ts rejects
@@ -45,6 +51,8 @@ export type EditAction =
   | { type: 'addNode'; node: GraphNode; index?: number }
   | { type: 'removeNode'; nodeId: string }
   | { type: 'moveNodes'; positions: Record<string, XY> }
+  /** size null clears a manual size (back to default width, content height). */
+  | { type: 'resizeNode'; nodeId: string; size: NodeSize | null }
   | { type: 'updateNodeData'; nodeId: string; patch: NodeDataPatch }
   | { type: 'connect'; edge: GraphEdge; index?: number }
   | { type: 'disconnect'; edgeId: string }

@@ -73,7 +73,7 @@ export interface ModelProfileSchema {
  */
 export const MODEL_PROFILES: ModelProfileSchema = {
   version: 1,
-  updatedAt: '2026-07-25T00:00:00.000Z',
+  updatedAt: '2026-10-15T00:00:00.000Z',
   profiles: [
     // ═══════════════════════════════════════════════════════════════════
     //  VIDEO ARCHITECTURES
@@ -151,6 +151,41 @@ export const MODEL_PROFILES: ModelProfileSchema = {
         'Extremely detailed descriptions of complex scenes with multiple characters, specific types of motion, and precise background details. Focus on physical realism.',
     },
     {
+      name: 'Seedance 2.5',
+      matchPatterns: ['seedance 2.5'],
+      // Official BytePlus guide shows the "0-X seconds:" template; 4-30 s with audio is from roundups (unverified).
+      videoTimeline: 'timestamps',
+      videoDurationRange: [4, 30],
+      videoAudio: true,
+      mediaType: 'video',
+      format: 'Dynamic Cinematic Shot.',
+      rules:
+        'Timestamped beats in whole seconds, each stating scene, subject action and camera movement. Keep subject wording identical across beats. Fluid motion with strong temporal coherence.',
+    },
+    {
+      name: 'Wan 3',
+      matchPatterns: ['wan 3'],
+      // Single roundup source (Oct 2026): up to 30 s clips with audio. Not vendor-verified.
+      videoTimeline: 'timestamps',
+      videoDurationRange: [2, 30],
+      videoAudio: true,
+      mediaType: 'video',
+      format: 'Dense Visual Script.',
+      rules:
+        'Describe the scene with a focus on spatial relationships, character expressions, and environmental changes over time. Keep the main subject wording identical across shots.',
+    },
+    {
+      name: 'MiniMax H3',
+      matchPatterns: ['minimax h3'],
+      // Official: platform.minimax.io (H3 4-15 s, H3 Max 5-15 s; camera commands like [pan] after the description).
+      videoTimeline: 'prose',
+      videoDurationRange: [4, 15],
+      mediaType: 'video',
+      format: 'Cinematic Motion Prose.',
+      rules:
+        'Natural prose with camera motion in brackets (for example [pan], [zoom], [static]) placed directly after the description it applies to. One continuous shot, concrete motion verbs.',
+    },
+    {
       name: 'Wan 2.x',
       // 'wan 2' covers WAN 2.5 / 2.7; 'WAN Image (T2I)' stays unmatched
       matchPatterns: ['wan 2'],
@@ -182,7 +217,7 @@ export const MODEL_PROFILES: ModelProfileSchema = {
     },
     {
       name: 'Hailuo / MiniMax',
-      matchPatterns: ['hailuo', 'minimax'],
+      matchPatterns: ['hailuo'],
       // Official: platform.minimax.io (audio output not stated)
       videoTimeline: 'prose',
       mediaType: 'video',
@@ -208,7 +243,7 @@ export const MODEL_PROFILES: ModelProfileSchema = {
     },
     {
       name: 'HiDream',
-      matchPatterns: ['hidream'],
+      matchPatterns: ['hidream (', 'hidream video'],
       mediaType: 'video',
       format: 'High-Fidelity Scene Prose.',
       rules:
@@ -276,33 +311,44 @@ export const MODEL_PROFILES: ModelProfileSchema = {
       name: 'Flux',
       matchPatterns: ['flux'],
       mediaType: 'image',
-      format: 'Dense Descriptive Paragraph.',
+      format: 'Natural Language Narrative.',
       rules:
-        'Natural language focusing on micro-textures, lighting interaction, and realistic material rendering. Describe the scene as if explaining it to a master painter. Avoid tag-lists. Mention \'hyper-realistic\' or \'raw\' if appropriate. Follow the STRICT IMAGE WORKFLOW for content structure.',
+        "Write the scene as flowing natural-language prose in this order: subject, action or pose, style or medium, setting, lighting, camera details. Be concrete (age, hair, clothing, materials) instead of generic. FLUX has no negative prompt and no weight syntax: state what you want, never what to avoid, and no keyword stacks or (token:1.2) markup. Put any text to render in double quotes. Follow the STRICT IMAGE WORKFLOW for content structure.",
     },
     {
       name: 'Imagen',
       matchPatterns: ['imagen'],
       mediaType: 'image',
-      format: 'Clear Semantic Prose.',
+      format: 'Descriptive Natural Language.',
       rules:
-        'High semantic accuracy. Describe relationships between objects and environmental lighting clearly. Focus on composition and clear subject-background separation. Follow the STRICT IMAGE WORKFLOW.',
+        "Follow Google's prompt guide: name the subject first, then its context or setting, then the style (photograph, sketch, pastel painting, isometric 3D). Use descriptive adjectives and adverbs in full sentences. For a photograph open with 'A photo of' and add camera proximity, camera position, lighting, lens (for example 24-35mm for portraits, 60-105mm macro for objects) and film type as needed. Keep any text to render short (about 25 characters, two or three phrases at most), in quotes, with a general font style. Never use 'no' or 'don't' phrasing. Follow the STRICT IMAGE WORKFLOW.",
+    },
+    {
+      name: 'Midjourney v5-v6.1',
+      matchPatterns: ['midjourney v5', 'midjourney v6', 'midjourney niji'],
+      mediaType: 'image',
+      format: 'Concise Keyword Phrases.',
+      // Multi-prompt :: separation is documented by Midjourney for v1-v5; weights are from third-party guides.
+      rules:
+        "Concise descriptive phrases or comma-separated descriptors work well: subject first, then medium, lighting, mood and style cues. v6 and later also respond to short natural sentences. Segments separated by :: may carry weights (space::2 ship); use sparingly. Do NOT output --ar, --v, --style or --no; they are handled via modifiers. Adapt the STRICT IMAGE WORKFLOW to a compact structure.",
     },
     {
       name: 'Midjourney',
       matchPatterns: ['midjourney'],
       mediaType: 'image',
-      format: 'Stylized Aesthetic Tags.',
+      format: 'Natural Language Description.',
       rules:
-        'Focus on style, medium, lighting mood, and artistic influence. Use evocative adjectives. Do NOT output params like --ar; they are handled via modifiers. Use latest style cues. Adapt the STRICT IMAGE WORKFLOW to this tag-based structure.',
+        "Write one or two vivid, specific descriptive sentences in natural language (subject, setting, lighting, medium and style) instead of stacked keywords or comma-separated tags; put the most important elements first. Do NOT output params like --ar, --v or --style; they are handled via modifiers. Adapt the STRICT IMAGE WORKFLOW to a compact descriptive sentence.",
     },
     {
-      name: 'Stable Diffusion / SDXL',
-      matchPatterns: ['stable diffusion', 'sdxl'],
+      name: 'Stable Diffusion 1.5 / 2.x',
+      matchPatterns: ['stable diffusion 1', 'stable diffusion 2', 'sd 1.5', 'sd1.5', 'sd 2.1', 'sd2.1'],
       mediaType: 'image',
-      format: 'Structured Descriptive Tags.',
+      format: 'Weighted Keyword Tags.',
+      // Syntax from the AUTOMATIC1111 wiki (Features: attention/emphasis, BREAK, negative prompt).
       rules:
-        'Mix of descriptive phrases and specific keywords. Focus on lighting (e.g., \'volumetric lighting\'), quality (e.g., \'highly detailed\'), and style (e.g., \'digital art\'). Follow the STRICT IMAGE WORKFLOW.',
+        "Write a compact, comma-separated prompt of descriptive phrases and keywords: subject first, then medium or style, lighting, composition, detail. The model reads 75 tokens per chunk, so front-load what matters and keep it short; use BREAK only to start a new chunk on purpose. Emphasis uses (token:1.2) (about 0.5-1.5 is the safe range) or (token) / [token] for +/-10 percent. Add short quality boosters such as 'masterpiece, best quality, highly detailed' when the checkpoint expects them. Pair with a separate negative prompt (for example 'lowres, bad anatomy, bad hands, extra fingers, worst quality, watermark, text'); never write 'no' or 'without' phrases in the positive prompt. Follow the STRICT IMAGE WORKFLOW for content structure.",
+      supportsNegativePrompt: true,
       supportsTokenWeighting: true,
       weightSyntax: "(token:weight)",
       minWeight: 0.1,
@@ -310,12 +356,57 @@ export const MODEL_PROFILES: ModelProfileSchema = {
       weightStep: 0.05,
     },
     {
-      name: 'Pony / Illustrious',
-      matchPatterns: ['pony', 'illustrious'],
+      name: 'Stable Diffusion 3+',
+      matchPatterns: ['stable diffusion 3', 'stable diffusion 4', 'sd3'],
       mediaType: 'image',
-      format: 'Weighted Tags.',
+      format: 'Natural Language Description.',
       rules:
-        'Start with quality scores (score_9, score_8_up, etc). Use descriptive tags for subjects, specific stylistic triggers, and Danbooru-style tagging conventions. Follow the STRICT IMAGE WORKFLOW.',
+        "Follow Stability AI's SD 3.5 guidance: describe the idea in plain, complete sentences like briefing a creative partner. Cover subject, style, composition terms (close-up, wide-angle) and lighting. Put any text to render in double quotes and keep it short. Emphasis with (token:1.2) is available for tools that parse it, but prefer wording over weights. No quality-tag spam. Follow the STRICT IMAGE WORKFLOW.",
+      supportsNegativePrompt: true,
+      supportsTokenWeighting: true,
+      weightSyntax: "(token:weight)",
+      minWeight: 0.1,
+      maxWeight: 2.0,
+      weightStep: 0.05,
+    },
+    {
+      name: 'Stable Diffusion / SDXL',
+      matchPatterns: ['stable diffusion', 'sdxl'],
+      mediaType: 'image',
+      format: 'Structured Descriptive Tags.',
+      rules:
+        "SDXL reads short natural phrases and comma-separated keywords. Open with the subject and its action in one clear phrase, then style or medium, lighting, composition and detail. Use the (token:1.2) emphasis syntax sparingly (about 0.7-1.4). Quality words help modestly; do not stack dozens. A negative prompt is optional and shorter than for SD 1.5 (for example 'blurry, low quality, watermark, text'); never write negative phrasing in the positive prompt. Follow the STRICT IMAGE WORKFLOW.",
+      supportsNegativePrompt: true,
+      supportsTokenWeighting: true,
+      weightSyntax: "(token:weight)",
+      minWeight: 0.1,
+      maxWeight: 2.0,
+      weightStep: 0.05,
+    },
+    {
+      name: 'Pony',
+      matchPatterns: ['pony'],
+      mediaType: 'image',
+      format: 'Score-Tagged Weighted Tags.',
+      // Pony Diffusion V6 XL model card: full score string, source_* and rating_* tags, no masterpiece/hd needed.
+      rules:
+        "Open with the full score string exactly: score_9, score_8_up, score_7_up, score_6_up, score_5_up, score_4_up (a lone score_9 is much weaker). Then one source tag (source_anime, source_cartoon, source_furry or source_pony) and a rating tag (rating_safe, rating_questionable or rating_explicit), then Danbooru / e621 style comma-separated tags: subject count and character, appearance, clothing, pose and action, setting, lighting. The model does not need 'masterpiece' or 'hd' and rarely needs a negative prompt. Weight with (tag:1.2) only when needed. Follow the STRICT IMAGE WORKFLOW.",
+      supportsNegativePrompt: true,
+      supportsTokenWeighting: true,
+      weightSyntax: "(token:weight)",
+      minWeight: 0.1,
+      maxWeight: 2.0,
+      weightStep: 0.05,
+    },
+    {
+      name: 'Illustrious / NoobAI',
+      matchPatterns: ['illustrious', 'noobai', 'noob ai'],
+      mediaType: 'image',
+      format: 'Danbooru Quality-Tagged Weighted Tags.',
+      // Model cards were not reachable (HF 401); tag style is community practice. Do not use Pony score_ tags here.
+      rules:
+        "Danbooru style comma-separated tags in this order: subject count (1girl, 1boy), character and series, appearance, clothing, pose and action, setting, composition, lighting. Open with quality tags such as 'masterpiece, best quality' (these models do not use Pony's score_ tags). Spell tags as Danbooru does, escape literal parentheses, and weight with (tag:1.2) when needed. Pair with a negative prompt such as 'worst quality, low quality, bad anatomy, watermark'. Follow the STRICT IMAGE WORKFLOW.",
+      supportsNegativePrompt: true,
       supportsTokenWeighting: true,
       weightSyntax: "(token:weight)",
       minWeight: 0.1,
@@ -327,8 +418,10 @@ export const MODEL_PROFILES: ModelProfileSchema = {
       matchPatterns: ['a1111', 'forge'],
       mediaType: 'image',
       format: 'Structured Descriptive Tags.',
+      // Syntax verified against the AUTOMATIC1111 wiki, Features page.
       rules:
-        'Mix of descriptive phrases and specific keywords. Focus on lighting, quality, and style. Supports weighted tokens via the (token:weight) syntax. Follow the STRICT IMAGE WORKFLOW.',
+        "Mix descriptive phrases and keywords. Emphasis: (word) x1.1, ((word)) x1.21, [word] /1.1, explicit (word:1.5); escape literal brackets with a backslash. BREAK starts a new 75-token chunk. [from:to:0.5] switches terms mid-sampling. The negative prompt is a separate field. Follow the STRICT IMAGE WORKFLOW.",
+      supportsNegativePrompt: true,
       supportsTokenWeighting: true,
       weightSyntax: "(token:weight)",
       minWeight: 0.1,
@@ -337,11 +430,11 @@ export const MODEL_PROFILES: ModelProfileSchema = {
     },
     {
       name: 'GPT / DALL-E',
-      matchPatterns: ['gpt-', 'dall-e'],
+      matchPatterns: ['gpt-', 'gpt image', 'dall-e'],
       mediaType: 'image',
-      format: 'Rich Narrative Prose.',
+      format: 'Structured Natural Language Narrative.',
       rules:
-        'Highly descriptive, imaginative, and literal. DALL-E follows instructions perfectly, so describe exactly what should be in the frame, including text if requested. Follow the STRICT IMAGE WORKFLOW.',
+        "Follow OpenAI's image prompting guide: order the prompt scene or background first, then the subject, then key details (materials, colours, composition, lighting), then constraints. Name the intended use (ad, UI mockup, infographic) when it is known. Be literal and exact about what is in the frame and where. Put text to render in double quotes with font style, size, colour and placement. State exclusions and invariants explicitly (for example 'no extra text', 'no watermark'). For photorealism say 'photorealistic' or 'real photograph'. Follow the STRICT IMAGE WORKFLOW.",
     },
     {
       name: 'Ideogram',
@@ -355,9 +448,9 @@ export const MODEL_PROFILES: ModelProfileSchema = {
       name: 'Janus / DeepSeek',
       matchPatterns: ['janus', 'deepseek'],
       mediaType: 'image',
-      format: 'Balanced Semantic Tags.',
+      format: 'Natural Language Description.',
       rules:
-        'Focus on subject clarity and environmental context. Use a mix of natural language and descriptive keywords. Follow the STRICT IMAGE WORKFLOW.',
+        "Write clear, complete natural-language sentences: subject clarity first, then environment, lighting and style. Avoid keyword stacks and weight markup. Follow the STRICT IMAGE WORKFLOW.",
     },
     {
       name: 'Seedream',
@@ -379,9 +472,9 @@ export const MODEL_PROFILES: ModelProfileSchema = {
       name: 'Nano Banana',
       matchPatterns: ['nano banana', 'nano_banana'],
       mediaType: 'image',
-      format: 'Concise Visual Direction.',
+      format: 'Descriptive Scene Narrative.',
       rules:
-        'Short, direct descriptive phrases focusing on style, composition, and lighting. Avoid long narratives; prioritize visual keywords and clear aesthetic direction. Follow the STRICT IMAGE WORKFLOW.',
+        "Describe the scene in natural, narrative sentences rather than a keyword list: who or what is in it, what they are doing, the setting, the lighting and mood, the camera angle and composition. Be specific about materials and details. For edits state what changes and what must stay the same. Put any text to render in double quotes. Follow the STRICT IMAGE WORKFLOW.",
     },
     {
       name: 'Recraft',

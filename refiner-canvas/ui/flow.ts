@@ -3,7 +3,7 @@
 
 import type { Connection, Edge, EdgeChange, Node, NodeChange } from '@xyflow/react';
 import { createEdge } from '../core/graph';
-import type { EditAction, Graph, GraphNode, NodeKind, NodeRunState, NodeRunStatus, XY } from '../core/types';
+import { NODE_SIZE, type EditAction, type Graph, type GraphNode, type NodeKind, type NodeRunState, type NodeRunStatus, type XY } from '../core/types';
 import { parseShotScript } from '../../utils/shotScript';
 import type { NodeOutput } from '../core/types';
 
@@ -24,6 +24,8 @@ export interface FlowOverlay {
   positions?: Readonly<Record<string, XY>>;
   /** Sizes xyflow measured; it needs them echoed back in controlled mode. */
   measured?: Readonly<Record<string, Size>>;
+  /** Sizes of nodes mid-resize; committed to the store once, when the resize ends. */
+  resizing?: Readonly<Record<string, Size>>;
 }
 
 // Stable `data` objects keep memoised node components from re-rendering on unrelated store changes.
@@ -49,11 +51,13 @@ export function toFlow(
   runStates: ReadonlyMap<string, NodeRunState>,
   overlay: FlowOverlay = {},
 ): { nodes: CanvasFlowNode[]; edges: Edge[] } {
-  const { selected, positions, measured } = overlay;
+  const { selected, positions, measured, resizing } = overlay;
   const nodes = graph.nodes.map((n): CanvasFlowNode => ({
     id: n.id,
     type: n.kind,
     position: positions?.[n.id] ?? n.position,
+    width: resizing?.[n.id]?.width ?? n.size?.width ?? NODE_SIZE.defaultWidth,
+    ...((resizing?.[n.id]?.height ?? n.size?.height) !== undefined ? { height: resizing?.[n.id]?.height ?? n.size?.height } : {}),
     data: nodeData(n, runStates.get(n.id) ?? { status: 'idle' }),
     selected: selected?.has(n.id) ?? false,
     ...(measured?.[n.id] ? { measured: measured[n.id] } : {}),
@@ -79,16 +83,28 @@ export function applySelection(prev: ReadonlySet<string>, changes: ReadonlyArray
   return next ?? prev;
 }
 
-/** Position and measured-size changes from xyflow. Everything else is handled elsewhere (selection) or
- *  by onDelete (removal). */
-export function fromNodeChanges(changes: ReadonlyArray<NodeChange>): { positions: Record<string, XY>; measured: Record<string, Size> } {
+/** Position, measured-size and resize changes from xyflow. Everything else is handled elsewhere (selection)
+ *  or by onDelete (removal). A resize is a 'dimensions' change the resizer flags with `setAttributes`:
+ *  `resizing` while the handle is held, `resized` once on release. */
+export function fromNodeChanges(changes: ReadonlyArray<NodeChange>): {
+  positions: Record<string, XY>;
+  measured: Record<string, Size>;
+  resizing: Record<string, Size>;
+  resized: Record<string, Size>;
+} {
   const positions: Record<string, XY> = {};
   const measured: Record<string, Size> = {};
+  const resizing: Record<string, Size> = {};
+  const resized: Record<string, Size> = {};
   for (const c of changes) {
     if (c.type === 'position' && c.position) positions[c.id] = { x: c.position.x, y: c.position.y };
-    else if (c.type === 'dimensions' && c.dimensions) measured[c.id] = { width: c.dimensions.width, height: c.dimensions.height };
+    else if (c.type === 'dimensions' && c.dimensions) {
+      const size = { width: c.dimensions.width, height: c.dimensions.height };
+      if (c.setAttributes) (c.resizing === false ? resized : resizing)[c.id] = size;
+      else measured[c.id] = size;
+    }
   }
-  return { positions, measured };
+  return { positions, measured, resizing, resized };
 }
 
 /** One undo step for a delete: nodes first (which also drops their edges), then any edges still left. */

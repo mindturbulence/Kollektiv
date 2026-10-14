@@ -4,12 +4,20 @@
 //   including node and edge order (edge order is input order for the executor).
 
 import { downstreamOf, isGraphNode } from './graph';
-import type { EditAction, Graph, GraphEdge, GraphNode, XY } from './types';
+import { NODE_SIZE, type EditAction, type Graph, type GraphEdge, type GraphNode, type NodeSize, type XY } from './types';
 
 type Result = { graph: Graph; inverse: EditAction };
 
 function noop(graph: Graph): Result {
   return { graph, inverse: { type: 'batch', actions: [], label: 'noop' } };
+}
+
+const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, Math.round(n)));
+
+/** Keeps a manual size inside the card limits so a stray drag cannot make a node unusable. */
+function clampSize(size: NodeSize): NodeSize {
+  const width = clamp(size.width, NODE_SIZE.minWidth, NODE_SIZE.maxWidth);
+  return size.height === undefined ? { width } : { width, height: clamp(size.height, NODE_SIZE.minHeight, NODE_SIZE.maxHeight) };
 }
 
 function insertAt<T>(list: T[], item: T, index: number | undefined): T[] {
@@ -60,6 +68,22 @@ export function applyEdit(graph: Graph, action: EditAction): Result {
       });
       if (Object.keys(before).length === 0) return noop(graph);
       return { graph: { ...graph, nodes }, inverse: { type: 'moveNodes', positions: before } };
+    }
+
+    case 'resizeNode': {
+      const node = graph.nodes.find(n => n.id === action.nodeId);
+      if (!node) return noop(graph);
+      const next = action.size ? clampSize(action.size) : undefined;
+      const same = next === undefined
+        ? node.size === undefined
+        : node.size !== undefined && node.size.width === next.width && node.size.height === next.height;
+      if (same) return noop(graph);
+      const nodes = graph.nodes.map((n): GraphNode => {
+        if (n.id !== node.id) return n;
+        const { size: _old, ...rest } = n;
+        return next ? { ...rest, size: next } : rest;
+      });
+      return { graph: { ...graph, nodes }, inverse: { type: 'resizeNode', nodeId: node.id, size: node.size ?? null } };
     }
 
     case 'updateNodeData': {

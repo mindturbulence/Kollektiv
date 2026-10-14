@@ -50,7 +50,11 @@ export function isGraphNode(v: unknown): v is GraphNode {
   const spec: Record<string, FieldSpec> = DATA_SPEC[v.kind];
   const data = v.data;
   const keys = Object.keys(data);
-  return keys.length === Object.keys(spec).length && keys.every(k => k in spec && fieldOk(spec[k], data[k]));
+  if (keys.length !== Object.keys(spec).length || !keys.every(k => k in spec && fieldOk(spec[k], data[k]))) return false;
+  const size = v.size;
+  if (size === undefined) return true;
+  return isRecord(size) && typeof size.width === 'number' && Number.isFinite(size.width)
+    && (size.height === undefined || (typeof size.height === 'number' && Number.isFinite(size.height)));
 }
 
 export function isGraphEdge(v: unknown): v is GraphEdge {
