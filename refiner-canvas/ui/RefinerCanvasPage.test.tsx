@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 vi.mock('../core/persistence', () => ({
   loadGraph: vi.fn(async () => null),
   saveGraph: vi.fn(async () => ({})),
+  listGraphs: vi.fn(async () => []),
 }));
 vi.mock('../../services/llmService', () => ({ refineSinglePrompt: vi.fn() }));
 vi.mock('../../contexts/SettingsContext', () => ({
