@@ -94,18 +94,21 @@ Built 2026-10-14: V1–V5, V7–V11 (every video model now gets the Director's S
 - [ ] **V13 · Still unverified (retry in a real browser, `/browse`)**: Runway help-centre prompting guides (403), Seedance 2.0 BytePlus guide (JS-rendered), Kling API reference pages, Vidu (expired cert), SkyReels (DNS), Pika 2.x durations, PixVerse. Pika / Vidu / PixVerse / Higgsfield / SkyReels use the default timestamp dialect with no durations or audio flag until then. **S**
 - [ ] **V14 · Audio-only follow-ups**: VibeVoice `Speaker N:` label, Fish multi-speaker syntax, MiniMax prose delivery and OpenAI tts-1 `instructions` are unverified; the Dialogue/Narration rules assume them. Gemini TTS, Dia and Qwen3-TTS have no profile. `audioType` is still injected ungated in `buildContextForEnhancer`. **S**
 
-## 11. Video production canvas (Weave-style) — phased
+## 11. Video production node canvas (Weave-style) — node-first
 
-Plan, research and council debate: [2026-10-14-video-canvas.md](2026-10-14-video-canvas.md). Small → large; each phase has a gate.
-Nothing built yet. Phase 0 is § 10 V6 / V12 (real clips) and blocks everything below.
+Plan, research and council debate: [2026-10-14-video-canvas.md](2026-10-14-video-canvas.md) (§ 10 records the node-first decision).
+Owner decision 2026-10-14: build the node canvas directly, not a board first. Small → large; each ticket ships alone.
+Real-clip validation (§ 10 V6 / V12) runs in parallel instead of blocking; the council advised blocking, the owner chose otherwise.
 
-- [ ] **C1 · `utils/shotScript.ts`**: parse a refined video script (timestamps / paragraph / blocks dialects) into `Beat[]` and serialise back; round-trip tests per dialect, reuses `buildTimelineSkeleton` / `validateTimeline`. **S**
-- [ ] **C2 · Usage counters (local only)**: count video refines, board opens, single-beat re-refines, copies; no network. Needed for the phase gates. **S**
-- [ ] **C3 · `refineBeat(script, index, instruction)`**: rewrite one beat with neighbouring beats as context, keep labels and total duration, validate with `validateTimeline`. **M**
-- [ ] **C4 · Storyboard board tab** in the Refiner result: beat cards with duration ruler (click to scroll), inline edit, re-refine one beat, undo last re-refine, copy all. Paper-* design system, no new dependency. **M**
-- [ ] **C5 · Project model**: `Project → Shot[] → Beat[]` plus `presets[]` (character / world / style, from `RefinerPreset`), persisted via idb with a schemaVersion; framework-free store like `video-editor/core/store.ts`. **M**
-- [ ] **C6 · Preset strip + shared prefix**: pin presets above the board; prefix injected into every shot prompt for consistency across clips. **M**
-- [ ] **C7 · Multi-shot generation**: concept → N shot scripts in one structured LLM call, each ≤ the model's max length, sharing the preset prefix. Verify per-shot re-run keeps cross-shot consistency first. **L**
-- [ ] **C8 · Generate (Veo-class only) + send to Video Editor**: one Generate button where `generateWithVeo` works, results through the existing asset path, shot list / clips into the Video Editor via `openInVideoEditor`. Other models stay "Copy". **L**
-- [ ] **C9 · Read-only canvas view**: derived from the Project, auto layout (Concept → Presets → Shots → Result), custom CSS-transform pan/zoom, click a node to open it in the board. Gate: demand for branching or reusable workflows. **M**
-- [ ] **C10 · Free-form canvas**: `@xyflow/react` (MIT), lazy-loaded, controlled mode over the framework-free store, `nodrag nopan nowheel` on inputs, daisyUI tokens override base css, undo via EditAction pattern. Gate: C9 shows demand and a second executable provider exists. **L**
+- [ ] **N1 · `utils/shotScript.ts`**: parse a refined video script (timestamps / paragraph / blocks dialects) into `Beat[]` and serialise back; round-trip tests per dialect. **S**
+- [ ] **N2 · Graph document + store**: `Graph { nodes, edges, viewport }`, node kinds `concept | preset | shot | audio | generate | result | assemble`, framework-free store with `EditAction` + inverse undo (pattern: `video-editor/core/store.ts`), idb persistence with schemaVersion. No UI. **M**
+- [ ] **N3 · Executor**: topological run, dirty tracking, re-run a node and everything downstream; refine nodes run the LLM (`enhancePromptStream`), an edge carries text (preset prefix, concept) or a clip; pure, with tests for cycles, missing inputs, partial re-run. **M**
+- [ ] **N4 · Canvas shell**: add `@xyflow/react` (MIT, lazy-loaded), "Canvas" mode in the Refiner, controlled mode over the N2 store, `nodrag nopan nowheel` on inputs, daisyUI tokens override base css (app theme, not Weave's), pan/zoom/minimap. **M**
+- [ ] **N5 · Node components + inspector**: Concept, Preset (character / world, from `RefinerPreset`), Shot (model, length, collapsed summary), Audio; edit text and beats in a side inspector, not inside the node. **M**
+- [ ] **N6 · Re-refine one beat**: rewrite a single beat with neighbours as context, validate with `validateTimeline`, per-node undo of the last re-run. **M**
+- [ ] **N7 · "Send to canvas"**: one click turns the current Refiner result into Concept → Preset → Shot nodes with the model and length already set. **S**
+- [ ] **N8 · Generate + Result nodes**: Generate runs `generateWithVeo` where it works, output through the existing asset path (no second store); every other model shows "Copy prompt". **M**
+- [ ] **N9 · Assemble node → Video Editor**: collect Result nodes in order and call `openInVideoEditor`. **M**
+- [ ] **N10 · Reusable workflows**: save a graph as a template, load onto new inputs (Weave's "reuse on different inputs"); simplified run-only view later. **M**
+- [ ] **N11 · Multi-shot "Storyboard" node**: concept → N shot nodes in one structured LLM call, each within the model's max length, sharing the preset prefix. Verify cross-shot consistency first. **L**
+- [ ] **N12 · Hardening**: keyboard, a11y, memoised nodes, `onlyRenderVisibleElements`, 100-node performance check, touch. **M**

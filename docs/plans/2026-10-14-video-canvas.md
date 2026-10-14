@@ -112,3 +112,23 @@ Kill criterion for phases 1–3: because the canvas is derived, deleting the tab
 
 Workable with changes, confidence ~0.7. A free-form Weave-style canvas now is weak (all four voices plus tier-decide at 0.30). The strong
 version is: **Shot/Beat model → storyboard board → derived canvas view → free-form canvas only on demand.**
+
+## 10. Owner decision: node-first (2026-10-14, later)
+
+The owner wants the node-based canvas like Weave, not a board first. This supersedes § 7 phases 1-3 and the C-tickets; § 11 of
+TASKS.md is rewritten as N1-N12.
+
+What changes and why it is still defensible:
+- **The skeptic's strongest objection (edges carry no data) is answered by the design.** Edges carry the preset prefix, the concept text and
+  generated clips; re-running a node re-runs its downstream nodes. The LLM refine step is itself an executable node, so the graph is not a
+  diagram of copy buttons; only the Generate node is limited to Veo-class models, the rest show Copy.
+- **Tech becomes `@xyflow/react`.** The council fork was "custom while layout is computed, xyflow once users wire and drag". Free-form
+  wiring is now required, so xyflow (MIT, deps ISC / BSD-3, GPL-3.0 compatible) is the pick; lazy-loaded, controlled mode over a
+  framework-free store, theme via daisyUI tokens.
+- **Persistence is a real document** (nodes, edges, viewport, schemaVersion) because nodes now carry user edits; the architect's
+  "derived view, nothing to migrate" advantage is gone, so the kill criterion becomes "delete the Canvas mode and the graph store".
+- **Still out of scope:** editing nodes (mask / relight / grade), scheduling, collaboration, provider execution beyond Veo-class.
+- **Risks that stand:** per-shot generation is fiction for whole-timeline models (Beat vs Shot, § 5); the dialect format is
+  unvalidated (V6 / V12 run in parallel); xyflow styling / a11y defaults and one-frame sync lag between its store and ours.
+
+Node kinds (all but Generate and Assemble run on the LLM or are pure): Concept, Preset, Shot, Audio, Generate, Result, Assemble.
