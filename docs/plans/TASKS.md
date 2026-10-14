@@ -93,3 +93,19 @@ Built 2026-10-14: V1–V5, V7–V11 (every video model now gets the Director's S
 - [ ] **V12 · Full manual walk**: Veo, Sora, Kling, LTX at 4/8/12 s, T2V and I2V, audio on/off; judge timing, lip-sync, silent-model handling. **M**
 - [ ] **V13 · Still unverified (retry in a real browser, `/browse`)**: Runway help-centre prompting guides (403), Seedance 2.0 BytePlus guide (JS-rendered), Kling API reference pages, Vidu (expired cert), SkyReels (DNS), Pika 2.x durations, PixVerse. Pika / Vidu / PixVerse / Higgsfield / SkyReels use the default timestamp dialect with no durations or audio flag until then. **S**
 - [ ] **V14 · Audio-only follow-ups**: VibeVoice `Speaker N:` label, Fish multi-speaker syntax, MiniMax prose delivery and OpenAI tts-1 `instructions` are unverified; the Dialogue/Narration rules assume them. Gemini TTS, Dia and Qwen3-TTS have no profile. `audioType` is still injected ungated in `buildContextForEnhancer`. **S**
+
+## 11. Video production canvas (Weave-style) — phased
+
+Plan, research and council debate: [2026-10-14-video-canvas.md](2026-10-14-video-canvas.md). Small → large; each phase has a gate.
+Nothing built yet. Phase 0 is § 10 V6 / V12 (real clips) and blocks everything below.
+
+- [ ] **C1 · `utils/shotScript.ts`**: parse a refined video script (timestamps / paragraph / blocks dialects) into `Beat[]` and serialise back; round-trip tests per dialect, reuses `buildTimelineSkeleton` / `validateTimeline`. **S**
+- [ ] **C2 · Usage counters (local only)**: count video refines, board opens, single-beat re-refines, copies; no network. Needed for the phase gates. **S**
+- [ ] **C3 · `refineBeat(script, index, instruction)`**: rewrite one beat with neighbouring beats as context, keep labels and total duration, validate with `validateTimeline`. **M**
+- [ ] **C4 · Storyboard board tab** in the Refiner result: beat cards with duration ruler (click to scroll), inline edit, re-refine one beat, undo last re-refine, copy all. Paper-* design system, no new dependency. **M**
+- [ ] **C5 · Project model**: `Project → Shot[] → Beat[]` plus `presets[]` (character / world / style, from `RefinerPreset`), persisted via idb with a schemaVersion; framework-free store like `video-editor/core/store.ts`. **M**
+- [ ] **C6 · Preset strip + shared prefix**: pin presets above the board; prefix injected into every shot prompt for consistency across clips. **M**
+- [ ] **C7 · Multi-shot generation**: concept → N shot scripts in one structured LLM call, each ≤ the model's max length, sharing the preset prefix. Verify per-shot re-run keeps cross-shot consistency first. **L**
+- [ ] **C8 · Generate (Veo-class only) + send to Video Editor**: one Generate button where `generateWithVeo` works, results through the existing asset path, shot list / clips into the Video Editor via `openInVideoEditor`. Other models stay "Copy". **L**
+- [ ] **C9 · Read-only canvas view**: derived from the Project, auto layout (Concept → Presets → Shots → Result), custom CSS-transform pan/zoom, click a node to open it in the board. Gate: demand for branching or reusable workflows. **M**
+- [ ] **C10 · Free-form canvas**: `@xyflow/react` (MIT), lazy-loaded, controlled mode over the framework-free store, `nodrag nopan nowheel` on inputs, daisyUI tokens override base css, undo via EditAction pattern. Gate: C9 shows demand and a second executable provider exists. **L**
