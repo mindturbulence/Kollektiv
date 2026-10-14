@@ -182,7 +182,7 @@ export const MODEL_PROFILES: ModelProfileSchema = {
     },
     {
       name: 'Hailuo / MiniMax',
-      matchPatterns: ['hailuo', 'minimax'],
+      matchPatterns: ['hailuo'],
       // Official: platform.minimax.io (audio output not stated)
       videoTimeline: 'prose',
       mediaType: 'video',
@@ -208,7 +208,7 @@ export const MODEL_PROFILES: ModelProfileSchema = {
     },
     {
       name: 'HiDream',
-      matchPatterns: ['hidream'],
+      matchPatterns: ['hidream (', 'hidream video'],
       mediaType: 'video',
       format: 'High-Fidelity Scene Prose.',
       rules:
@@ -276,25 +276,34 @@ export const MODEL_PROFILES: ModelProfileSchema = {
       name: 'Flux',
       matchPatterns: ['flux'],
       mediaType: 'image',
-      format: 'Dense Descriptive Paragraph.',
+      format: 'Natural Language Narrative.',
       rules:
-        'Natural language focusing on micro-textures, lighting interaction, and realistic material rendering. Describe the scene as if explaining it to a master painter. Avoid tag-lists. Mention \'hyper-realistic\' or \'raw\' if appropriate. Follow the STRICT IMAGE WORKFLOW for content structure.',
+        "Write the scene as flowing natural-language prose in this order: subject, action or pose, style or medium, setting, lighting, camera details. Be concrete (age, hair, clothing, materials) instead of generic. FLUX has no negative prompt and no weight syntax: state what you want, never what to avoid, and no keyword stacks or (token:1.2) markup. Put any text to render in double quotes. Follow the STRICT IMAGE WORKFLOW for content structure.",
     },
     {
       name: 'Imagen',
       matchPatterns: ['imagen'],
       mediaType: 'image',
-      format: 'Clear Semantic Prose.',
+      format: 'Descriptive Natural Language.',
       rules:
-        'High semantic accuracy. Describe relationships between objects and environmental lighting clearly. Focus on composition and clear subject-background separation. Follow the STRICT IMAGE WORKFLOW.',
+        "Follow Google's prompt guide: name the subject first, then its context or setting, then the style (photograph, sketch, pastel painting, isometric 3D). Use descriptive adjectives and adverbs in full sentences. For a photograph open with 'A photo of' and add camera proximity, camera position, lighting, lens (for example 24-35mm for portraits, 60-105mm macro for objects) and film type as needed. Keep any text to render short (about 25 characters, two or three phrases at most), in quotes, with a general font style. Never use 'no' or 'don't' phrasing. Follow the STRICT IMAGE WORKFLOW.",
     },
     {
       name: 'Midjourney',
       matchPatterns: ['midjourney'],
       mediaType: 'image',
-      format: 'Stylized Aesthetic Tags.',
+      format: 'Natural Language Description.',
       rules:
-        'Focus on style, medium, lighting mood, and artistic influence. Use evocative adjectives. Do NOT output params like --ar; they are handled via modifiers. Use latest style cues. Adapt the STRICT IMAGE WORKFLOW to this tag-based structure.',
+        "Write one or two vivid, specific descriptive sentences in natural language (subject, setting, lighting, medium and style) instead of stacked keywords or comma-separated tags; put the most important elements first. Do NOT output params like --ar, --v or --style; they are handled via modifiers. Adapt the STRICT IMAGE WORKFLOW to a compact descriptive sentence.",
+    },
+    {
+      name: 'Stable Diffusion 3+',
+      matchPatterns: ['stable diffusion 3', 'stable diffusion 4', 'sd3'],
+      mediaType: 'image',
+      format: 'Natural Language Description.',
+      rules:
+        "Follow Stability AI's SD 3.5 guidance: describe the idea in plain, complete sentences like briefing a creative partner. Cover subject, style, composition terms (close-up, wide-angle) and lighting. Put any text to render in double quotes and keep it short. Do not use weight syntax or quality-tag spam (no 'masterpiece, 8k'). Follow the STRICT IMAGE WORKFLOW.",
+      supportsNegativePrompt: true,
     },
     {
       name: 'Stable Diffusion / SDXL',
@@ -337,11 +346,11 @@ export const MODEL_PROFILES: ModelProfileSchema = {
     },
     {
       name: 'GPT / DALL-E',
-      matchPatterns: ['gpt-', 'dall-e'],
+      matchPatterns: ['gpt-', 'gpt image', 'dall-e'],
       mediaType: 'image',
-      format: 'Rich Narrative Prose.',
+      format: 'Structured Natural Language Narrative.',
       rules:
-        'Highly descriptive, imaginative, and literal. DALL-E follows instructions perfectly, so describe exactly what should be in the frame, including text if requested. Follow the STRICT IMAGE WORKFLOW.',
+        "Follow OpenAI's image prompting guide: order the prompt scene or background first, then the subject, then key details (materials, colours, composition, lighting), then constraints. Name the intended use (ad, UI mockup, infographic) when it is known. Be literal and exact about what is in the frame and where. Put text to render in double quotes with font style, size, colour and placement. State exclusions and invariants explicitly (for example 'no extra text', 'no watermark'). For photorealism say 'photorealistic' or 'real photograph'. Follow the STRICT IMAGE WORKFLOW.",
     },
     {
       name: 'Ideogram',
@@ -355,9 +364,9 @@ export const MODEL_PROFILES: ModelProfileSchema = {
       name: 'Janus / DeepSeek',
       matchPatterns: ['janus', 'deepseek'],
       mediaType: 'image',
-      format: 'Balanced Semantic Tags.',
+      format: 'Natural Language Description.',
       rules:
-        'Focus on subject clarity and environmental context. Use a mix of natural language and descriptive keywords. Follow the STRICT IMAGE WORKFLOW.',
+        "Write clear, complete natural-language sentences: subject clarity first, then environment, lighting and style. Avoid keyword stacks and weight markup. Follow the STRICT IMAGE WORKFLOW.",
     },
     {
       name: 'Seedream',
@@ -379,9 +388,9 @@ export const MODEL_PROFILES: ModelProfileSchema = {
       name: 'Nano Banana',
       matchPatterns: ['nano banana', 'nano_banana'],
       mediaType: 'image',
-      format: 'Concise Visual Direction.',
+      format: 'Descriptive Scene Narrative.',
       rules:
-        'Short, direct descriptive phrases focusing on style, composition, and lighting. Avoid long narratives; prioritize visual keywords and clear aesthetic direction. Follow the STRICT IMAGE WORKFLOW.',
+        "Describe the scene in natural, narrative sentences rather than a keyword list: who or what is in it, what they are doing, the setting, the lighting and mood, the camera angle and composition. Be specific about materials and details. For edits state what changes and what must stay the same. Put any text to render in double quotes. Follow the STRICT IMAGE WORKFLOW.",
     },
     {
       name: 'Recraft',

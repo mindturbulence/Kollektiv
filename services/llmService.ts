@@ -260,6 +260,8 @@ export const buildContextForEnhancer = (
     // (the slider default, and the value for any modifier with no slider
     // touched) returns the token unchanged — see serializeModifierToken.
     const w = (key: string, value: string) => serializeModifierToken(value, modifierWeights[key] ?? 1.0, targetAIModel);
+    // Modifiers persist across media modes; a value picked on the Video tab must not steer an image prompt.
+    const isVideoTarget = TARGET_VIDEO_AI_MODELS.some(m => m === targetAIModel);
 
     if (modifiers.artStyle) ctx.push(`Movement: ${w('artStyle', modifiers.artStyle)}`);
     if (modifiers.artist) ctx.push(`Creator: ${w('artist', modifiers.artist)}`);
@@ -303,11 +305,11 @@ export const buildContextForEnhancer = (
     if (modifiers.filmType) ctx.push(`Medium: ${modifiers.filmType}`);
     if (modifiers.aspectRatio) ctx.push(`Aspect Ratio: ${modifiers.aspectRatio}`);
 
-    if (modifiers.motion) ctx.push(`Dynamics: ${w('motion', modifiers.motion)}`);
-    if (modifiers.cameraMovement) ctx.push(`Camera Path: ${w('cameraMovement', modifiers.cameraMovement)}`);
-    if (modifiers.videoEffect) ctx.push(`Video Effect / Post-Processing: ${w('videoEffect', modifiers.videoEffect)}`);
+    if (isVideoTarget && modifiers.motion) ctx.push(`Dynamics: ${w('motion', modifiers.motion)}`);
+    if (isVideoTarget && modifiers.cameraMovement) ctx.push(`Camera Path: ${w('cameraMovement', modifiers.cameraMovement)}`);
+    if (isVideoTarget && modifiers.videoEffect) ctx.push(`Video Effect / Post-Processing: ${w('videoEffect', modifiers.videoEffect)}`);
 
-    if (modifiers.audioType) ctx.push(`Type: ${modifiers.audioType}`);
+    if (isAudio && modifiers.audioType) ctx.push(`Type: ${modifiers.audioType}`);
     if (isAudio && modifiers.voiceGender) ctx.push(`Voice: ${modifiers.voiceGender}`);
     if (isAudio && modifiers.voiceTone) ctx.push(`Tone: ${modifiers.voiceTone}`);
     if (isAudio && modifiers.audioEnvironment) ctx.push(`Acoustics: ${modifiers.audioEnvironment}`);

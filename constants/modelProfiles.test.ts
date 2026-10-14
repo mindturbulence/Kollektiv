@@ -109,3 +109,42 @@ describe('serializeModifierToken', () => {
     expect(result).toBe('(masterpiece:1.50)');
   });
 });
+
+import { TARGET_AUDIO_AI_MODELS, TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS } from './models';
+
+describe('media separation', () => {
+  it('every image target resolves to an image profile (never a video or audio recipe)', () => {
+    const bad = TARGET_IMAGE_AI_MODELS.filter(m => lookupModelProfile(m).mediaType !== 'image');
+    expect(bad).toEqual([]);
+  });
+
+  it('every video target resolves to a video profile and every audio target to an audio one', () => {
+    expect(TARGET_VIDEO_AI_MODELS.filter(m => lookupModelProfile(m, true).mediaType !== 'video')).toEqual([]);
+    expect(TARGET_AUDIO_AI_MODELS.filter(m => lookupModelProfile(m, false, true).mediaType !== 'audio')).toEqual([]);
+  });
+
+  it('image profiles carry no motion or timeline fields', () => {
+    for (const m of TARGET_IMAGE_AI_MODELS) {
+      const p = lookupModelProfile(m);
+      expect(p.videoTimeline, m).toBeUndefined();
+      expect(p.videoDurations, m).toBeUndefined();
+    }
+  });
+
+  it('HiDream image and video models land on different profiles', () => {
+    expect(lookupModelProfile('HiDream-O1-Image-1.5').mediaType).toBe('image');
+    expect(lookupModelProfile('HiDream (Excellence)').mediaType).toBe('video');
+  });
+
+  it('SD 3.x / 4.x use natural language, SDXL keeps weighted tags', () => {
+    expect(lookupModelProfile('Stable Diffusion 3.5 Large').format).toMatch(/Natural Language/);
+    expect(lookupModelProfile('Stable Diffusion 3.5 Large').supportsTokenWeighting).toBeFalsy();
+    expect(lookupModelProfile('Stable Diffusion XL').supportsTokenWeighting).toBe(true);
+  });
+
+  it('image recipes are natural-language narrative formats', () => {
+    for (const m of ['FLUX.2 [pro]', 'Google Imagen 4 (Nano Banana Pro)', 'GPT Image 2 (OpenAI)', 'Midjourney v7', 'Google Nano Banana 2 (Gemini 3.1 Flash)']) {
+      expect(lookupModelProfile(m).format, m).toMatch(/Natural Language|Narrative|Descriptive/);
+    }
+  });
+});

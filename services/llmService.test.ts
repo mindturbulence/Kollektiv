@@ -258,6 +258,31 @@ describe('enhancePromptStream — speech dialogue and narration rules', () => {
     });
 });
 
+describe('buildContextForEnhancer — media separation', () => {
+    const leftovers: PromptModifiers = {
+        motion: 'Slow Motion', cameraMovement: 'Dolly In', videoEffect: 'Time-lapse',
+        audioType: 'Dialogue / Speech', voiceTone: 'Warm', musicGenre: 'Jazz', lighting: 'Soft light',
+    };
+
+    it('keeps stale video and audio picks out of an image prompt', () => {
+        const ctx = buildContextForEnhancer(leftovers, false, {}, 'FLUX.2 [pro]');
+        expect(ctx).toContain('Lighting: Soft light');
+        for (const leak of ['Dynamics', 'Camera Path', 'Video Effect', 'Type: Dialogue', 'Tone', 'Music Genre']) {
+            expect(ctx).not.toContain(leak);
+        }
+    });
+
+    it('still passes motion and camera path to a video target', () => {
+        const ctx = buildContextForEnhancer(leftovers, false, {}, 'Google Veo 3.1');
+        expect(ctx).toContain('Dynamics: Slow Motion');
+        expect(ctx).toContain('Camera Path: Dolly In');
+    });
+
+    it('still passes the audio type to an audio target', () => {
+        expect(buildContextForEnhancer(leftovers, true, {}, 'ElevenLabs v3 (TTS)')).toContain('Type: Dialogue / Speech');
+    });
+});
+
 describe('getActiveProvider', () => {
     const base = { activeLLM: 'gemini' } as LLMSettings;
     it('collapses ollama_cloud to ollama', () => {
