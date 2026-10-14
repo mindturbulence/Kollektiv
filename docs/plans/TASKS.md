@@ -82,3 +82,20 @@ Verified by lint + unit tests only; nothing voice-related has been run live. Ide
 - [ ] **Selected-item context** — the assistant now knows the *page* (`get_current_page`), not the selected prompt/image. Needs each page to publish its selection to `utils/assistantContext.ts`; build only if "refine this" proves awkward in practice. **M**
 - [ ] **Undo for tool results** — the Activity footer shows what ran (`assistantToolResult`) but offers no undo. **M**
 - [ ] **Reminders only fire while the app is open** (in-app toast; missed ones show on next boot). True background delivery needs a service worker / Notification permission. **M** — only if wanted.
+
+## 10. Video "Director's Script" format + duration + audio direction
+
+Plan and sources: [2026-10-14-video-director-format.md](2026-10-14-video-director-format.md). Ordered small → large;
+each ticket is shippable on its own. Nothing built yet.
+
+- [ ] **V1 · Pure helper `buildTimelineSkeleton(duration, maxBeats)`** in `utils/` with a unit test (ranges contiguous, last ends at N, 4 s → ≤2 beats, 15 s → ≤5). No UI. **S**
+- [ ] **V2 · Add `videoDuration`, `videoAudio`, `videoDialogue`, `videoSfx` to `PromptModifiers`** (`types.ts`), `RefinerPage` defaults, and the `PromptAnalyzer` field maps (it lists `audioDuration` by hand at three places). **S**
+- [ ] **V3 · Re-verify vendor docs** that were unreachable or third-party-only: Kling 3.0 (official), Wan 2.5/2.6 (Model Studio), Seedance 2.0, Runway Gen-4, Luma, Pika, Vidu. Record each as `verified: true/false` in the plan table. **S**
+- [ ] **V4 · Research audio-model formats** (conversation / actions / dialogue / narration): per model in `modelProfiles.ts:347-490` capture speaker syntax, tag vocabulary, length limits from the vendor page. **M**
+- [ ] **V5 · `VideoDialect` on `ModelProfile`** (timeline style, audio mode, negatives, durations, maxBeats) filled for the verified families only; others fall back to today's behaviour. **M**
+- [ ] **V6 · Duration slider in the Motion tab** (under T2V/I2V), range/snap from the dialect, unknown model → 3–15 s; show "set `seconds` = N in the API call" for Sora-type dialects. Hide/disable for non-video. **M**
+- [ ] **V7 · Rewrite `VIDEO_MOTION_RULES` + T2V/I2V protocols** in `llmService.ts` as dialect-conditional "Director's Script" rules (header / lock / timeline / style / continuity). Keep the ban on labels the dialect doesn't allow. Update `llmService` tests. **M**
+- [ ] **V8 · Video audio direction**: Motion-tab audio toggle (off / auto / direct) + dialogue and SFX fields; inject audio modifiers for video when on; format per dialect; drop the block for silent models and say so in the UI. **L**
+- [ ] **V9 · Audio-only: "Dialogue scene" and "Narration" audio types** with speaker-labelled script + action lines, adapted per audio model's tags (needs V4). **L**
+- [ ] **V10 · I2V identity lock**: make the reference image reach every provider path (or document the limit), and have the lock come from an image description. Verify what the non-Gemini paths actually receive first. **L**
+- [ ] **V11 · Manual generation walk** (needs you + keys): same concept through Veo, Sora, Kling, LTX at 4/8/12 s, T2V and I2V, audio on/off; judge timing adherence, lip-sync, silent-model handling. **M**
