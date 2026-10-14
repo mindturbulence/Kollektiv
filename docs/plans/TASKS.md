@@ -98,11 +98,8 @@ Built 2026-10-14: V1–V5, V7–V11 (every video model now gets the Director's S
 
 Plan, research and council debate: [2026-10-14-video-canvas.md](2026-10-14-video-canvas.md) (§ 10 records the node-first decision).
 Owner decision 2026-10-14: build the node canvas directly, not a board first. Small → large; each ticket ships alone.
-Real-clip validation (§ 10 V6 / V12) runs in parallel instead of blocking; the council advised blocking, the owner chose otherwise.
+Built 2026-10-14: N1–N3 (`utils/shotScript.ts`, `refiner-canvas/core/`: graph store, undo, persistence, executor; unit-tested, no UI; IndexedDB code itself untested, only the in-memory adapter). Real-clip validation (§ 10 V6 / V12) runs in parallel instead of blocking; the council advised blocking, the owner chose otherwise.
 
-- [ ] **N1 · `utils/shotScript.ts`**: parse a refined video script (timestamps / paragraph / blocks dialects) into `Beat[]` and serialise back; round-trip tests per dialect. **S**
-- [ ] **N2 · Graph document + store**: `Graph { nodes, edges, viewport }`, node kinds `concept | preset | shot | audio | generate | result | assemble`, framework-free store with `EditAction` + inverse undo (pattern: `video-editor/core/store.ts`), idb persistence with schemaVersion. No UI. **M**
-- [ ] **N3 · Executor**: topological run, dirty tracking, re-run a node and everything downstream; refine nodes run the LLM (`enhancePromptStream`), an edge carries text (preset prefix, concept) or a clip; pure, with tests for cycles, missing inputs, partial re-run. **M**
 - [ ] **N4 · Canvas shell**: add `@xyflow/react` (MIT, lazy-loaded), "Canvas" mode in the Refiner, controlled mode over the N2 store, `nodrag nopan nowheel` on inputs, daisyUI tokens override base css (app theme, not Weave's), pan/zoom/minimap. **M**
 - [ ] **N5 · Node components + inspector**: Concept, Preset (character / world, from `RefinerPreset`), Shot (model, length, collapsed summary), Audio; edit text and beats in a side inspector, not inside the node. **M**
 - [ ] **N6 · Re-refine one beat**: rewrite a single beat with neighbours as context, validate with `validateTimeline`, per-node undo of the last re-run. **M**
