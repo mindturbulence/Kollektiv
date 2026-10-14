@@ -16,6 +16,11 @@ These decisions are permanent — do not re-litigate without the user asking fir
   planner flags vault writes, settings changes and generations, but `capability_execute` runs them
   without a confirmation step, consistent with ISSUE-22. **Do not add a gate without an explicit
   user request.**
+  - **Narrowed 2026-10-13 at the owner's explicit request:** three local destructive tools
+    (`delete_gallery_item`, `update_settings`, `toggle_mcp_server`) now carry
+    `requiresConfirmation` and are gated by a *spoken/typed* confirmation
+    (`services/confirmationGate.ts`, see AI_ENGINE.md § Tool execution). The planner's
+    `user_confirmation` step and ISSUE-22's Gmail tools are unchanged — still ungated.
 
 ---
 

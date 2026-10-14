@@ -65,6 +65,7 @@ export type ActiveTab =
   | 'prompts'
   | 'crafter'
   | 'refiner'
+  | 'refiner_canvas'
   | 'prompt_analyzer'
   | 'media_analyzer'
   | 'prompt'
@@ -217,6 +218,8 @@ export interface LLMSettings {
 
   /** Voice backend provider. Default: 'gemini_live' */
   voiceProvider?: 'gemini_live' | 'openai_realtime' | 'elevenlabs';
+  /** Push-to-talk: the mic stays closed until Ctrl+Space is held. Default: false (Ctrl+Space toggles the session). */
+  pushToTalk?: boolean;
 
   // AI Assistant Persona (chat + Gemini Live voice mode)
   assistantName?: string;
@@ -339,6 +342,12 @@ export interface PromptModifiers {
   cameraMovement?: string;
   videoInputType?: 't2v' | 'i2v'; 
   videoEffect?: string;
+  /** Clip length in seconds; snapped to the target model's allowed values. */
+  videoDuration?: string;
+  /** off = silent clip, auto = model's native audio untouched, direct = inject dialogue/SFX. */
+  videoAudio?: 'off' | 'auto' | 'direct';
+  videoDialogue?: string;
+  videoSfx?: string;
   // Audio specific
   audioType?: string;
   voiceGender?: string;

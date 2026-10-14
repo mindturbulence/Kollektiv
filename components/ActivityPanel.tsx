@@ -67,6 +67,17 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
             }
         });
 
+        // Outcome of each finished tool call: the footer shows the latest entry,
+        // so voice-triggered changes are visible ("what I just did").
+        const offResult = appEventBus.on('assistantToolResult', (r: { toolName: string; ok: boolean; summary: string }) => {
+            if (!r?.toolName) return;
+            setActivity(prev => [...prev, {
+                id: uuidv4(),
+                text: `${r.ok ? '✓' : '✗'} ${r.toolName} — ${r.summary}`,
+                timestamp: Date.now(),
+            }]);
+        });
+
         // Listen for caption chunks (user + assistant)
         const offCaption = appEventBus.on('liveCaption', (p: { who: 'user' | 'assistant'; text: string }) => {
             if (p && p.who && p.text) {
@@ -120,7 +131,7 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
             }
         });
 
-        return () => { offActivity(); offCaption(); offState(); offMode(); };
+        return () => { offActivity(); offResult(); offCaption(); offState(); offMode(); };
     }, []);
 
     // ── Auto-scroll transcript ──────────────────────────────────

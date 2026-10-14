@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { gsap } from 'gsap';
+import { setActivePage } from '../utils/assistantContext';
 import { MotionConfig } from 'motion/react';
 import { prefersReducedMotion } from './transitions/routeFx';
 import { useSettings } from '../contexts/SettingsContext';
@@ -52,6 +53,7 @@ import { subscribeVideoEditorOpen, takePendingVideoEditorPayload } from '../vide
 // Own chunk: video-editor pulls in its own media/render/export engines and
 // must not add to the ~4MB main entry (plan §7).
 const VideoEditorPage = React.lazy(() => import('../video-editor/ui/VideoEditorPage'));
+const RefinerCanvasPage = React.lazy(() => import('../refiner-canvas/ui/RefinerCanvasPage'));
 // Own chunk too: the image editor (renderer, WebGL2 compositor, tools) is only needed on its tab.
 const ImageEditorPage = React.lazy(() => import('../image-editor/ui/ImageEditorPage'));
 import LocalGenerationStudioPage from './LocalGenerationStudioPage';
@@ -154,6 +156,7 @@ const AppContent: React.FC = () => {
     // independent copy under the same localStorage key with no cross-sync, which
     // nothing ever read; that copy was removed rather than kept "in sync".
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
+    useEffect(() => setActivePage(activeTab), [activeTab]); // so the assistant knows where the user is
     const [editorOpenPayload, setEditorOpenPayload] = useState<EditorOpenPayload | undefined>(undefined);
     const [videoEditorOpenPayload, setVideoEditorOpenPayload] = useState<VideoEditorOpenPayload | undefined>(() => takePendingVideoEditorPayload());
     const [converterOpenFiles, setConverterOpenFiles] = useState<File[] | undefined>(undefined);
@@ -225,6 +228,7 @@ const AppContent: React.FC = () => {
             case 'a1111_studio': return `FORGE | ${base}`;
             case 'image_editor': return `IMAGE EDITOR | ${base}`;
             case 'video_editor': return `VIDEO EDITOR | ${base}`;
+            case 'refiner_canvas': return `CANVAS | ${base}`;
             default: return base;
         }
     }, [activeTab]);
@@ -476,6 +480,11 @@ const AppContent: React.FC = () => {
             case 'video_editor': return (
                 <React.Suspense key="video_editor" fallback={<div className="flex items-center justify-center w-full h-full"><ThinkingOrb state="working" size={64} /></div>}>
                     <VideoEditorPage openPayload={videoEditorOpenPayload} showGlobalFeedback={showGlobalFeedback} isExiting={false} />
+                </React.Suspense>
+            );
+            case 'refiner_canvas': return (
+                <React.Suspense key="refiner_canvas" fallback={<div className="flex items-center justify-center w-full h-full"><ThinkingOrb state="working" size={64} /></div>}>
+                    <RefinerCanvasPage />
                 </React.Suspense>
             );
             default: return <Dashboard key="default" onNavigate={handleNavigate} onOpenSettings={openSettings} isExiting={false} />;

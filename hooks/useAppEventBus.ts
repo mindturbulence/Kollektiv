@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { startReminderTicker } from '../services/reminderService';
 import { appEventBus, type PromptsPageState, type OpenInEditorPayload } from '../utils/eventBus';
 import type { EditorOpenPayload } from '../image-editor/core/types';
 import type { ActiveTab, Idea } from '../types';
@@ -56,6 +57,9 @@ export const useAppEventBus = ({
     });
     return () => { navigateSub(); sendToSub(); feedbackSub(); };
   }, [handleNavigate, handleSendToPromptsPage, showGlobalFeedback]);
+
+  // ── Assistant reminders: toast when due (and on boot for ones missed while closed) ──
+  useEffect(() => startReminderTicker(), []);
 
   // ── Theme cycling (from command palette "Next Theme") ────────────────
   useEffect(() => {

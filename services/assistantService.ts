@@ -1,5 +1,7 @@
 import type { LLMSettings, SourceContext } from '../types';
 import { getGeminiClient } from './geminiService';
+import { noteUserUtterance, noteAssistantOutput } from './confirmationGate';
+import { describePageContext } from '../utils/assistantContext';
 import { executeAssistantTool, geminiToolDeclarations, ollamaToolDeclarations, fallbackProtocolPrompt, ASSISTANT_TOOLS } from './assistantTools';
 import { streamChat } from './llmService';
 import { parseActionBlock, visibleText } from './assistantProtocol';
@@ -142,6 +144,10 @@ export const buildSystemIdentity = (settings: LLMSettings, sourceContext?: Sourc
     const lines = [
         `You are ${name}, embedded in a local-first creative suite for prompt engineering and media management. Be concise. Use your tools to act on the app when the user asks for something the tools can do; report what you did.`,
     ];
+    const pageLine = describePageContext();
+    if (pageLine) lines.push(pageLine);
+    // Without the clock the model can't resolve "at 5pm" or "tomorrow" for set_reminder.
+    lines.push(`Current local time: ${new Date().toLocaleString([], { dateStyle: 'full', timeStyle: 'short' })} (${Intl.DateTimeFormat().resolvedOptions().timeZone}).`);
     if (settings.assistantLanguage?.trim()) {
         lines.push(`Always respond in ${settings.assistantLanguage.trim()}, regardless of what language the user writes or speaks in, unless they explicitly ask you to switch.`);
     }
@@ -177,19 +183,26 @@ export const getAssistantProvider = (settings: LLMSettings): AssistantProvider =
     settings.activeLLM;
 
 export async function* runAssistantTurn(messages: ChatMsg[], settings: LLMSettings, sourceContext?: SourceContext[]): AsyncGenerator<AssistantEvent> {
-    switch (getAssistantProvider(settings)) {
-        case 'gemini':
-            yield* runGeminiTurn(messages, settings, sourceContext);
-            return;
-        case 'ollama':
-        case 'ollama_cloud':
-            yield* runOllamaTurn(messages, settings, sourceContext);
-            return;
-        case 'openrouter':
-            yield* runOpenRouterTurn(messages, settings, sourceContext);
-            return;
-        default:
-            yield* runFallbackTurn(messages, settings, sourceContext);
+    // A chat turn is one user utterance followed by assistant output; the
+    // confirmation gate (confirmationGate.ts) keys off exactly that ordering.
+    noteUserUtterance();
+    try {
+        switch (getAssistantProvider(settings)) {
+            case 'gemini':
+                yield* runGeminiTurn(messages, settings, sourceContext);
+                return;
+            case 'ollama':
+            case 'ollama_cloud':
+                yield* runOllamaTurn(messages, settings, sourceContext);
+                return;
+            case 'openrouter':
+                yield* runOpenRouterTurn(messages, settings, sourceContext);
+                return;
+            default:
+                yield* runFallbackTurn(messages, settings, sourceContext);
+        }
+    } finally {
+        noteAssistantOutput();
     }
 }
 

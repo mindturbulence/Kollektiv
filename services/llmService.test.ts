@@ -41,6 +41,16 @@ describe('cleanLLMResponse', () => {
         expect(cleanLLMResponse(raw)).toBe('first idea\nsecond idea\nthird idea');
     });
 
+    it('keeps "- " bullets that follow a "Label:" line (Sora Actions)', () => {
+        const raw = 'Scene text\nActions:\n- she turns\n- he nods\n- third\nMood: calm\n- stray';
+        expect(cleanLLMResponse(raw)).toBe('Scene text\nActions:\n- she turns\n- he nods\n- third\nMood: calm\nstray');
+    });
+
+    it('keeps one blank line between paragraphs when asked, never leading or doubled', () => {
+        const raw = '\n\npara one\n\n\n\npara two line a\npara two line b\n\n';
+        expect(cleanLLMResponse(raw, true)).toBe('para one\n\npara two line a\npara two line b');
+    });
+
     it('drops empty lines', () => {
         const raw = 'line one\n\n\nline two';
         expect(cleanLLMResponse(raw)).toBe('line one\nline two');
@@ -86,6 +96,14 @@ describe('buildContextForEnhancer', () => {
         const mods: PromptModifiers = { musicGenre: 'Synthwave' };
         expect(buildContextForEnhancer(mods, false)).toBe('');
         expect(buildContextForEnhancer(mods, true)).toContain('Music Genre: Synthwave');
+    });
+
+    it('only includes voice/acoustics/mood fields when isAudio is true', () => {
+        const mods: PromptModifiers = { voiceGender: 'Female', voiceTone: 'Warm', audioEnvironment: 'Studio', audioMood: 'Calm' };
+        expect(buildContextForEnhancer(mods, false)).toBe('');
+        const out = buildContextForEnhancer(mods, true);
+        expect(out).toContain('Voice: Female');
+        expect(out).toContain('Mood: Calm');
     });
 
     it('applies a modifier weight to the value on a weighting-capable target model', () => {
@@ -168,6 +186,75 @@ describe('enhancePromptStream — modifier weight wiring', () => {
         const out = await collect(stream);
         expect(out).toContain('Movement: Teal & Orange Blockbuster');
         expect(out).not.toContain('1.35');
+    });
+});
+
+describe("enhancePromptStream — video Director's Script", () => {
+    const settings = { activeLLM: 'gemini' } as LLMSettings;
+    const run = async (model: string, modifiers: PromptModifiers, reply: string[]) => {
+        let sys = '';
+        vi.mocked(enhancePromptGeminiStream).mockImplementation(async function* (_p: string, _c: string, _s: unknown, system: string) {
+            sys = system;
+            for (const c of reply) yield c;
+        });
+        const out = await collect(enhancePromptStream('a woman crosses a street', '', 'Medium', model, modifiers, settings));
+        return { sys, out };
+    };
+
+    it('timestamps dialect: header first, labeled beats in the system prompt, output untouched', async () => {
+        const { sys, out } = await run('Kling 3.0 Pro / Turbo / Omni', { videoDuration: '6', aspectRatio: '9:16' }, ['0–3s: walks\n', '3–6s: stops\n']);
+        expect(sys).toContain("DIRECTOR'S SCRIPT — TIMESTAMPED");
+        expect(sys).not.toContain('STRICTLY FORBIDDEN in the output: timestamps');
+        expect(out.startsWith('9:16 cinematic video. Total duration 6 seconds.\n0–3s: walks')).toBe(true);
+    });
+
+    it('prose dialect strips leaked labels from the stream', async () => {
+        const { out } = await run('Google Veo 3.1', {}, ['Keyframe 2s: she turns\n', '0–3s: then smiles']);
+        expect(out).toBe('she turns\nthen smiles');
+    });
+
+    it('a general video model gets the timestamp dialect, not the legacy ban', async () => {
+        const { sys, out } = await run('Default (General Video)', { videoDuration: '10', videoAudio: 'direct', videoDialogue: 'Maya: "Go."' }, ['0–3s: x']);
+        expect(sys).toContain("DIRECTOR'S SCRIPT — TIMESTAMPED");
+        expect(sys).toContain('Maya: "Go."');
+        expect(sys).not.toContain('[MOTION TIMELINE RULES]');
+        expect(out.startsWith('cinematic video. Total duration 10 seconds.\n0–3s: x')).toBe(true);
+    });
+
+    it('non-video targets never get a director', async () => {
+        const { sys } = await run('Stable Diffusion XL', { videoDuration: '10' }, ['x']);
+        expect(sys).not.toContain("DIRECTOR'S SCRIPT");
+    });
+});
+
+describe('enhancePromptStream — speech dialogue and narration rules', () => {
+    const settings = { activeLLM: 'gemini' } as LLMSettings;
+    const sysFor = async (model: string, audioType?: string) => {
+        let sys = '';
+        vi.mocked(enhancePromptGeminiStream).mockImplementation(async function* (_p: string, _c: string, _s: unknown, system: string) {
+            sys = system;
+            yield 'x';
+        });
+        await collect(enhancePromptStream('two friends argue', '', 'Medium', model, { audioType }, settings));
+        return sys;
+    };
+
+    it('ElevenLabs dialogue uses named speakers with bracket tags', async () => {
+        const sys = await sysFor('ElevenLabs v3 (TTS)', 'Dialogue / Speech');
+        expect(sys).toContain('[DIALOGUE SCENE RULES]');
+        expect(sys).toContain("'Name: [delivery tag] spoken words'");
+    });
+    it('Vibe Voice uses speaker ids, Kokoro-style plain models one block per speaker', async () => {
+        expect(await sysFor('Vibe Voice', 'Dialogue / Speech')).toContain('Speaker 1:');
+        expect(await sysFor('OpenAI Voice Engine', 'Dialogue / Speech')).toContain('one voice per request');
+    });
+    it('narration type gets the narration rule', async () => {
+        expect(await sysFor('ElevenLabs v3 (TTS)', 'Narration / Voiceover')).toContain('[NARRATION RULES]');
+    });
+    it('no audio type, music and sfx models keep the generic rules', async () => {
+        expect(await sysFor('ElevenLabs v3 (TTS)')).toContain('[SPEECH SCRIPT RULES]');
+        expect(await sysFor('Suno v5 (Music)', 'Dialogue / Speech')).toContain('[MUSIC STRUCTURE RULES]');
+        expect(await sysFor('MMAudio v2 (Sound FX)', 'Dialogue / Speech')).toContain('[SOUND DESIGN RULES]');
     });
 });
 

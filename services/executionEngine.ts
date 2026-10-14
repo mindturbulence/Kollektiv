@@ -352,7 +352,8 @@ async function dispatchStep(step: PlanStep, intent: RouterIntent, ctx: ToolConte
     case 'user_confirmation':
       // Owner decision (ISSUE-47, 2026-09-28): plan.requiresConfirmation stays
       // unenforced, so this step can't block — but it must not fail the plan
-      // either (a settings plan starts with it). It completes as an explicit
+      // either (a settings plan starts with it). (Tools flagged requiresConfirmation
+      // are gated separately, at executeAssistantTool — confirmationGate.ts.) It completes as an explicit
       // auto-approval; the output says no prompt was shown, never a fake click.
       return { confirmed: true, mode: 'auto', userPrompted: false, reason: 'confirmation is intentionally unenforced (ISSUE-47)' };
 

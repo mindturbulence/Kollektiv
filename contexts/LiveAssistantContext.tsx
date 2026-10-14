@@ -6,6 +6,7 @@ import type { ElevenLabsAssistant } from '../services/elevenLabsService';
 import { useSettings } from './SettingsContext';
 import { appEventBus } from '../utils/eventBus';
 import { audioService } from '../services/audioService';
+import { noteUserUtterance, noteAssistantOutput } from '../services/confirmationGate';
 import { browserControlService } from '../services/browserControlService';
 
 type Status = 'idle' | 'connecting' | 'live' | 'error';
@@ -51,6 +52,7 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
     // start() whose generation no longer matches when its connect() resolves
     // disconnects itself instead of wiring into liveRef/status.
     const sessionIdRef = useRef(0);
+    const pttHeldRef = useRef(false); // Ctrl+Space currently held (push-to-talk)
     const [status, setStatus] = useState<Status>('idle');
     const [speaking, setSpeaking] = useState(false);
     const [sharing, setSharing] = useState(false);
@@ -111,7 +113,12 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
                 }
                 else stop();
             },
-            onCaption: (who, text) => { if (!isStale()) appEventBus.emit('liveCaption', { who, text }); },
+            onCaption: (who, text) => {
+                if (isStale()) return;
+                // Feeds the spoken-confirmation gate (services/confirmationGate.ts).
+                if (who === 'user') noteUserUtterance(); else noteAssistantOutput();
+                appEventBus.emit('liveCaption', { who, text });
+            },
             onToolActivity: (info) => { if (!isStale()) appEventBus.emit('liveAssistantActivity', info); },
             onSpeaking: (s) => { if (!isStale()) setSpeaking(s); },
             onScreenShare: (s) => { if (!isStale()) setSharing(s); },
@@ -150,6 +157,7 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
         }
         if (isStale()) return; // toggled away while the chunk was loading; nothing to tear down yet
         liveRef.current = live;
+        live.setMicEnabled(!settings.pushToTalk || pttHeldRef.current);
         try {
             await live.connect(settings, handlers);
         } catch (e: any) {
@@ -185,19 +193,51 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
             ? !!(settings.elevenlabsApiKey || process.env.ELEVENLABS_API_KEY)
             : !!(settings.geminiApiKey || process.env.GEMINI_API_KEY);
 
-    // Global hotkey: Ctrl+Space toggles the live voice session from anywhere.
+    // Push-to-talk (opt-in, settings.pushToTalk): the mic stays closed until Ctrl+Space
+    // is held. Ctrl+Space still starts a session; the header/avatar stops it.
+    const pushToTalk = !!settings.pushToTalk;
+    useEffect(() => {
+        liveRef.current?.setMicEnabled(!pushToTalk || pttHeldRef.current);
+    }, [pushToTalk]);
+
+    // Global hotkey: Ctrl+Space toggles the live voice session from anywhere
+    // (or, with push-to-talk on, opens the mic while held).
     useEffect(() => {
         if (!hasVoiceKey) return;
         const onKey = (e: KeyboardEvent) => {
-            if (e.ctrlKey && e.code === 'Space' && !e.repeat) {
+            if (!(e.ctrlKey && e.code === 'Space')) return;
+            if (!pushToTalk) {
+                if (e.repeat) return;
                 e.preventDefault();
                 audioService.playClick();
                 toggleLive();
+                return;
             }
+            e.preventDefault();
+            if (e.repeat) return;
+            pttHeldRef.current = true;
+            if (status === 'idle' || status === 'error') void start();
+            else liveRef.current?.setMicEnabled(true);
+        };
+        // Release on keyup of either key (Ctrl may go up first, so don't require ctrlKey)
+        // and on window blur, so alt-tabbing mid-hold can't leave the mic open.
+        const release = () => {
+            if (!pttHeldRef.current) return;
+            pttHeldRef.current = false;
+            liveRef.current?.setMicEnabled(false);
+        };
+        const onKeyUp = (e: KeyboardEvent) => {
+            if (e.code === 'Space' || e.code === 'ControlLeft' || e.code === 'ControlRight') release();
         };
         window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    }, [toggleLive, hasVoiceKey]);
+        window.addEventListener('keyup', onKeyUp);
+        window.addEventListener('blur', release);
+        return () => {
+            window.removeEventListener('keydown', onKey);
+            window.removeEventListener('keyup', onKeyUp);
+            window.removeEventListener('blur', release);
+        };
+    }, [toggleLive, hasVoiceKey, pushToTalk, status, start]);
 
     const toggleShare = useCallback(() => {
         if (!liveRef.current) return;

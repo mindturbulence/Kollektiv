@@ -14,6 +14,7 @@
 
 import type { LLMSettings } from '../types';
 import { executeAssistantTool, AssistantTool } from './assistantTools';
+import { noteUserUtterance, noteAssistantOutput } from './confirmationGate';
 import { loadMcpAssistantTools } from './mcpAssistantTools';
 import { browserControlService } from './browserControlService';
 import { externalBrowserService } from './externalBrowserService';
@@ -39,6 +40,8 @@ export class OpenAIRealtimeAssistant {
     private pc: RTCPeerConnection | null = null;
     private dc: RTCDataChannel | null = null;
     private micStream: MediaStream | null = null;
+    /** Push-to-talk gate — remembered so it applies when the stream is created in connect(). */
+    private micWanted = true;
     private audioEl: HTMLAudioElement | null = null;
     private outCtx: AudioContext | null = null;
     private screenStream: MediaStream | null = null;
@@ -119,6 +122,7 @@ export class OpenAIRealtimeAssistant {
             audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
         });
         for (const track of this.micStream.getAudioTracks()) {
+            track.enabled = this.micWanted;
             this.pc.addTrack(track, this.micStream);
         }
 
@@ -189,6 +193,10 @@ export class OpenAIRealtimeAssistant {
                 // Track AI response start
                 if (event.item?.role === 'assistant' && event.item?.type === 'message') {
                     this.handlers.onTurnState?.('responding');
+                    noteAssistantOutput();
+                } else if (event.item?.role === 'user') {
+                    // Spoken-confirmation gate: this backend emits no caption for user speech.
+                    noteUserUtterance();
                 }
                 break;
             case 'response.audio.delta':
@@ -283,6 +291,7 @@ export class OpenAIRealtimeAssistant {
     }
 
     setMicEnabled(enabled: boolean): boolean {
+        this.micWanted = enabled;
         if (!this.micStream) return false;
         for (const track of this.micStream.getAudioTracks()) {
             track.enabled = enabled;

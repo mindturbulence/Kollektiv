@@ -70,3 +70,34 @@ Every item passed lint + unit tests only; nothing below could be tested without 
 - [ ] **Decide:** hook for automatic tier routing (`.claude/hooks/tier-router.mjs` exists but is not registered; the global Jev router is ON and would suppress it); delete `scripts/design-spike/` and the empty `/tmp/s` a spike builder left in Git Bash's temp dir. Also **rotate the beatapi.io key** that was pasted into the chat, and add OpenRouter credits (the Jev route returns HTTP 402) or store the beatapi key from your own terminal so `tier-decide` can use it.
 - [ ] **Security residual — decide:** `authRateLimiter` skips loopback, which is what keeps local chat usable (10 requests / 15 min otherwise); it only matters if the server sits behind a reverse proxy on a non-loopback HOST. Also: plain `fetch` re-resolves DNS after the SSRF check in `scrapeUrl` (a rebinding host can race it); `isDisallowedAddress` does no DNS lookup for names (RSS, `/proxy-remote`); 100.64/10 (Tailscale) is now refused by `/proxy-remote` and RSS.
 - Known small gaps: empty `design-library/<id>/` folders remain after delete (no directory-removal API); export clears `design/refs/*` before writing (failure mid-write leaves a partial export); thumbnails all load on mount (add IntersectionObserver past a few hundred recipes); collection-delete dialog counts are a snapshot from when Manage opened; Import-from-site first capture after boot may time out once.
+
+## 9. AI Assistant improvements
+
+Built 2026-10-13 (push-to-talk, spoken confirmation gate, tool-result strip, reminders, page context; see
+[VOICE_PIPELINE.md](../handbook/docs/06_VOICE/VOICE_PIPELINE.md) and [AI_ENGINE.md](../handbook/docs/01_AI_ENGINE/AI_ENGINE.md)).
+Verified by lint + unit tests only; nothing voice-related has been run live. Ideas deliberately not built
+(always-on wake word, more top-level tools) are parked in [NOTES.md](../NOTES.md).
+
+- [ ] **Live voice walk** (needs you + a voice key): push-to-talk on each of Gemini Live / OpenAI Realtime / ElevenLabs (hold = talks, release ends the turn, alt-tab mid-hold closes the mic); then the spoken confirmation — "delete that gallery item" → the assistant asks → "yes" executes, "no" does not. **Echo test first**: without headphones the assistant's own question may be transcribed as your answer. Also confirm OpenAI Realtime really emits `conversation.item.created` with `role: 'user'` (the gate relies on it) and that ElevenLabs `onMessage` delivers both roles.
+- [ ] **Selected-item context** — the assistant now knows the *page* (`get_current_page`), not the selected prompt/image. Needs each page to publish its selection to `utils/assistantContext.ts`; build only if "refine this" proves awkward in practice. **M**
+- [ ] **Undo for tool results** — the Activity footer shows what ran (`assistantToolResult`) but offers no undo. **M**
+- [ ] **Reminders only fire while the app is open** (in-app toast; missed ones show on next boot). True background delivery needs a service worker / Notification permission. **M** — only if wanted.
+
+## 10. Video "Director's Script" format + duration + audio direction
+
+Plan, sources and council findings: [2026-10-14-video-director-format.md](2026-10-14-video-director-format.md) § 7.
+Revised 2026-10-14 after the council. Order is the build order (small → large); each ticket ships alone.
+Built 2026-10-14: V1–V5, V7–V11 (every video model now gets the Director's Script; timestamps is the default dialect, Sora/LTX/Veo/Hailuo differ) (`utils/videoDirector.ts`, flat video fields on `ModelProfile`, `llmService.ts` dialect rules). Verified by unit tests only; no real clip generated yet (V6). Kling and Seedance run the timestamp dialect from community sources until V10. Not done from V3: `PromptAnalyzer` field maps (it extracts descriptors from existing prompts; duration is not one). Veo 2 is silent but shares the Veo profile, so V8 must special-case it.
+
+- [ ] **V6 · Smoke generation** (needs you + a key): one model, one T2V and one I2V clip, to validate the format before building audio. **S**
+- [ ] **V12 · Full manual walk**: Veo, Sora, Kling, LTX at 4/8/12 s, T2V and I2V, audio on/off; judge timing, lip-sync, silent-model handling. **M**
+- [ ] **V13 · Still unverified (retry in a real browser, `/browse`)**: Runway help-centre prompting guides (403), Seedance 2.0 BytePlus guide (JS-rendered), Kling API reference pages, Vidu (expired cert), SkyReels (DNS), Pika 2.x durations, PixVerse. Pika / Vidu / PixVerse / Higgsfield / SkyReels use the default timestamp dialect with no durations or audio flag until then. **S**
+- [ ] **V14 · Audio-only follow-ups**: VibeVoice `Speaker N:` label, Fish multi-speaker syntax, MiniMax prose delivery and OpenAI tts-1 `instructions` are unverified; the Dialogue/Narration rules assume them. Gemini TTS, Dia and Qwen3-TTS have no profile. `audioType` is still injected ungated in `buildContextForEnhancer`. **S**
+
+## 11. Video production node canvas (Weave-style) — node-first
+
+Plan, research and council debate: [2026-10-14-video-canvas.md](2026-10-14-video-canvas.md) (§ 10 records the node-first decision).
+Owner decision 2026-10-14: build the node canvas directly, not a board first. Small → large; each ticket ships alone.
+Built 2026-10-14: N4–N11 (Split into shots from a Concept: one LLM call, presets shared; templates: save a graph without inputs, add a copy of a template below the current nodes, one undo step; Assemble opens clips in the Video Editor from session previews or Gallery files; Generate + Result nodes: Veo generates into the Gallery, other models copy the prompt; no Generation history record, preview is session-only; canvas page, Send to canvas button; canvas page, nodes, inspector, per-beat re-refine, edited-script policy); N1–N3 (`utils/shotScript.ts`, `refiner-canvas/core/`: graph store, undo, persistence, executor; unit-tested, no UI; IndexedDB code itself untested, only the in-memory adapter). Real-clip validation (§ 10 V6 / V12) runs in parallel instead of blocking; the council advised blocking, the owner chose otherwise.
+
+- [ ] **N12 · Hardening, manual part**: core is checked at 200 nodes (run order, dirty propagation, one-step undo, cycle error: `refiner-canvas/core/scale.test.ts`); memoised nodes, `onlyRenderVisibleElements` and Ctrl+Z are in. Still needs a running app: drag / connect feel at ~100 nodes, keyboard-only use (tab order, delete), touch pinch vs node drag, screen-reader labels on nodes and handles. **S**

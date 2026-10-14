@@ -15,6 +15,9 @@ import { refinerPresetService } from './refinerPresetService';
 import { PROMPT_DETAIL_LEVELS } from '../constants/modifiers';
 import { MCP_PRESETS, findMcpPresetEntry, upsertMcpPresetEntry } from '../constants/mcpPresets';
 import { mcpService } from './mcpService';
+import { checkConfirmation } from './confirmationGate';
+import { getPageContext } from '../utils/assistantContext';
+import { addReminder, cancelReminder, loadReminders, pendingReminders } from '../utils/remindersStorage';
 
 // Re-export ToolContext + AssistantTool from the shared module so callers
 // that import them from this file still work. New code should import from
@@ -45,7 +48,7 @@ import { youtubeTranscriptTools } from './tools/youtubeTranscriptTools';
 import { twitterTools } from './tools/twitterTools';
 
 // Must mirror ActiveTab in types.ts.
-const PAGES = ['dashboard', 'discovery', 'prompts', 'crafter', 'refiner', 'prompt_analyzer', 'media_analyzer', 'prompt', 'gallery', 'design_library', 'resizer', 'converter', 'assets_manager', 'video_to_frames', 'image_compare', 'color_palette_extractor', 'composer', 'batch_runner', 'comfy_studio', 'a1111_studio', 'settings'];
+const PAGES = ['dashboard', 'discovery', 'prompts', 'crafter', 'refiner', 'prompt_analyzer', 'media_analyzer', 'prompt', 'gallery', 'design_library', 'resizer', 'converter', 'assets_manager', 'video_to_frames', 'image_compare', 'color_palette_extractor', 'composer', 'refiner_canvas', 'batch_runner', 'comfy_studio', 'a1111_studio', 'settings'];
 
 export const ASSISTANT_TOOLS: AssistantTool[] = [
     {
@@ -692,6 +695,61 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         },
     },
     {
+        name: 'get_current_page',
+        description: 'Which page the user is on right now (and, if they are on the assistant page, the page they came from). Call this when the user says "this", "here" or "the current one" without naming what they mean.',
+        parameters: { type: 'object', properties: {} },
+        execute: () => {
+            const { page, workPage } = getPageContext();
+            if (!page) return 'Unknown: the page has not been reported yet.';
+            return page === 'assistant'
+                ? `On the assistant page; came from "${workPage || 'unknown'}".`
+                : `On the "${page}" page.`;
+        },
+    },
+    {
+        name: 'set_reminder',
+        description: "Set a reminder that shows up as a notification while the app is open (or on next launch if it came due while closed). Give exactly one of in_minutes (relative) or at (absolute local time, ISO like 2026-10-13T17:00). The current local time is in your system prompt.",
+        parameters: {
+            type: 'object',
+            properties: {
+                text: { type: 'string', description: 'What to remind the user about.' },
+                in_minutes: { type: 'number', description: 'Minutes from now.' },
+                at: { type: 'string', description: 'Absolute local date-time, ISO format (YYYY-MM-DDTHH:MM).' },
+            },
+            required: ['text'],
+        },
+        execute: async ({ text, in_minutes, at }) => {
+            const body = String(text || '').trim();
+            if (!body) return 'Error: text is required.';
+            if ((in_minutes == null) === (at == null)) return 'Error: give exactly one of in_minutes or at.';
+            const dueAt = in_minutes != null ? Date.now() + Number(in_minutes) * 60_000 : Date.parse(String(at));
+            if (!Number.isFinite(dueAt)) return 'Error: could not understand the time. Use in_minutes or an ISO date-time like 2026-10-13T17:00.';
+            if (dueAt <= Date.now()) return 'Error: that time is already in the past.';
+            const r = await addReminder(body, dueAt);
+            return `Reminder set for ${new Date(r.dueAt).toLocaleString()} (id ${r.id}): ${r.text}`;
+        },
+    },
+    {
+        name: 'list_reminders',
+        description: 'List pending (not yet fired) reminders, soonest first.',
+        parameters: { type: 'object', properties: {} },
+        execute: async () => {
+            const list = pendingReminders(await loadReminders());
+            if (list.length === 0) return 'No pending reminders.';
+            return list.map(r => `- ${new Date(r.dueAt).toLocaleString()} — ${r.text} (id ${r.id})`).join('\n');
+        },
+    },
+    {
+        name: 'cancel_reminder',
+        description: 'Cancel a pending reminder by id (from list_reminders).',
+        parameters: {
+            type: 'object',
+            properties: { id: { type: 'string', description: 'Reminder id.' } },
+            required: ['id'],
+        },
+        execute: async ({ id }) => (await cancelReminder(String(id))) ? 'Reminder cancelled.' : `Error: no reminder with id "${id}".`,
+    },
+    {
         name: 'save_note',
         description: "Save a note to your Notes panel (note icon in the header) so the user can revisit, edit, copy, or download it later. Use for reminders, research findings, summaries, or anything the user asks you to note down.",
         parameters: {
@@ -1056,6 +1114,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'update_settings',
+        requiresConfirmation: true,
         description: 'Update one or more app settings (theme, model, persona, dashboard preferences, etc.). Does NOT require screen share or page navigation. The change persists immediately. Returns the updated settings snapshot. Safe settings: activeLLM, llmModel, masterRolePrompt, assistantName, assistantPersonality, assistantLanguage, assistantVoice, darkTheme, lightTheme, fontSize, musicEnabled, musicYoutubeUrl, dashboardVideoUrl, isDashboardVideoEnabled, dashboardBackgroundType, idleScreenType, isIdleEnabled, idleTimeoutMinutes, convertImageToJpgLocal, convertImageToJpgDrive, jpgCompressionQuality.',
         parameters: {
             type: 'object',
@@ -1117,6 +1176,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'toggle_mcp_server',
+        requiresConfirmation: true,
         description: `Turn a Predefined MCP server on or off (default: all off). Valid preset ids: ${MCP_PRESETS.map(p => p.id).join(', ')}. Firecrawl is hosted and needs an api_key to enable (ask the user for one if they don't have it configured yet, or point them to Settings > MCP Servers > Predefined). Brave Search and Playwright run as a local process the user must launch themselves — enabling here only tells the assistant it's allowed to use it; if the ping right after enabling fails, tell the user to run the shown local command.`,
         parameters: {
             type: 'object',
@@ -1202,6 +1262,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'delete_gallery_item',
+        requiresConfirmation: true,
         description: 'Delete a gallery item by its id (obtained from search_gallery). The saved media file is also removed from the vault if possible. Cannot be undone.',
         parameters: {
             type: 'object',
@@ -1517,12 +1578,23 @@ export const executeAssistantTool = async (name: string, args: Record<string, an
     }
     const tool = [...ASSISTANT_TOOLS, ...extraTools].find(t => t.name === name);
     if (!tool) return `Error: unknown tool "${name}". Available: ${[...ASSISTANT_TOOLS, ...extraTools].map(t => t.name).join(', ')}`;
+    if (tool.requiresConfirmation && checkConfirmation(name, args || {}) === 'ask') {
+        appEventBus.emit('assistantToolResult', { toolName: name, ok: true, summary: 'waiting for your confirmation' });
+        return `CONFIRMATION_REQUIRED: "${name}" was NOT executed. Ask the user aloud (or in chat) whether to proceed, naming exactly what will change (${JSON.stringify(args || {})}), then wait for their answer. If they clearly agree, call "${name}" again with identical arguments. If they decline, hesitate or say something unrelated, do nothing and tell them it was cancelled.`;
+    }
+    let result: string;
     try {
-        return String(await tool.execute(args || {}, ctx));
+        result = String(await tool.execute(args || {}, ctx));
     } catch (e: any) {
         // Feed the failure back to the model so it can self-correct (ADA pattern, kept).
-        return `Error executing ${name}: ${e?.message || e}`;
+        result = `Error executing ${name}: ${e?.message || e}`;
     }
+    appEventBus.emit('assistantToolResult', {
+        toolName: name,
+        ok: !/^error/i.test(result),
+        summary: result.split('\n')[0].slice(0, 120),
+    });
+    return result;
 };
 
 /** Recursively convert one internal (lowercase-type) schema node to Gemini's

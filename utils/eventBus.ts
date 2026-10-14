@@ -39,6 +39,8 @@ export interface AppEvents {
   liveAssistantState: { status: string; speaking?: boolean };
   liveCaption: { who: 'user' | 'assistant'; text: string };
   liveAssistantActivity: { flavour: string; toolName: string };
+  /** Outcome of a finished assistant tool call (emitted once, in executeAssistantTool). */
+  assistantToolResult: { toolName: string; ok: boolean; summary: string };
   chatSpeaking: { speaking: boolean };
   webSearchResults: WebResult[];
   webSearchError: string;

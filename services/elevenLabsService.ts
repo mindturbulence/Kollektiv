@@ -25,6 +25,8 @@ export interface ElevenLabsHandlers {
 
 export class ElevenLabsAssistant {
   private conversation: VoiceConversation | null = null;
+  /** Push-to-talk gate — applied once the session exists. */
+  private micWanted = true;
   private handlers!: ElevenLabsHandlers;
   private settings!: LLMSettings;
   private reconnectManager = new ReconnectManager({
@@ -105,6 +107,7 @@ export class ElevenLabsAssistant {
         },
       });
 
+      if (!this.micWanted) this.conversation.setMicMuted(true);
       this.reconnectManager.reportSuccess();
       handlers.onStatus('live');
     } catch (err) {
@@ -123,6 +126,7 @@ export class ElevenLabsAssistant {
   }
 
   setMicEnabled(enabled: boolean): boolean {
+    this.micWanted = enabled;
     if (!this.conversation) return false;
     this.conversation.setMicMuted(!enabled);
     return true;
