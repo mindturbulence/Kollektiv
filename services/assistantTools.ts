@@ -2,7 +2,7 @@ import type { WildcardCategory, WebResult } from '../types';
 import { appControlService } from './appControlService';
 import { appEventBus } from '../utils/eventBus';
 import { getOperator } from './browserOperatorResolver';
-import { addNote, loadNotes, updateNote, deleteNote } from '../utils/notesStorage';
+import { addNote, loadNotes, updateNote, deleteNote, restoreNote } from '../utils/notesStorage';
 import { loadMemories as loadMemoryEntries, deleteMemory } from '../utils/memoryStorage';
 // Obsidian imports removed — all obsidian tools live in services/tools/obsidianTools.ts
 import { loadGalleryItems, addItemToGallery, deleteItemFromGallery, loadCategories, loadPinnedItemIds } from '../utils/galleryStorage';
@@ -17,7 +17,7 @@ import { MCP_PRESETS, findMcpPresetEntry, upsertMcpPresetEntry } from '../consta
 import { mcpService } from './mcpService';
 import { checkConfirmation } from './confirmationGate';
 import { getPageContext } from '../utils/assistantContext';
-import { addReminder, cancelReminder, loadReminders, pendingReminders } from '../utils/remindersStorage';
+import { addReminder, cancelReminder, loadReminders, pendingReminders, restoreReminder } from '../utils/remindersStorage';
 
 // Re-export ToolContext + AssistantTool from the shared module so callers
 // that import them from this file still work. New code should import from
@@ -728,6 +728,10 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             const r = await addReminder(body, dueAt);
             return `Reminder set for ${new Date(r.dueAt).toLocaleString()} (id ${r.id}): ${r.text}`;
         },
+        prepareUndo: async () => async (result) => {
+            const id = /\(id ([\w-]+)\)/.exec(result)?.[1];
+            return id && (await cancelReminder(id)) ? 'Reminder removed.' : 'Reminder was already gone.';
+        },
     },
     {
         name: 'list_reminders',
@@ -748,6 +752,10 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             required: ['id'],
         },
         execute: async ({ id }) => (await cancelReminder(String(id))) ? 'Reminder cancelled.' : `Error: no reminder with id "${id}".`,
+        prepareUndo: async ({ id }) => {
+            const before = (await loadReminders()).find(r => r.id === String(id));
+            return before ? async () => { await restoreReminder(before); return 'Reminder restored.'; } : null;
+        },
     },
     {
         name: 'save_note',
@@ -763,6 +771,10 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         execute: async ({ title, content }) => {
             const n = await addNote(title ? String(title) : '', String(content), 'assistant');
             return `Saved note "${n.title}" (id ${n.id}).`;
+        },
+        prepareUndo: async () => async (result) => {
+            const id = /\(id ([\w-]+)\)/.exec(result)?.[1];
+            return id && (await deleteNote(id)) ? 'Note removed.' : 'Note was already gone.';
         },
     },
     {
@@ -798,6 +810,13 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             const n = await updateNote(String(id), patch);
             return n ? `Updated note "${n.title}".` : `Error: no note with id ${id}.`;
         },
+        prepareUndo: async ({ id }) => {
+            const before = (await loadNotes()).find(n => n.id === String(id));
+            return before ? async () => {
+                await updateNote(before.id, { title: before.title, content: before.content });
+                return `Note "${before.title}" reverted.`;
+            } : null;
+        },
     },
     {
         name: 'delete_note',
@@ -808,6 +827,10 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             required: ['id'],
         },
         execute: async ({ id }) => ((await deleteNote(String(id))) ? 'Note deleted.' : `Error: no note with id ${id}.`),
+        prepareUndo: async ({ id }) => {
+            const before = (await loadNotes()).find(n => n.id === String(id));
+            return before ? async () => { await restoreNote(before); return `Note "${before.title}" restored.`; } : null;
+        },
     },
     {
         name: 'remember',
@@ -1583,18 +1606,45 @@ export const executeAssistantTool = async (name: string, args: Record<string, an
         return `CONFIRMATION_REQUIRED: "${name}" was NOT executed. Ask the user aloud (or in chat) whether to proceed, naming exactly what will change (${JSON.stringify(args || {})}), then wait for their answer. If they clearly agree, call "${name}" again with identical arguments. If they decline, hesitate or say something unrelated, do nothing and tell them it was cancelled.`;
     }
     let result: string;
+    let undo: ((result: string) => Promise<string>) | null = null;
     try {
+        undo = tool.prepareUndo ? await tool.prepareUndo(args || {}).catch(() => null) : null;
         result = String(await tool.execute(args || {}, ctx));
     } catch (e: any) {
         // Feed the failure back to the model so it can self-correct (ADA pattern, kept).
         result = `Error executing ${name}: ${e?.message || e}`;
     }
+    const ok = !/^error/i.test(result);
+    let undoId: string | undefined;
+    if (ok && undo) {
+        undoId = String(++undoSeq);
+        const run = undo;
+        undoStack.set(undoId, () => run(result));
+        if (undoStack.size > MAX_UNDO) undoStack.delete(undoStack.keys().next().value as string);
+    }
     appEventBus.emit('assistantToolResult', {
         toolName: name,
-        ok: !/^error/i.test(result),
+        ok,
         summary: result.split('\n')[0].slice(0, 120),
+        undoId,
     });
     return result;
+};
+
+const MAX_UNDO = 20;
+let undoSeq = 0;
+const undoStack = new Map<string, () => Promise<string>>();
+
+/** Reverses one earlier assistant tool call (id from `assistantToolResult.undoId`). One-shot. */
+export const undoAssistantAction = async (undoId: string): Promise<string> => {
+    const run = undoStack.get(undoId);
+    if (!run) return 'Nothing to undo.';
+    undoStack.delete(undoId);
+    try {
+        return await run();
+    } catch (e: any) {
+        return `Error undoing: ${e?.message || e}`;
+    }
 };
 
 /** Recursively convert one internal (lowercase-type) schema node to Gemini's

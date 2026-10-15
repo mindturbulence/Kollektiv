@@ -38,6 +38,11 @@ export async function cancelReminder(id: string): Promise<boolean> {
   return true;
 }
 
+/** Re-inserts a cancelled reminder with its original id (undo of cancelReminder). */
+export async function restoreReminder(r: Reminder): Promise<void> {
+  await save([...(await loadReminders()).filter(x => x.id !== r.id), r]);
+}
+
 /** Marks reminders as fired and prunes ones fired more than a day ago. */
 export async function markFired(ids: string[], now = Date.now()): Promise<void> {
   const list = await loadReminders();

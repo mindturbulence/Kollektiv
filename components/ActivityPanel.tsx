@@ -3,6 +3,7 @@ import { gsap } from 'gsap';
 import { v4 as uuidv4 } from 'uuid';
 import { appEventBus } from '../utils/eventBus';
 import { audioService } from '../services/audioService';
+import { undoAssistantAction } from '../services/assistantTools';
 import { CloseIcon, DeleteIcon, TerminalIcon, ChatBubbleIcon } from './icons';
 import EmptyState from './EmptyState';
 
@@ -19,6 +20,8 @@ interface ActivityEntry {
     id: string;
     text: string;
     timestamp: number;
+    /** Set while the tool call can still be reversed from the footer. */
+    undoId?: string;
 }
 
 // ── Props ───────────────────────────────────────────────────────────
@@ -69,12 +72,13 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
 
         // Outcome of each finished tool call: the footer shows the latest entry,
         // so voice-triggered changes are visible ("what I just did").
-        const offResult = appEventBus.on('assistantToolResult', (r: { toolName: string; ok: boolean; summary: string }) => {
+        const offResult = appEventBus.on('assistantToolResult', (r: { toolName: string; ok: boolean; summary: string; undoId?: string }) => {
             if (!r?.toolName) return;
             setActivity(prev => [...prev, {
                 id: uuidv4(),
                 text: `${r.ok ? '✓' : '✗'} ${r.toolName} — ${r.summary}`,
                 timestamp: Date.now(),
+                undoId: r.undoId,
             }]);
         });
 
@@ -185,6 +189,16 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
     // ── Latest activity (for footer display) ────────────────────
 
     const latestActivity = activity.length > 0 ? activity[activity.length - 1] : null;
+
+    const handleUndo = useCallback(async (entry: ActivityEntry) => {
+        if (!entry.undoId) return;
+        audioService.playClick();
+        const message = await undoAssistantAction(entry.undoId);
+        setActivity(prev => [
+            ...prev.map(a => (a.id === entry.id ? { ...a, undoId: undefined } : a)),
+            { id: uuidv4(), text: `↶ ${message}`, timestamp: Date.now() },
+        ]);
+    }, []);
 
     // ── Pulse animation on new activity ─────────────────────────
 
@@ -313,7 +327,15 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
                                 <span className="text-base font-medium text-base-content/60 truncate">
                                     {latestActivity.text}
                                 </span>
-                                <span className="text-sm font-mono text-base-content/60 tabular-nums ml-auto shrink-0">
+                                {latestActivity.undoId && (
+                                    <button
+                                        onClick={() => handleUndo(latestActivity)}
+                                        className="btn btn-xs btn-ghost rounded-none ml-auto shrink-0 uppercase tracking-[0.2em]"
+                                    >
+                                        Undo
+                                    </button>
+                                )}
+                                <span className={`text-sm font-mono text-base-content/60 tabular-nums shrink-0 ${latestActivity.undoId ? '' : 'ml-auto'}`}>
                                     {formatTime(latestActivity.timestamp)}
                                 </span>
                             </div>
