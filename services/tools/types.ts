@@ -20,6 +20,9 @@ export interface AssistantTool {
   /** Destructive tool: the first call is parked and the assistant must ask the user aloud
    *  (see services/confirmationGate.ts). */
   requiresConfirmation?: boolean;
+  /** Runs before `execute`; returns a function that reverses the call given its result string,
+   *  or null when there is nothing to undo. Surfaces as an Undo button in the Activity footer. */
+  prepareUndo?: (args: Record<string, any>) => Promise<((result: string) => Promise<string>) | null>;
 }
 
 /** Per-tool-call context. Mirrors the running conversation and AI settings. */

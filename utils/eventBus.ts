@@ -40,7 +40,7 @@ export interface AppEvents {
   liveCaption: { who: 'user' | 'assistant'; text: string };
   liveAssistantActivity: { flavour: string; toolName: string };
   /** Outcome of a finished assistant tool call (emitted once, in executeAssistantTool). */
-  assistantToolResult: { toolName: string; ok: boolean; summary: string };
+  assistantToolResult: { toolName: string; ok: boolean; summary: string; undoId?: string };
   chatSpeaking: { speaking: boolean };
   webSearchResults: WebResult[];
   webSearchError: string;

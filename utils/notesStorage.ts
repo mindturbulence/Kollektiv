@@ -159,6 +159,15 @@ export async function deleteNote(id: string): Promise<boolean> {
   return true;
 }
 
+/** Re-inserts a previously deleted note with its original id (undo of deleteNote). */
+export async function restoreNote(note: AssistantNote): Promise<void> {
+  const db = await getDb();
+  await db.put(STORE_NAME, note);
+  _cache = [note, ..._cache.filter((n) => n.id !== note.id)].sort((a, b) => b.updatedAt - a.updatedAt);
+  dualWriteToLocalStorage(_cache);
+  appEventBus.emit('notesChanged', _cache);
+}
+
 export async function clearNotes(): Promise<void> {
   try {
     const db = await getDb();
